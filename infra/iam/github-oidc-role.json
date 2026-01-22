@@ -1,0 +1,31 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "apigateway:*",
+        "lambda:*",
+        "dynamodb:*",
+        "s3:*",
+        "cloudfront:*",
+        "wafv2:*",
+        "acm:*",
+        "route53:*",
+        "iam:PassRole",
+        "iam:GetRole",
+        "iam:CreateRole",
+        "iam:AttachRolePolicy",
+        "events:*",
+        "logs:*",
+        "budgets:*",
+        "cognito-idp:*",
+        "cloudwatch:*",
+        "sns:*",
+        "sqs:*",
+        "kms:*"
+      ],
+      "Resource": "*"
+    }
+  ]
+}

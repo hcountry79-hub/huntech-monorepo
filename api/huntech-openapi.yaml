@@ -1,0 +1,46 @@
+
+openapi: 3.0.3
+info:
+  title: HUNTECH API
+  version: 0.1.0
+servers:
+  - url: https://api.huntechusa.com
+paths:
+  /health:
+    get:
+      summary: Health check
+      responses:
+        '200': { description: OK }
+  /properties:
+    get:
+      summary: List properties
+      responses:
+        '200': { description: OK }
+    post:
+      summary: Create property
+      responses:
+        '201': { description: Created }
+  /pins:
+    get:
+      summary: List pins
+      responses:
+        '200': { description: OK }
+    post:
+      summary: Create pin
+      responses:
+        '201': { description: Created }
+  /media/signed-url:
+    post:
+      summary: Get signed S3 upload URL
+      responses:
+        '200': { description: OK }
+  /learn:
+    get:
+      summary: List Learn cards
+      responses:
+        '200': { description: OK }
+  /billing/webhook:
+    post:
+      summary: Stripe webhook endpoint
+      responses:
+        '200': { description: Received }

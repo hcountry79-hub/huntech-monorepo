@@ -1,0 +1,9 @@
+{
+  "name": "huntech-backend",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "aws-sdk": "^2.1599.0"
+  },
+  "devDependencies": {}
+}

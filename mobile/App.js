@@ -1,0 +1,1 @@
+import { Text, View } from 'react-native'; export default function App(){ return (<View style={{flex:1,backgroundColor:'#3b2f2f',alignItems:'center',justifyContent:'center'}}><Text style={{color:'#ffd54a',fontSize:24}}>HUNTΞCH</Text><Text style={{color:'#ffd54a'}}>Dev shell</Text></View>);} 
