@@ -17,10 +17,22 @@ resource "aws_dynamodb_table" "app" {
   hash_key     = "PK"
   range_key    = "SK"
 
-  attribute { name = "PK" type = "S" }
-  attribute { name = "SK" type = "S" }
-  attribute { name = "GSI1PK" type = "S" }
-  attribute { name = "GSI1SK" type = "S" }
+  attribute {
+    name = "PK"
+    type = "S"
+  }
+  attribute {
+    name = "SK"
+    type = "S"
+  }
+  attribute {
+    name = "GSI1PK"
+    type = "S"
+  }
+  attribute {
+    name = "GSI1SK"
+    type = "S"
+  }
 
   global_secondary_index {
     name            = "GSI1"
@@ -29,16 +41,26 @@ resource "aws_dynamodb_table" "app" {
     projection_type = "ALL"
   }
 
-  server_side_encryption { enabled = true, kms_key_arn = aws_kms_key.app.arn }
+  server_side_encryption {
+    enabled     = true
+    kms_key_arn = aws_kms_key.app.arn
+  }
 }
 
 # S3 buckets
-resource "aws_s3_bucket" "web" { bucket = "${local.name}-web-${local.suffix}" }
-resource "aws_s3_bucket" "media" { bucket = "${local.name}-media-${local.suffix}" }
-resource "aws_s3_bucket" "logs" { bucket = "${local.name}-logs-${local.suffix}" }
+resource "aws_s3_bucket" "web" {
+  bucket = "${local.name}-web-${local.suffix}"
+}
+resource "aws_s3_bucket" "media" {
+  bucket = "${local.name}-media-${local.suffix}"
+}
+resource "aws_s3_bucket" "logs" {
+  bucket = "${local.name}-logs-${local.suffix}"
+}
 
 resource "aws_s3_bucket_public_access_block" "all" {
   for_each = { for b in [aws_s3_bucket.web, aws_s3_bucket.media, aws_s3_bucket.logs] : b.id => b }
+
   bucket                  = each.value.id
   block_public_acls       = true
   block_public_policy     = true
@@ -51,7 +73,11 @@ resource "aws_iam_role" "lambda_exec" {
   name               = "${local.name}-lambda-exec"
   assume_role_policy = jsonencode({
     Version = "2012-10-17",
-    Statement = [{ Effect = "Allow", Principal = { Service = "lambda.amazonaws.com" }, Action = "sts:AssumeRole" }]
+    Statement = [{
+      Effect = "Allow",
+      Principal = { Service = "lambda.amazonaws.com" },
+      Action   = "sts:AssumeRole"
+    }]
   })
 }
 
@@ -60,7 +86,7 @@ resource "aws_iam_role_policy_attachment" "lambda_basic" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
 
-# Hello handler zip
+# Package the hello function
 data "archive_file" "hello" {
   type        = "zip"
   source_dir  = "../../backend/functions/hello"
@@ -73,7 +99,12 @@ resource "aws_lambda_function" "hello" {
   handler       = "index.handler"
   runtime       = "nodejs20.x"
   filename      = data.archive_file.hello.output_path
-  environment { variables = { TABLE = aws_dynamodb_table.app.name } }
+
+  environment {
+    variables = {
+      TABLE = aws_dynamodb_table.app.name
+    }
+  }
 }
 
 # API Gateway HTTP API
@@ -105,22 +136,21 @@ resource "aws_lambda_permission" "apigw" {
 
 # Cognito User Pool
 resource "aws_cognito_user_pool" "pool" {
-  name = "HUNTECH-auth-dev"
+  name                = "HUNTECH-auth-dev"
   username_attributes = ["email"]
   mfa_configuration   = "OPTIONAL"
-  # Advanced security (aka threat protection) mode can be set via console or plus plan; manual toggle may be required.
 }
 
 resource "aws_cognito_user_pool_client" "web" {
-  name                         = "${local.name}-web"
-  user_pool_id                 = aws_cognito_user_pool.pool.id
-  generate_secret              = false
+  name                                 = "${local.name}-web"
+  user_pool_id                         = aws_cognito_user_pool.pool.id
+  generate_secret                      = false
   allowed_oauth_flows_user_pool_client = true
-  allowed_oauth_flows         = ["code"]
-  allowed_oauth_scopes        = ["email","openid","profile"]
-  callback_urls               = ["https://app.${var.domain}/auth/callback"]
-  logout_urls                 = ["https://app.${var.domain}/"]
-  supported_identity_providers = ["COGNITO"]
+  allowed_oauth_flows                  = ["code"]
+  allowed_oauth_scopes                 = ["email", "openid", "profile"]
+  callback_urls                        = ["https://app.${var.domain}/auth/callback"]
+  logout_urls                          = ["https://app.${var.domain}/"]
+  supported_identity_providers         = ["COGNITO"]
 }
 
 # CloudFront + S3 static web origin (web app published to S3)
@@ -136,23 +166,29 @@ resource "aws_cloudfront_distribution" "cdn" {
   default_root_object = "index.html"
 
   origin {
-    domain_name = aws_s3_bucket.web.bucket_regional_domain_name
-    origin_id   = "s3-web"
+    domain_name              = aws_s3_bucket.web.bucket_regional_domain_name
+    origin_id                = "s3-web"
     origin_access_control_id = aws_cloudfront_origin_access_control.oac.id
   }
 
   default_cache_behavior {
-    allowed_methods  = ["GET","HEAD"]
-    cached_methods   = ["GET","HEAD"]
-    target_origin_id = "s3-web"
+    allowed_methods        = ["GET", "HEAD"]
+    cached_methods         = ["GET", "HEAD"]
+    target_origin_id       = "s3-web"
     viewer_protocol_policy = "redirect-to-https"
   }
 
   price_class = "PriceClass_100"
 
-  restrictions { geo_restriction { restriction_type = "none" } }
+  restrictions {
+    geo_restriction {
+      restriction_type = "none"
+    }
+  }
 
-  viewer_certificate { cloudfront_default_certificate = true }
+  viewer_certificate {
+    cloudfront_default_certificate = true
+  }
 }
 
 # WAF (global) with AWS Managed Rules
@@ -160,15 +196,37 @@ resource "aws_wafv2_web_acl" "global" {
   name        = "${local.name}-waf"
   description = "Baseline protection"
   scope       = "CLOUDFRONT"
-  default_action { allow {} }
-  visibility_config { cloudwatch_metrics_enabled = true metric_name = "${local.name}-waf" sampled_requests_enabled = true }
+
+  default_action {
+    allow {}
+  }
+
+  visibility_config {
+    cloudwatch_metrics_enabled = true
+    metric_name                = "${local.name}-waf"
+    sampled_requests_enabled   = true
+  }
 
   rule {
     name     = "AWS-AWSManagedRulesCommonRuleSet"
     priority = 1
-    override_action { none {} }
-    statement { managed_rule_group_statement { name = "AWSManagedRulesCommonRuleSet" vendor_name = "AWS" } }
-    visibility_config { cloudwatch_metrics_enabled = true metric_name = "common" sampled_requests_enabled = true }
+
+    override_action {
+      none {}
+    }
+
+    statement {
+      managed_rule_group_statement {
+        name        = "AWSManagedRulesCommonRuleSet"
+        vendor_name = "AWS"
+      }
+    }
+
+    visibility_config {
+      cloudwatch_metrics_enabled = true
+      metric_name                = "common"
+      sampled_requests_enabled   = true
+    }
   }
 }
 
@@ -179,14 +237,25 @@ resource "aws_wafv2_web_acl_association" "cf" {
 
 # Budget alert (cost guardrail)
 resource "aws_budgets_budget" "monthly" {
-  name              = "${local.name}-monthly-budget"
-  budget_type       = "COST"
-  limit_amount      = "50"
-  limit_unit        = "USD"
-  time_unit         = "MONTHLY"
+  name         = "${local.name}-monthly-budget"
+  budget_type  = "COST"
+  limit_amount = "50"
+  limit_unit   = "USD"
+  time_unit    = "MONTHLY"
 }
 
-output "api_url" { value = aws_apigatewayv2_api.http.api_endpoint }
-output "cloudfront_domain" { value = aws_cloudfront_distribution.cdn.domain_name }
-output "cognito_user_pool_id" { value = aws_cognito_user_pool.pool.id }
-output "cognito_app_client_id" { value = aws_cognito_user_pool_client.web.id }
+output "api_url" {
+  value = aws_apigatewayv2_api.http.api_endpoint
+}
+
+output "cloudfront_domain" {
+  value = aws_cloudfront_distribution.cdn.domain_name
+}
+
+output "cognito_user_pool_id" {
+  value = aws_cognito_user_pool.pool.id
+}
+
+output "cognito_app_client_id" {
+  value = aws_cognito_user_pool_client.web.id
+}
