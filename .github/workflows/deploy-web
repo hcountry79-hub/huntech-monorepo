@@ -1,0 +1,48 @@
+name: deploy-web
+
+on:
+  push:
+    branches: [ "main" ]
+    paths:
+      - "web/**"
+      - ".github/workflows/deploy-web.yml"
+
+permissions:
+  id-token: write     # OIDC to assume the AWS role
+  contents: read
+
+env:
+  AWS_REGION: us-east-1
+  WEB_DIR: web                           # if you build to another folder later, change this
+  S3_BUCKET: huntech-dev-web-382773571217
+  CF_DIST_ID: E3BZ04W7GR7EPZ
+  ROLE_ARN: arn:aws:iam::382773571217:role/huntech-ci-oidc
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # If later you add a build step (e.g., React/Vite), uncomment below,
+      # run the build inside "web", and set WEB_DIR to the build output folder (e.g., web/dist).
+      # - name: Build web
+      #   working-directory: ${{ env.WEB_DIR }}
+      #   run: |
+      #     npm ci
+      #     npm run build
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ env.AWS_REGION }}
+          role-to-assume: ${{ env.ROLE_ARN }}
+
+      - name: Sync to S3
+        run: |
+          aws s3 sync "${{ env.WEB_DIR }}/" "s3://${{ env.S3_BUCKET }}/" --delete
+
+      - name: Invalidate CloudFront
+        run: |
+          aws cloudfront create-invalidation --distribution-id "${{ env.CF_DIST_ID }}" --paths "/*"
