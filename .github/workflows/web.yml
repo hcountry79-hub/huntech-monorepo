@@ -1,0 +1,47 @@
+name: deploy-web
+
+on:
+  push:
+    branches: [ "main" ]
+    paths:
+      - "web/**"
+      - ".github/workflows/deploy-web.yml"
+
+permissions:
+  id-token: write   # OIDC
+  contents: read
+
+env:
+  AWS_REGION: us-east-1
+  WEB_DIR: web
+  S3_BUCKET: huntech-dev-web-382773571217   # will replace after Step 1
+  CF_DIST_ID: E3XXXXXXXXXXXX               # will replace after Step 1
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # (Optional) If you build a SPA before deploy, uncomment and tweak:
+      # - name: Build web
+      #   working-directory: ${{ env.WEB_DIR }}
+      #   run: |
+      #     npm ci
+      #     npm run build
+      #   # then set WEB_DIR to your build output (e.g. dist)
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ env.AWS_REGION }}
+          role-to-assume: arn:aws:iam::382773571217:role/huntech-ci-oidc    # will replace after Step 1
+
+      - name: Sync to S3 (static site)
+        run: |
+          aws s3 sync "${{ env.WEB_DIR }}/" "s3://${{ env.S3_BUCKET }}/" --delete
+
+      - name: Invalidate CloudFront
+        run: |
+          aws cloudfront create-invalidation --distribution-id "${{ env.CF_DIST_ID }}" --paths "/*"
