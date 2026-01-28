@@ -8,14 +8,15 @@ on:
       - ".github/workflows/deploy-web.yml"
 
 permissions:
-  id-token: write   # OIDC
+  id-token: write     # for GitHub OIDC -> AWS
   contents: read
 
 env:
   AWS_REGION: us-east-1
   WEB_DIR: web
-  S3_BUCKET: huntech-dev-web-382773571217   # will replace after Step 1
-  CF_DIST_ID: E3XXXXXXXXXXXX               # will replace after Step 1
+  S3_BUCKET: huntech-dev-web-382773571217
+  CF_DIST_ID: E3BZ04W7GR7EPZ
+  ROLE_ARN: arn:aws:iam::382773571217:role/huntech-ci-oidc
 
 jobs:
   deploy:
@@ -24,21 +25,21 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # (Optional) If you build a SPA before deploy, uncomment and tweak:
+      # If you later add a build step for a SPA, do it here and set WEB_DIR to your build output (e.g., dist)
       # - name: Build web
       #   working-directory: ${{ env.WEB_DIR }}
       #   run: |
       #     npm ci
       #     npm run build
-      #   # then set WEB_DIR to your build output (e.g. dist)
+      #   # then change WEB_DIR env above to "web/dist" (or your output folder)
 
       - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-region: ${{ env.AWS_REGION }}
-          role-to-assume: arn:aws:iam::382773571217:role/huntech-ci-oidc    # will replace after Step 1
+          role-to-assume: ${{ env.ROLE_ARN }}
 
-      - name: Sync to S3 (static site)
+      - name: Sync to S3
         run: |
           aws s3 sync "${{ env.WEB_DIR }}/" "s3://${{ env.S3_BUCKET }}/" --delete
 
