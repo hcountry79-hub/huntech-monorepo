@@ -43,4 +43,3 @@ jobs:
               GitHubRepo=huntech-monorepo \
               GitBranch=main \
               CreateOIDCProvider=true
-``
