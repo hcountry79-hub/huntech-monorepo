@@ -1,0 +1,110 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: HUNTECH bootstrap - GitHub OIDC provider + IAM roles for CI/CD and platform admin
+
+Parameters:
+  GitHubOrg:
+    Type: String
+    Description: GitHub organization or user (e.g., huntech79-hub)
+    Default: huntech79-hub
+  GitHubRepo:
+    Type: String
+    Description: GitHub repository name (e.g., huntech-monorepo)
+    Default: huntech-monorepo
+  GitBranch:
+    Type: String
+    Description: Branch to allow for OIDC (e.g., main)
+    Default: main
+  CreateOIDCProvider:
+    Type: String
+    AllowedValues: ['true','false']
+    Default: 'true'
+    Description: Whether to create the GitHub OIDC provider in this account (set to false if one already exists)
+
+Conditions:
+  CreateProvider: !Equals [ !Ref CreateOIDCProvider, 'true' ]
+
+Resources:
+  GitHubOIDC:
+    Type: AWS::IAM::OIDCProvider
+    Condition: CreateProvider
+    Properties:
+      Url: https://token.actions.githubusercontent.com
+      ClientIdList:
+        - sts.amazonaws.com
+      ThumbprintList:
+        # Trust both intermediary thumbprints per GitHub guidance
+        - 6938fd4d98bab03faadb97b34396831e3780aea1
+        - 1c58a3a8518e8759bf075b76b750d4f2df264fcd
+
+  CICDRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: HUNTECH-CICD
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Federated: !If
+                - CreateProvider
+                - !Ref GitHubOIDC
+                - !Sub arn:aws:iam::${AWS::AccountId}:oidc-provider/token.actions.githubusercontent.com
+            Action: sts:AssumeRoleWithWebIdentity
+            Condition:
+              StringEquals:
+                token.actions.githubusercontent.com:aud: sts.amazonaws.com
+                token.actions.githubusercontent.com:sub: !Sub 'repo:${GitHubOrg}/${GitHubRepo}:ref:refs/heads/${GitBranch}'
+      Policies:
+        - PolicyName: HUNTECH-CICD-Policy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              # NOTE: Narrow further as services finalize
+              - Effect: Allow
+                Action:
+                  - cloudformation:CreateStack
+                  - cloudformation:UpdateStack
+                  - cloudformation:DeleteStack
+                  - cloudformation:DescribeStacks
+                  - cloudformation:DescribeStackEvents
+                  - cloudformation:ValidateTemplate
+                  - iam:PassRole
+                  - iam:GetRole
+                  - iam:CreateRole
+                  - iam:AttachRolePolicy
+                  - iam:PutRolePolicy
+                  - iam:TagRole
+                  - lambda:*
+                  - apigateway:*
+                  - dynamodb:*
+                  - s3:*
+                  - ssm:*
+                  - secretsmanager:*
+                  - events:*
+                  - logs:*
+                  - cognito-idp:*
+                  - route53:*
+                  - cloudfront:*
+                Resource: '*'
+
+  PlatformAdminRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: HUNTECH-PlatformAdmin
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS: !Sub arn:aws:iam::${AWS::AccountId}:root
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/PowerUserAccess
+
+Outputs:
+  CICDRoleArn:
+    Value: !GetAtt CICDRole.Arn
+    Description: ARN of the CI/CD role to assume from GitHub Actions
+  PlatformAdminRoleArn:
+    Value: !GetAtt PlatformAdminRole.Arn
+    Description: ARN of the platform admin role
