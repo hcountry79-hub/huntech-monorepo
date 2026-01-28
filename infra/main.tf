@@ -12,12 +12,12 @@ terraform {
 }
 
 # ===== Variables (inline so we only need one file) =====
-variable "aws_region"       { type = string, default = "us-east-1" }
-variable "project"          { type = string, default = "huntech" }
-variable "domain"           { type = string, default = "huntechusa.com" }
-variable "hosted_zone_id"   { type = string, default = "" }
-variable "mapbox_public_token" { type = string, default = "" }
-variable "stripe_secret_key"   { type = string, default = "" }
+variable "aws_region"            { type = string, default = "us-east-1" }
+variable "project"               { type = string, default = "huntech" }
+variable "domain"                { type = string, default = "huntechusa.com" }
+variable "hosted_zone_id"        { type = string, default = "" }
+variable "mapbox_public_token"   { type = string, default = "" }
+variable "stripe_secret_key"     { type = string, default = "" }
 
 provider "aws" {
   region = var.aws_region
@@ -109,10 +109,10 @@ resource "aws_iam_role_policy_attachment" "lambda_basic" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
 
-# Package function code (workflow runs from infra/terraform)
+# Package function code (workflow runs from infra)
 data "archive_file" "hello" {
   type        = "zip"
-  source_dir  = "../../backend/functions/hello"
+  source_dir  = "../backend/functions/hello"
   output_path = "./hello.zip"
 }
 
@@ -198,14 +198,10 @@ resource "aws_cloudfront_distribution" "cdn" {
   price_class = "PriceClass_100"
 
   restrictions {
-    geo_restriction {
-      restriction_type = "none"
-    }
+    geo_restriction { restriction_type = "none" }
   }
 
-  viewer_certificate {
-    cloudfront_default_certificate = true
-  }
+  viewer_certificate { cloudfront_default_certificate = true }
 }
 
 # ===== WAF (global) =====
