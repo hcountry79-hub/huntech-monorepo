@@ -1,0 +1,46 @@
+name: HUNTECH Deploy (Bootstrap)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ "main" ]
+    paths:
+      - "infra/**"
+      - ".github/workflows/**"
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    env:
+      AWS_REGION: us-east-1
+      ACCOUNT_ID: 382773571217
+      ROLE_TO_ASSUME: arn:aws:iam::382773571217:role/HUNTECH-CICD
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.ROLE_TO_ASSUME }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Validate template
+        run: |
+          aws cloudformation validate-template --template-body file://infra/cfn/infra_cfn_huntech_bootstrap.yaml
+
+      - name: Deploy stack
+        run: |
+          aws cloudformation deploy \
+            --template-file infra/cfn/infra_cfn_huntech_bootstrap.yaml \
+            --stack-name HUNTECH-Bootstrap \
+            --capabilities CAPABILITY_NAMED_IAM \
+            --parameter-overrides \
+              GitHubOrg=huntech79-hub \
+              GitHubRepo=huntech-monorepo \
+              GitBranch=main \
+              CreateOIDCProvider=true
+``
