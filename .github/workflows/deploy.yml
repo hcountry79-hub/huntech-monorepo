@@ -26,20 +26,3 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ env.ROLE_TO_ASSUME }}
-          aws-region: ${{ env.AWS_REGION }}
-
-      - name: Validate template
-        run: |
-          aws cloudformation validate-template --template-body file://infra/cfn/infra_cfn_huntech_bootstrap.yaml
-
-      - name: Deploy stack
-        run: |
-          aws cloudformation deploy \
-            --template-file infra/cfn/infra_cfn_huntech_bootstrap.yaml \
-            --stack-name HUNTECH-Bootstrap \
-            --capabilities CAPABILITY_NAMED_IAM \
-            --parameter-overrides \
-              GitHubOrg=huntech79-hub \
-              GitHubRepo=huntech-monorepo \
-              GitBranch=main \
-              CreateOIDCProvider=true
