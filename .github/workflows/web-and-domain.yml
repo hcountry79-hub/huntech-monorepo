@@ -1,0 +1,276 @@
+name: HUNTECH Web + CDN + Domain (ONE CLICK)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  webcdn_domain:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    env:
+      AWS_REGION: us-east-1
+      ACCOUNT_ID: 382773571217
+      ROLE_TO_ASSUME: arn:aws:iam::382773571217:role/HUNTECH-CICD
+      # Core resources from your foundation
+      WEB_BUCKET: huntech-web-382773571217-us-east-1-core
+      # CloudFormation stack for CDN
+      CDN_STACK: HUNTECH-WebCore-CDN
+      TEMPLATE_PATH: infra/cfn/huntech_web_cdn.yaml
+      # DNS / cert targets
+      CORE_FQDN: core.huntechusa.com
+      APEX_DOMAIN: huntechusa.com
+      CLOUDFRONT_ZONE_ID: Z2FDTNDATAQYW2   # CloudFront ALIAS zone (constant)
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.ROLE_TO_ASSUME }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      # Make sure the CI role can manage CloudFront, Route53, and ACM
+      - name: Ensure CloudFront + Route53 + ACM permissions (inline)
+        shell: bash
+        run: |
+          set -e
+          cat > /tmp/HUNTECH-Web-DNS-StackOps.json <<'JSON'
+          {
+            "Version": "2012-10-17",
+            "Statement": [
+              {
+                "Sid": "CloudFrontManage",
+                "Effect": "Allow",
+                "Action": [
+                  "cloudfront:CreateDistribution",
+                  "cloudfront:UpdateDistribution",
+                  "cloudfront:GetDistribution",
+                  "cloudfront:GetDistributionConfig",
+                  "cloudfront:ListDistributions",
+                  "cloudfront:CreateInvalidation",
+                  "cloudfront:TagResource",
+                  "cloudfront:UntagResource"
+                ],
+                "Resource": "*"
+              },
+              {
+                "Sid": "Route53Manage",
+                "Effect": "Allow",
+                "Action": [
+                  "route53:ListHostedZonesByName",
+                  "route53:GetHostedZone",
+                  "route53:ListResourceRecordSets",
+                  "route53:ChangeResourceRecordSets"
+                ],
+                "Resource": "*"
+              },
+              {
+                "Sid": "ACMManage",
+                "Effect": "Allow",
+                "Action": [
+                  "acm:RequestCertificate",
+                  "acm:DescribeCertificate",
+                  "acm:ListCertificates",
+                  "acm:AddTagsToCertificate",
+                  "acm:DeleteCertificate"
+                ],
+                "Resource": "*"
+              }
+            ]
+          }
+          JSON
+          aws iam put-role-policy \
+            --role-name HUNTECH-CICD \
+            --policy-name HUNTECH-Web-DNS-StackOps \
+            --policy-document file:///tmp/HUNTECH-Web-DNS-StackOps.json
+
+      - name: Write CloudFormation template (CloudFront + OAC + bucket policy)
+        shell: bash
+        run: |
+          set -e
+          mkdir -p infra/cfn
+          cat > ${{ env.TEMPLATE_PATH }} <<'YAML'
+          AWSTemplateFormatVersion: '2010-09-09'
+          Description: CloudFront (OAC) for private S3 web bucket + bucket policy
+
+          Parameters:
+            WebBucketName:
+              Type: String
+
+          Resources:
+            OAC:
+              Type: AWS::CloudFront::OriginAccessControl
+              Properties:
+                Name: !Sub 'oac-${WebBucketName}'
+                Description: Origin Access Control for private S3 origin
+                OriginAccessControlOriginType: s3
+                SigningBehavior: always
+                SigningProtocol: sigv4
+
+            Distribution:
+              Type: AWS::CloudFront::Distribution
+              Properties:
+                DistributionConfig:
+                  Enabled: true
+                  Comment: !Sub 'HUNTECH Web CDN for ${WebBucketName}'
+                  DefaultRootObject: index.html
+                  HttpVersion: http2
+                  PriceClass: PriceClass_100
+                  Origins:
+                    - Id: S3Origin
+                      DomainName: !Sub '${WebBucketName}.s3.${AWS::Region}.amazonaws.com'
+                      S3OriginConfig: {}
+                      OriginAccessControlId: !GetAtt OAC.Id
+                  DefaultCacheBehavior:
+                    TargetOriginId: S3Origin
+                    ViewerProtocolPolicy: redirect-to-https
+                    AllowedMethods: [GET, HEAD]
+                    CachedMethods: [GET, HEAD]
+                    Compress: true
+                    CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6 # AWS CachingOptimized
+
+            BucketPolicy:
+              Type: AWS::S3::BucketPolicy
+              Properties:
+                Bucket: !Ref WebBucketName
+                PolicyDocument:
+                  Version: '2012-10-17'
+                  Statement:
+                    - Sid: AllowCloudFrontReadOAC
+                      Effect: Allow
+                      Principal:
+                        Service: cloudfront.amazonaws.com
+                      Action: s3:GetObject
+                      Resource: !Sub 'arn:aws:s3:::${WebBucketName}/*'
+                      Condition:
+                        StringEquals:
+                          AWS:SourceArn: !Sub 'arn:aws:cloudfront::${AWS::AccountId}:distribution/${Distribution.Id}'
+
+          Outputs:
+            DistributionId:
+              Value: !GetAtt Distribution.Id
+              Description: CloudFront distribution ID
+            DistributionDomainName:
+              Value: !GetAtt Distribution.DomainName
+              Description: CloudFront domain name
+          YAML
+
+      - name: Validate template
+        run: aws cloudformation validate-template --template-body file://${{ env.TEMPLATE_PATH }}
+
+      - name: Create CDN stack if missing (no change sets)
+        id: create
+        shell: bash
+        run: |
+          set -e
+          if aws cloudformation describe-stacks --stack-name "${CDN_STACK}" >/dev/null 2>&1; then
+            echo "EXISTS=true" >> $GITHUB_OUTPUT
+            echo "CDN stack exists."
+          else
+            echo "EXISTS=false" >> $GITHUB_OUTPUT
+            echo "Creating CDN stack..."
+            aws cloudformation create-stack \
+              --stack-name "${CDN_STACK}" \
+              --template-body file://${TEMPLATE_PATH} \
+              --capabilities CAPABILITY_NAMED_IAM \
+              --parameters ParameterKey=WebBucketName,ParameterValue="${WEB_BUCKET}"
+            aws cloudformation wait stack-create-complete --stack-name "${CDN_STACK}"
+          fi
+
+      - name: Update CDN stack if exists (idempotent)
+        if: steps.create.outputs.EXISTS == 'true'
+        shell: bash
+        run: |
+          set -e
+          set +e
+          aws cloudformation update-stack \
+            --stack-name "${CDN_STACK}" \
+            --template-body file://${TEMPLATE_PATH} \
+            --capabilities CAPABILITY_NAMED_IAM \
+            --parameters ParameterKey=WebBucketName,ParameterValue="${WEB_BUCKET}"
+          rc=$?
+          set -e
+          if [ "$rc" -eq 0 ]; then
+            aws cloudformation wait stack-update-complete --stack-name "${CDN_STACK}"
+          else
+            echo "No updates (or benign ValidationError)."
+          fi
+
+      - name: Read CDN outputs (with fallback)
+        id: cfn
+        shell: bash
+        run: |
+          set -e
+          DIST_ID=$(aws cloudformation describe-stacks --stack-name "${CDN_STACK}" \
+            --query "Stacks[0].Outputs[?OutputKey=='DistributionId'].OutputValue" --output text 2>/dev/null || true)
+          DIST_DNS=$(aws cloudformation describe-stacks --stack-name "${CDN_STACK}" \
+            --query "Stacks[0].Outputs[?OutputKey=='DistributionDomainName'].OutputValue" --output text 2>/dev/null || true)
+
+          if [ -z "$DIST_ID" ] || [ "$DIST_ID" = "None" ]; then
+            echo "Outputs missing; falling back to list-distributions..."
+            DIST_ID=$(aws cloudfront list-distributions \
+              --query "DistributionList.Items[?Comment=='HUNTECH Web CDN for ${WEB_BUCKET}'].Id" --output text)
+            DIST_DNS=$(aws cloudfront list-distributions \
+              --query "DistributionList.Items[?Comment=='HUNTECH Web CDN for ${WEB_BUCKET}'].DomainName" --output text)
+          fi
+
+          if [ -z "$DIST_ID" ] || [ "$DIST_ID" = "None" ]; then
+            echo "Could not resolve CloudFront distribution. Aborting."; exit 1
+          fi
+
+          echo "DIST_ID=$DIST_ID" >> $GITHUB_ENV
+          echo "DIST_DNS=$DIST_DNS" >> $GITHUB_ENV
+          echo "CDN: $DIST_ID  $DIST_DNS"
+
+      - name: Create sample site and upload to S3
+        shell: bash
+        run: |
+          set -e
+          mkdir -p site
+          cat > site/index.html <<'HTML'
+          <!doctype html>
+          <html lang="en">
+          <head>
+            <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+            <title>HUNTΞCH — Core</title>
+            <style>
+              body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 0; padding: 48px; background:#111; color:#fefefe; }
+              .card { max-width: 720px; margin: auto; background:#222; padding: 32px; border-radius: 12px; }
+              h1 { margin-top: 0; letter-spacing: .5px; }
+              a { color: #ffd34d; text-decoration: none; }
+              .tag { display:inline-block; padding:4px 10px; border-radius:999px; background:#3a2e11; color:#ffd34d; font-weight:600; margin-bottom:12px;}
+            </style>
+          </head>
+          <body>
+            <div class="card">
+              <div class="tag">HUNTΞCH • Core Web</div>
+              <h1>Where Innovation Meets Tradition</h1>
+              <p>This static page is served from a private S3 bucket through CloudFront (OAC).</p>
+            </div>
+          </body>
+          </html>
+          HTML
+          aws s3 sync site/ "s3://${WEB_BUCKET}/" --delete --cache-control max-age=60
+
+      - name: Invalidate CloudFront and wait for Deployed
+        shell: bash
+        run: |
+          set -e
+          aws cloudfront create-invalidation --distribution-id "${DIST_ID}" --paths "/*" >/dev/null
+          for i in {1..60}; do
+            STATUS=$(aws cloudfront get-distribution --id "${DIST_ID}" --query "Distribution.Status" --output text)
+            echo "CloudFront status: $STATUS"
+            [ "$STATUS" = "Deployed" ] && exit 0
+            sleep 10
+          done
+          echo "Distribution did not reach Deployed in time"; exit 1
+
+      - name: Resolve Route53 Hosted Zone
+        id: hz
+        shell: bash
+        run: |
+          set -e
+          HZ_ID=$(aws route53 list-hosted-zones-by-name --dns-name "${APEX_DOMAIN}" \
