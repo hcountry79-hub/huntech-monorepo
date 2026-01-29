@@ -1,10 +1,10 @@
-name: HUNTECH Map Domain (ONE FILE)
+name: HUNTECH Map Domain (ID or Domain)
 
 on:
   workflow_dispatch:
     inputs:
-      dist_id:
-        description: "CloudFront Distribution ID (required)"
+      dist_input:
+        description: "CloudFront Distribution ID (E...) OR Domain (dxxxxx.cloudfront.net)"
         required: true
         default: ""
 
@@ -20,9 +20,7 @@ jobs:
 
       CORE_FQDN: core.huntechusa.com
       APEX_DOMAIN: huntechusa.com
-      CLOUDFRONT_ZONE_ID: Z2FDTNDATAQYW2         # Route 53 alias zone id for CloudFront (global)
-      CDN_STACK: HUNTECH-WebCore-CDN             # Not required; we operate by dist_id
-      WEB_BUCKET: huntech-web-382773571217-us-east-1-core
+      CLOUDFRONT_ZONE_ID: Z2FDTNDATAQYW2   # Route 53 alias zone for CloudFront (global)
 
     steps:
       - name: Checkout
@@ -34,7 +32,7 @@ jobs:
           role-to-assume: ${{ env.ROLE_TO_ASSUME }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Install jq and dig
+      - name: Install jq & dig
         run: |
           set -e
           if ! command -v jq >/dev/null 2>&1; then
@@ -44,18 +42,18 @@ jobs:
             sudo apt-get update -y && sudo apt-get install -y dnsutils
           fi
 
-      - name: Resolve Hosted Zone (must be authoritative)
+      - name: Resolve Hosted Zone (authoritative check)
         id: hz
         run: |
           set -e
           HZ_ID=$(aws route53 list-hosted-zones-by-name --dns-name "${APEX_DOMAIN}" \
             --query "HostedZones[?Name=='${APEX_DOMAIN}.'].Id" --output text | sed 's#/hostedzone/##')
           if [ -z "$HZ_ID" ] || [ "$HZ_ID" = "None" ]; then
-            echo "ERROR: Route 53 hosted zone for ${APEX_DOMAIN} not found in this account."; exit 1
+            echo "ERROR: Route 53 hosted zone for ${APEX_DOMAIN} not found."; exit 1
           fi
           echo "HZ_ID=$HZ_ID" >> $GITHUB_ENV
 
-          # Soft check: make sure Route 53 is authoritative (nameservers match public)
+          # Soft validation: R53 NS must match public NS for DNS validation to work
           R53_NS=$(aws route53 get-hosted-zone --id "$HZ_ID" --query 'DelegationSet.NameServers' --output text | tr '\t' '\n' | sort)
           PUB_NS=$(dig NS "${APEX_DOMAIN}" +short | sort || true)
           echo "Route53 NS:"; echo "$R53_NS"
@@ -65,25 +63,40 @@ jobs:
             echo "WARNING: Route 53 may not be authoritative for ${APEX_DOMAIN}. If validation stalls, update registrar NS."
           fi
 
-      - name: Read Distribution (ID provided by input)
+      - name: Resolve Distribution (accepts ID or domain)
         id: dist
         env:
-          DIST_ID_INPUT: ${{ github.event.inputs.dist_id }}
+          DIST_INPUT: ${{ github.event.inputs.dist_input }}
         run: |
           set -e
-          if [ -z "${DIST_ID_INPUT}" ]; then
-            echo "ERROR: dist_id input is required."; exit 1
+          if [ -z "${DIST_INPUT}" ]; then
+            echo "ERROR: dist_input is required"; exit 1
           fi
-          # Verify it exists and fetch domain name
-          DIST_DNS=$(aws cloudfront get-distribution --id "${DIST_ID_INPUT}" --query "Distribution.DomainName" --output text 2>/dev/null || true)
-          if [ -z "$DIST_DNS" ] || [ "$DIST_DNS" = "None" ]; then
-            echo "ERROR: Could not read CloudFront distribution ${DIST_ID_INPUT}"; exit 1
-          fi
-          echo "DIST_ID=${DIST_ID_INPUT}" >> $GITHUB_ENV
-          echo "DIST_DNS=${DIST_DNS}"     >> $GITHUB_ENV
-          echo "Using Distribution: ${DIST_ID_INPUT}  Domain: ${DIST_DNS}"
 
-      - name: Request ACM certificate in us-east-1 (viewer TLS for CloudFront)
+          # If it looks like a domain (contains .cloudfront.net), resolve to ID
+          if echo "${DIST_INPUT}" | grep -qiE '\.cloudfront\.net$'; then
+            DIST_ID=$(aws cloudfront list-distributions \
+              --query "DistributionList.Items[?DomainName=='${DIST_INPUT}'].Id | [0]" \
+              --output text 2>/dev/null || true)
+            if [ -z "$DIST_ID" ] || [ "$DIST_ID" = "None" ]; then
+              echo "ERROR: Could not resolve distribution ID from domain ${DIST_INPUT}"; exit 1
+            fi
+          else
+            DIST_ID="${DIST_INPUT}"
+          fi
+
+          # Fetch the domain name for this distribution
+          DIST_DNS=$(aws cloudfront get-distribution --id "${DIST_ID}" \
+            --query "Distribution.DomainName" --output text 2>/dev/null || true)
+          if [ -z "$DIST_DNS" ] || [ "$DIST_DNS" = "None" ]; then
+            echo "ERROR: Could not read CloudFront distribution ${DIST_ID}"; exit 1
+          fi
+
+          echo "DIST_ID=${DIST_ID}"  >> $GITHUB_ENV
+          echo "DIST_DNS=${DIST_DNS}" >> $GITHUB_ENV
+          echo "Using Distribution: ${DIST_ID}  Domain: ${DIST_DNS}"
+
+      - name: Request ACM certificate in us-east-1 (required by CloudFront)
         id: acm_request
         run: |
           set -e
@@ -95,14 +108,12 @@ jobs:
           echo "CERT_ARN=$CERT_ARN" >> $GITHUB_ENV
           echo "Requested certificate: $CERT_ARN"
 
-      - name: Wait for ACM to return DNS ResourceRecord (robust)
+      - name: Wait for ACM to return DNS CNAME (robust)
         id: acm_rr
         run: |
           set -e
-          RR_NAME=""
-          RR_TYPE=""
-          RR_VALUE=""
-          for i in $(seq 1 120); do    # up to ~10 minutes
+          RR_NAME=""; RR_TYPE=""; RR_VALUE=""
+          for i in $(seq 1 120); do
             REC=$(aws acm describe-certificate --region us-east-1 --certificate-arn "${CERT_ARN}" \
               --query "Certificate.DomainValidationOptions" --output json)
             RR_NAME=$(echo "$REC" | jq -r --arg d "${CORE_FQDN}" '
@@ -125,7 +136,7 @@ jobs:
             sleep 5
           done
           if [ -z "$RR_NAME" ]; then
-            echo "ERROR: Validation record not found after waiting. Re-run in a minute."; exit 1
+            echo "ERROR: Validation record not found after waiting. Re-run shortly."; exit 1
           fi
           echo "RR_NAME=$RR_NAME"   >> $GITHUB_ENV
           echo "RR_TYPE=$RR_TYPE"   >> $GITHUB_ENV
@@ -134,17 +145,15 @@ jobs:
       - name: Upsert DNS validation CNAME in Route 53
         run: |
           set -e
-          CHANGE=$(jq -n --arg n "$RR_NAME" --arg t "$RR_TYPE" --arg v "$RR_VALUE" \
+          CHG=$(jq -n --arg n "$RR_NAME" --arg t "$RR_TYPE" --arg v "$RR_VALUE" \
             '{Comment:"ACM DNS validation",Changes:[{Action:"UPSERT",ResourceRecordSet:{Name:$n,Type:$t,TTL:60,ResourceRecords:[{Value:$v}]}}]}')
-          aws route53 change-resource-record-sets \
-            --hosted-zone-id "${HZ_ID}" \
-            --change-batch "$CHANGE" >/dev/null
+          aws route53 change-resource-record-sets --hosted-zone-id "${HZ_ID}" --change-batch "$CHG" >/dev/null
           echo "Validation CNAME upserted: $RR_NAME -> $RR_VALUE"
 
       - name: Wait for certificate to be ISSUED
         run: |
           set -e
-          for i in $(seq 1 120); do  # up to ~20 minutes
+          for i in $(seq 1 120); do
             STATUS=$(aws acm describe-certificate --region us-east-1 --certificate-arn "${CERT_ARN}" \
               --query "Certificate.Status" --output text)
             echo "ACM cert status: $STATUS"
@@ -182,9 +191,7 @@ jobs:
                 {Action:"UPSERT",ResourceRecordSet:{Name:$fqdn,Type:"A",AliasTarget:{HostedZoneId:$z,DNSName:$target,EvaluateTargetHealth:false}}},
                 {Action:"UPSERT",ResourceRecordSet:{Name:$fqdn,Type:"AAAA",AliasTarget:{HostedZoneId:$z,DNSName:$target,EvaluateTargetHealth:false}}}
               ]}')
-          aws route53 change-resource-record-sets \
-            --hosted-zone-id "${HZ_ID}" \
-            --change-batch "$CHG" >/dev/null
+          aws route53 change-resource-record-sets --hosted-zone-id "${HZ_ID}" --change-batch "$CHG" >/dev/null
           echo "Alias A/AAAA created: ${CORE_FQDN} → ${DIST_DNS}"
 
       - name: Invalidate and probe site
@@ -193,7 +200,7 @@ jobs:
           aws cloudfront create-invalidation --distribution-id "${DIST_ID}" --paths "/*" >/dev/null
           URL="https://${CORE_FQDN}/"
           echo "Visiting: $URL"
-          for i in $(seq 1 48); do   # up to ~4 minutes
+          for i in $(seq 1 48); do
             CODE=$(curl -s -o /dev/null -w "%{http_code}" "$URL")
             echo "Attempt $i -> HTTP $CODE"
             [ "$CODE" = "200" ] && { echo "domain ok: $URL"; exit 0; }
