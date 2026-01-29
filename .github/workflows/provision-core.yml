@@ -1,4 +1,3 @@
-
 name: HUNTECH Provision (Core — ONE FILE)
 
 on:
@@ -16,6 +15,7 @@ jobs:
       ROLE_TO_ASSUME: arn:aws:iam::382773571217:role/HUNTECH-CICD
       STACK_NAME: HUNTECH-Foundation-core
       TEMPLATE_PATH: infra/cfn/huntech_core_stack.yaml
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -26,7 +26,7 @@ jobs:
           role-to-assume: ${{ env.ROLE_TO_ASSUME }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Write CloudFormation template to repo workspace (one-file workflow)
+      - name: Write CloudFormation template to workspace (fixed S3 names)
         shell: bash
         run: |
           mkdir -p infra/cfn
@@ -56,10 +56,11 @@ jobs:
               - !Not [ !Equals [ !Ref CognitoUserPoolArn, '' ] ]
 
           Resources:
+            # S3 buckets: all lowercase, no StackName
             WebBucket:
               Type: AWS::S3::Bucket
               Properties:
-                BucketName: !Sub 'huntech-web-${AWS::AccountId}-${AWS::Region}-${AWS::StackName}'
+                BucketName: !Sub 'huntech-web-${AWS::AccountId}-${AWS::Region}-core'
                 PublicAccessBlockConfiguration:
                   BlockPublicAcls: true
                   BlockPublicPolicy: true
@@ -75,7 +76,7 @@ jobs:
             MediaBucket:
               Type: AWS::S3::Bucket
               Properties:
-                BucketName: !Sub 'huntech-media-${AWS::AccountId}-${AWS::Region}-${AWS::StackName}'
+                BucketName: !Sub 'huntech-media-${AWS::AccountId}-${AWS::Region}-core'
                 PublicAccessBlockConfiguration:
                   BlockPublicAcls: true
                   BlockPublicPolicy: true
@@ -276,7 +277,15 @@ jobs:
           else
             echo "EXISTS=false" >> $GITHUB_OUTPUT
             echo "Creating stack..."
-            aws cloudformation create-stack               --stack-name "${STACK_NAME}"               --template-body file://${TEMPLATE_PATH}               --capabilities CAPABILITY_NAMED_IAM               --parameters                 ParameterKey=ProjectName,ParameterValue=HUNTECH                 ParameterKey=Environment,ParameterValue=core                 ParameterKey=CreateApiAuthorizer,ParameterValue=false                 ParameterKey=CognitoUserPoolArn,ParameterValue=""
+            aws cloudformation create-stack \
+              --stack-name "${STACK_NAME}" \
+              --template-body file://${TEMPLATE_PATH} \
+              --capabilities CAPABILITY_NAMED_IAM \
+              --parameters \
+                ParameterKey=ProjectName,ParameterValue=HUNTECH \
+                ParameterKey=Environment,ParameterValue=core \
+                ParameterKey=CreateApiAuthorizer,ParameterValue=false \
+                ParameterKey=CognitoUserPoolArn,ParameterValue=""
             echo "Waiting for CREATE_COMPLETE..."
             aws cloudformation wait stack-create-complete --stack-name "${STACK_NAME}"
           fi
@@ -288,7 +297,15 @@ jobs:
           set -e
           echo "Updating stack..."
           set +e
-          aws cloudformation update-stack             --stack-name "${STACK_NAME}"             --template-body file://${TEMPLATE_PATH}             --capabilities CAPABILITY_NAMED_IAM             --parameters               ParameterKey=ProjectName,ParameterValue=HUNTECH               ParameterKey=Environment,ParameterValue=core               ParameterKey=CreateApiAuthorizer,ParameterValue=false               ParameterKey=CognitoUserPoolArn,ParameterValue=""
+          aws cloudformation update-stack \
+            --stack-name "${STACK_NAME}" \
+            --template-body file://${TEMPLATE_PATH} \
+            --capabilities CAPABILITY_NAMED_IAM \
+            --parameters \
+              ParameterKey=ProjectName,ParameterValue=HUNTECH \
+              ParameterKey=Environment,ParameterValue=core \
+              ParameterKey=CreateApiAuthorizer,ParameterValue=false \
+              ParameterKey=CognitoUserPoolArn,ParameterValue=""
           rc=$?
           set -e
           if [ "$rc" -ne 0 ]; then
@@ -300,8 +317,10 @@ jobs:
       - name: Show outputs
         id: outputs
         run: |
-          aws cloudformation describe-stacks --stack-name ${{ env.STACK_NAME }}             --query 'Stacks[0].Outputs' --output table
-          API=$(aws cloudformation describe-stacks --stack-name ${{ env.STACK_NAME }}             --query "Stacks[0].Outputs[?OutputKey=='ApiEndpoint'].OutputValue" --output text)
+          aws cloudformation describe-stacks --stack-name ${{ env.STACK_NAME }} \
+            --query 'Stacks[0].Outputs' --output table
+          API=$(aws cloudformation describe-stacks --stack-name ${{ env.STACK_NAME }} \
+            --query "Stacks[0].Outputs[?OutputKey=='ApiEndpoint'].OutputValue" --output text)
           echo "API_ENDPOINT=$API" >> $GITHUB_ENV
           echo "API Endpoint: $API"
 
