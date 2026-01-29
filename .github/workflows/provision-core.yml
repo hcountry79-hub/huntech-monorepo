@@ -1,4 +1,4 @@
-name: HUNTECH Provision (Core — ONE FILE)
+name: HUNTECH Provision (Core — ONE FILE, self-healing)
 
 on:
   workflow_dispatch:
@@ -29,7 +29,7 @@ jobs:
           role-to-assume: ${{ env.ROLE_TO_ASSUME }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Write CloudFormation template to workspace (fixed S3 names)
+      - name: Write CloudFormation template (core stack)
         shell: bash
         run: |
           mkdir -p infra/cfn
@@ -38,20 +38,10 @@ jobs:
           Description: HUNTECH Foundation (core) - HTTP API, Lambda, DynamoDB, S3 (web/media), EventBridge, Secrets, CloudWatch
 
           Parameters:
-            ProjectName:
-              Type: String
-              Default: HUNTECH
-            Environment:
-              Type: String
-              Default: core
-            CreateApiAuthorizer:
-              Type: String
-              AllowedValues: ['true','false']
-              Default: 'false'
-            CognitoUserPoolArn:
-              Type: String
-              Default: ''
-              Description: Provide ARN only if CreateApiAuthorizer=true.
+            ProjectName: { Type: String, Default: HUNTECH }
+            Environment: { Type: String, Default: core }
+            CreateApiAuthorizer: { Type: String, AllowedValues: ['true','false'], Default: 'false' }
+            CognitoUserPoolArn: { Type: String, Default: '' }
 
           Conditions:
             UseAuthorizer: !And
@@ -59,7 +49,6 @@ jobs:
               - !Not [ !Equals [ !Ref CognitoUserPoolArn, '' ] ]
 
           Resources:
-            # S3 buckets: all lowercase, no StackName
             WebBucket:
               Type: AWS::S3::Bucket
               Properties:
@@ -69,12 +58,10 @@ jobs:
                   BlockPublicPolicy: true
                   IgnorePublicAcls: true
                   RestrictPublicBuckets: true
-                VersioningConfiguration:
-                  Status: Enabled
+                VersioningConfiguration: { Status: Enabled }
                 BucketEncryption:
                   ServerSideEncryptionConfiguration:
-                    - ServerSideEncryptionByDefault:
-                        SSEAlgorithm: AES256
+                    - ServerSideEncryptionByDefault: { SSEAlgorithm: AES256 }
 
             MediaBucket:
               Type: AWS::S3::Bucket
@@ -85,269 +72,9 @@ jobs:
                   BlockPublicPolicy: true
                   IgnorePublicAcls: true
                   RestrictPublicBuckets: true
-                VersioningConfiguration:
-                  Status: Enabled
+                VersioningConfiguration: { Status: Enabled }
                 BucketEncryption:
                   ServerSideEncryptionConfiguration:
-                    - ServerSideEncryptionByDefault:
-                        SSEAlgorithm: AES256
+                    - ServerSideEncryptionByDefault: { SSEAlgorithm: AES256 }
 
             AppTable:
-              Type: AWS::DynamoDB::Table
-              Properties:
-                TableName: !Sub '${ProjectName}-${Environment}-AppData'
-                BillingMode: PAY_PER_REQUEST
-                AttributeDefinitions:
-                  - AttributeName: pk
-                    AttributeType: S
-                  - AttributeName: sk
-                    AttributeType: S
-                KeySchema:
-                  - AttributeName: pk
-                    KeyType: HASH
-                  - AttributeName: sk
-                    KeyType: RANGE
-
-            AppFunctionRole:
-              Type: AWS::IAM::Role
-              Properties:
-                RoleName: !Sub '${ProjectName}-${Environment}-LambdaRole'
-                AssumeRolePolicyDocument:
-                  Version: '2012-10-17'
-                  Statement:
-                    - Effect: Allow
-                      Principal:
-                        Service: lambda.amazonaws.com
-                      Action: sts:AssumeRole
-                ManagedPolicyArns:
-                  - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
-                Policies:
-                  - PolicyName: AppTableAccess
-                    PolicyDocument:
-                      Version: '2012-10-17'
-                      Statement:
-                        - Effect: Allow
-                          Action:
-                            - dynamodb:PutItem
-                            - dynamodb:GetItem
-                            - dynamodb:UpdateItem
-                            - dynamodb:Query
-                            - dynamodb:Scan
-                          Resource: !GetAtt AppTable.Arn
-                  - PolicyName: MediaBucketAccess
-                    PolicyDocument:
-                      Version: '2012-10-17'
-                      Statement:
-                        - Effect: Allow
-                          Action:
-                            - s3:PutObject
-                            - s3:GetObject
-                            - s3:DeleteObject
-                          Resource: !Sub '${MediaBucket.Arn}/*'
-
-            AppFunction:
-              Type: AWS::Lambda::Function
-              Properties:
-                FunctionName: !Sub '${ProjectName}-${Environment}-ApiHandler'
-                Description: Minimal handler (health + seed demo)
-                Runtime: python3.12
-                Handler: index.handler
-                Role: !GetAtt AppFunctionRole.Arn
-                Timeout: 15
-                MemorySize: 256
-                Environment:
-                  Variables:
-                    TABLE_NAME: !Sub '${ProjectName}-${Environment}-AppData'
-                    MEDIA_BUCKET: !Ref MediaBucket
-                Code:
-                  ZipFile: |
-                    import json, os, boto3
-                    ddb = boto3.resource('dynamodb')
-                    table = ddb.Table(os.environ['TABLE_NAME'])
-
-                    def handler(event, context):
-                        path = event.get('rawPath','/')
-                        if path == '/health':
-                            return {'statusCode': 200, 'headers': {'content-type':'application/json'}, 'body': json.dumps({'ok': True})}
-                        if path == '/seed':
-                            table.put_item(Item={'pk':'DEMO','sk':'SEED','ts':context.aws_request_id})
-                            return {'statusCode': 200, 'headers': {'content-type':'application/json'}, 'body': json.dumps({'seeded': True})}
-                        return {'statusCode': 404, 'headers': {'content-type':'application/json'}, 'body': json.dumps({'error':'Not Found'})}
-
-            HttpApi:
-              Type: AWS::ApiGatewayV2::Api
-              Properties:
-                Name: !Sub '${ProjectName}-${Environment}-HttpApi'
-                ProtocolType: HTTP
-
-            HttpAuthorizer:
-              Type: AWS::ApiGatewayV2::Authorizer
-              Condition: UseAuthorizer
-              Properties:
-                ApiId: !Ref HttpApi
-                AuthorizerType: JWT
-                IdentitySource:
-                  - '$request.header.Authorization'
-                Name: CognitoJwt
-                JwtConfiguration:
-                  Audience: []
-                  Issuer: !Ref CognitoUserPoolArn
-
-            HttpIntegration:
-              Type: AWS::ApiGatewayV2::Integration
-              Properties:
-                ApiId: !Ref HttpApi
-                IntegrationType: AWS_PROXY
-                IntegrationUri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${AppFunction.Arn}/invocations'
-                PayloadFormatVersion: '2.0'
-
-            RouteHealth:
-              Type: AWS::ApiGatewayV2::Route
-              Properties:
-                ApiId: !Ref HttpApi
-                RouteKey: 'GET /health'
-                Target: !Sub 'integrations/${HttpIntegration}'
-
-            StageDefault:
-              Type: AWS::ApiGatewayV2::Stage
-              Properties:
-                ApiId: !Ref HttpApi
-                StageName: '$default'
-                AutoDeploy: true
-
-            LambdaInvokePermissionApi:
-              Type: AWS::Lambda::Permission
-              Properties:
-                Action: lambda:InvokeFunction
-                FunctionName: !Ref AppFunction
-                Principal: apigateway.amazonaws.com
-
-            HeartbeatRule:
-              Type: AWS::Events::Rule
-              Properties:
-                Name: !Sub '${ProjectName}-${Environment}-Heartbeat'
-                ScheduleExpression: rate(30 minutes)
-                State: ENABLED
-                Targets:
-                  - Arn: !GetAtt AppFunction.Arn
-                    Id: AppFn
-
-            LambdaInvokePermissionEvents:
-              Type: AWS::Lambda::Permission
-              Properties:
-                Action: lambda:InvokeFunction
-                FunctionName: !Ref AppFunction
-                Principal: events.amazonaws.com
-                SourceArn: !GetAtt HeartbeatRule.Arn
-
-            VendorKeys:
-              Type: AWS::SecretsManager::Secret
-              Properties:
-                Name: !Sub '${ProjectName}/${Environment}/TrailCam/VendorKeys'
-                Description: Placeholder for partner API keys
-                SecretString: '{}'
-
-          Outputs:
-            ApiEndpoint:
-              Description: Invoke URL of the HTTP API (default stage)
-              Value: !Sub 'https://${HttpApi}.execute-api.${AWS::Region}.amazonaws.com'
-            WebBucketOut:
-              Description: Web/media static bucket name
-              Value: !Ref WebBucket
-            MediaBucketOut:
-              Description: Uploads/media bucket name
-              Value: !Ref MediaBucket
-            DynamoTableOut:
-              Description: DynamoDB table name
-              Value: !Ref AppTable
-            FunctionName:
-              Description: Lambda function name
-              Value: !Ref AppFunction
-          YAML
-
-      - name: Validate template
-        run: aws cloudformation validate-template --template-body file://${{ env.TEMPLATE_PATH }}
-
-      - name: Create stack (if missing)
-        id: create
-        shell: bash
-        run: |
-          set -e
-          if aws cloudformation describe-stacks --stack-name "${STACK_NAME}" >/dev/null 2>&1; then
-            echo "EXISTS=true" >> $GITHUB_OUTPUT
-          else
-            echo "EXISTS=false" >> $GITHUB_OUTPUT
-            aws cloudformation create-stack \
-              --stack-name "${STACK_NAME}" \
-              --template-body file://${TEMPLATE_PATH} \
-              --capabilities CAPABILITY_NAMED_IAM \
-              --parameters \
-                ParameterKey=ProjectName,ParameterValue=${PROJECT_NAME} \
-                ParameterKey=Environment,ParameterValue=${ENV_NAME} \
-                ParameterKey=CreateApiAuthorizer,ParameterValue=false \
-                ParameterKey=CognitoUserPoolArn,ParameterValue=""
-            aws cloudformation wait stack-create-complete --stack-name "${STACK_NAME}"
-          fi
-
-      - name: Update stack (if exists)
-        if: steps.create.outputs.EXISTS == 'true'
-        shell: bash
-        run: |
-          set -e
-          set +e
-          aws cloudformation update-stack \
-            --stack-name "${STACK_NAME}" \
-            --template-body file://${TEMPLATE_PATH} \
-            --capabilities CAPABILITY_NAMED_IAM \
-            --parameters \
-              ParameterKey=ProjectName,ParameterValue=${PROJECT_NAME} \
-              ParameterKey=Environment,ParameterValue=${ENV_NAME} \
-              ParameterKey=CreateApiAuthorizer,ParameterValue=false \
-              ParameterKey=CognitoUserPoolArn,ParameterValue=""
-          rc=$?
-          set -e
-          if [ "$rc" -ne 0 ]; then
-            echo "No updates (or benign ValidationError)."
-          else
-            aws cloudformation wait stack-update-complete --stack-name "${STACK_NAME}"
-          fi
-
-      - name: Derive API endpoint from stack resources
-        id: api
-        run: |
-          API_ID=$(aws cloudformation describe-stack-resources \
-            --stack-name "${STACK_NAME}" \
-            --logical-resource-id HttpApi \
-            --query 'StackResources[0].PhysicalResourceId' --output text)
-          echo "API_ENDPOINT=https://${API_ID}.execute-api.${AWS_REGION}.amazonaws.com" >> $GITHUB_ENV
-          echo "API Endpoint: https://${API_ID}.execute-api.${AWS_REGION}.amazonaws.com"
-
-      - name: Wait for /health (retry)
-        run: |
-          set -e
-          for i in {1..24}; do
-            if curl -sf "${API_ENDPOINT}/health" >/dev/null; then
-              echo "Health OK"; exit 0
-            fi
-            echo "Waiting for health... ($i/24)"; sleep 5
-          done
-          echo "Health check failed"; exit 1
-
-      - name: Seed data
-        run: |
-          set -e
-          curl -sf "${API_ENDPOINT}/seed" >/dev/null
-          sleep 3
-
-      - name: Verify DynamoDB item exists
-        run: |
-          set -e
-          VAL=$(aws dynamodb get-item \
-            --table-name "${DDB_TABLE}" \
-            --key '{"pk":{"S":"DEMO"},"sk":{"S":"SEED"}}' \
-            --consistent-read \
-            --query 'Item.pk.S' --output text || echo "")
-          if [ "$VAL" != "DEMO" ]; then
-            echo "DynamoDB verification FAILED (DEMO/SEED not found)"; exit 1
-          fi
-          echo "DynamoDB verification OK"
