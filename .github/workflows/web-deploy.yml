@@ -1,0 +1,221 @@
+name: HUNTECH Web Deploy (build + upload + probe)
+
+on:
+  workflow_dispatch:
+    inputs:
+      dist_input:
+        description: "CloudFront Distribution ID (E...) OR Domain (dxxxxx.cloudfront.net). Leave blank to auto-discover from core.huntechusa.com"
+        required: false
+        default: ""
+      app_path:
+        description: "Path to frontend project (where package.json lives)"
+        required: false
+        default: "."
+      build_dir:
+        description: "Optional build output dir (e.g., dist, build, out). Leave blank to auto-detect"
+        required: false
+        default: ""
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    env:
+      AWS_REGION: us-east-1
+      ROLE_TO_ASSUME: arn:aws:iam::382773571217:role/HUNTECH-CICD
+      WEB_BUCKET: huntech-web-382773571217-us-east-1-core
+      SITE_FQDN: core.huntechusa.com
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.ROLE_TO_ASSUME }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Install tools
+        run: |
+          set -e
+          sudo apt-get update -y
+          sudo apt-get install -y jq dnsutils curl
+
+      # ---------- Resolve distribution ----------
+      - name: Resolve Dist ID (input → domain → CNAME of site → origin match)
+        id: dist
+        env:
+          DIST_INPUT: ${{ github.event.inputs.dist_input }}
+        run: |
+          set -e
+          DIST_ID=""
+          DIST_DOMAIN=""
+
+          # 1) If input provided, normalize to ID and domain
+          if [ -n "${DIST_INPUT}" ]; then
+            if echo "${DIST_INPUT}" | grep -qiE '\.cloudfront\.net$'; then
+              DIST_DOMAIN="${DIST_INPUT}"
+              DIST_ID=$(aws cloudfront list-distributions \
+                --query "DistributionList.Items[?DomainName=='${DIST_DOMAIN}'].Id | [0]" \
+                --output text 2>/dev/null || true)
+            else
+              DIST_ID="${DIST_INPUT}"
+              DIST_DOMAIN=$(aws cloudfront get-distribution --id "${DIST_ID}" \
+                --query "Distribution.DomainName" --output text 2>/dev/null || true)
+            fi
+          fi
+
+          # 2) Discover from site's public CNAME
+          if [ -z "$DIST_ID" ] || [ "$DIST_ID" = "None" ]; then
+            CF_CNAME=$(dig +short CNAME "${SITE_FQDN}" | sed 's/\.$//' || true)
+            if [ -n "$CF_CNAME" ]; then
+              DIST_DOMAIN="$CF_CNAME"
+              DIST_ID=$(aws cloudfront list-distributions \
+                --query "DistributionList.Items[?DomainName=='${DIST_DOMAIN}'].Id | [0]" \
+                --output text 2>/dev/null || true)
+            fi
+          fi
+
+          # 3) Fallback: any distribution whose origin uses this bucket
+          if [ -z "$DIST_ID" ] || [ "$DIST_ID" = "None" ]; then
+            ORIGIN="${WEB_BUCKET}.s3.${AWS_REGION}.amazonaws.com"
+            DIST_ID=$(aws cloudfront list-distributions \
+              --query "DistributionList.Items[?contains(Origins.Items[].DomainName, '${ORIGIN}')].Id | [0]" \
+              --output text 2>/dev/null || true)
+            if [ "$DIST_ID" != "None" ] && [ -n "$DIST_ID" ]; then
+              DIST_DOMAIN=$(aws cloudfront get-distribution --id "${DIST_ID}" \
+                --query "Distribution.DomainName" --output text 2>/dev/null || true)
+            fi
+          fi
+
+          if [ -z "$DIST_ID" ] || [ "$DIST_ID" = "None" ]; then
+            echo "ERROR: Could not resolve a CloudFront distribution. Provide dist_input or ensure DNS CNAME exists (core.huntechusa.com → CloudFront)."
+            exit 1
+          fi
+
+          echo "DIST_ID=$DIST_ID" >> $GITHUB_ENV
+          echo "DIST_DOMAIN=$DIST_DOMAIN" >> $GITHUB_ENV
+          echo "Using Distribution: $DIST_ID ($DIST_DOMAIN)"
+
+      # ---------- Build (auto-detect PM) ----------
+      - name: Build frontend (auto-detect package manager)
+        working-directory: ${{ github.event.inputs.app_path }}
+        run: |
+          set -e
+          if [ -f package.json ]; then
+            # Prefer existing lockfiles; default to npm if none
+            if [ -f pnpm-lock.yaml ] && command -v pnpm >/dev/null 2>&1; then
+              pnpm install --frozen-lockfile || pnpm install
+              pnpm run build || pnpm build || true
+            elif [ -f yarn.lock ] && command -v yarn >/dev/null 2>&1; then
+              yarn install --frozen-lockfile || yarn install
+              yarn build || true
+            else
+              npm ci || npm install
+              npm run build || true
+            fi
+          else
+            echo "No package.json found; will deploy a fallback index.html if no build dir is detected."
+          fi
+
+      - name: Resolve build directory
+        id: outdir
+        working-directory: ${{ github.event.inputs.app_path }}
+        env:
+          BUILD_DIR_IN: ${{ github.event.inputs.build_dir }}
+        run: |
+          set -e
+          OUT=""
+          if [ -n "$BUILD_DIR_IN" ] && [ -d "$BUILD_DIR_IN" ]; then
+            OUT="$BUILD_DIR_IN"
+          else
+            for d in dist build out public; do
+              if [ -d "$d" ]; then OUT="$d"; break; fi
+            done
+          fi
+          echo "OUT_DIR=${OUT}" >> $GITHUB_ENV
+          if [ -n "$OUT" ]; then echo "Using build output dir: $OUT"; else echo "No build dir found; will deploy fallback index.html."; fi
+
+      # ---------- Upload site ----------
+      - name: Upload site to S3
+        working-directory: ${{ github.event.inputs.app_path }}
+        run: |
+          set -e
+          if [ -n "${OUT_DIR}" ]; then
+            aws s3 sync "${OUT_DIR}/" "s3://${WEB_BUCKET}/" --delete --cache-control max-age=60
+          else
+            mkdir -p _tmp_site
+            printf '%s\n' '<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>HUNTΞCH — Core</title><body style="font-family:system-ui;background:#111;color:#fff;padding:3rem"><h1>HUNTΞCH — Core</h1><p>CloudFront + OAC + private S3 is working.</p></body>' > _tmp_site/index.html
+            aws s3 sync _tmp_site/ "s3://${WEB_BUCKET}/" --delete --cache-control max-age=60
+          fi
+
+      # ---------- Self-heal CF config & bucket policy (no heredocs; safe JSON via jq) ----------
+      - name: Ensure Default Root = index.html
+        run: |
+          set -e
+          CFG=$(aws cloudfront get-distribution-config --id "${DIST_ID}")
+          ETAG=$(echo "$CFG" | jq -r .ETag)
+          DC=$(echo "$CFG" | jq -r '.DistributionConfig')
+          CURRENT=$(echo "$DC" | jq -r '.DefaultRootObject // empty')
+          if [ "$CURRENT" != "index.html" ]; then
+            NEW=$(echo "$DC" | jq '.DefaultRootObject = "index.html"')
+            printf '%s' "$NEW" > /tmp/new-cf.json
+            aws cloudfront update-distribution --id "${DIST_ID}" --if-match "${ETAG}" \
+              --distribution-config file:///tmp/new-cf.json >/dev/null
+            echo "Set DefaultRootObject=index.html"
+          else
+            echo "DefaultRootObject already index.html"
+          fi
+
+      - name: Re-apply OAC bucket policy for this distribution
+        run: |
+          set -e
+          POLICY=$(jq -n --arg bucket "${WEB_BUCKET}" --arg dist "${DIST_ID}" --arg acct "382773571217" '{
+            Version:"2012-10-17",
+            Statement:[{
+              Sid:"AllowCloudFrontServicePrincipalReadOnly",
+              Effect:"Allow",
+              Principal:{Service:"cloudfront.amazonaws.com"},
+              Action:"s3:GetObject",
+              Resource:("arn:aws:s3:::"+$bucket+"/*"),
+              Condition:{StringEquals:{"AWS:SourceArn":("arn:aws:cloudfront::"+$acct+":distribution/"+$dist)}}
+            }]
+          }')
+          printf '%s' "$POLICY" > /tmp/policy.json
+          aws s3api put-bucket-policy --bucket "${WEB_BUCKET}" --policy file:///tmp/policy.json
+          echo "Bucket policy applied for distribution ${DIST_ID}"
+
+      # ---------- Invalidate & probe ----------
+      - name: Invalidate CloudFront
+        run: |
+          set -e
+          aws cloudfront create-invalidation --distribution-id "${DIST_ID}" --paths "/*" >/dev/null
+          echo "Invalidation created"
+
+      - name: Probe /index.html (expect 200)
+        run: |
+          set -e
+          URL="https://${{ env.SITE_FQDN }}/index.html"
+          for i in $(seq 1 48); do
+            CODE=$(curl -s -o /dev/null -w "%{http_code}" "$URL")
+            echo "GET $URL -> $CODE (try $i/48)"
+            [ "$CODE" = "200" ] && exit 0
+            sleep 5
+          done
+          echo "index.html did not return 200 yet"; exit 1
+
+      - name: Probe / (expect 200)
+        if: ${{ success() }}
+        run: |
+          set -e
+          URL="https://${{ env.SITE_FQDN }}/"
+          for i in $(seq 1 48); do
+            CODE=$(curl -s -o /dev/null -w "%{http_code}" "$URL")
+            echo "GET $URL -> $CODE (try $i/48)"
+            [ "$CODE" = "200" ] && { echo "domain ok: $URL"; exit 0; }
+            sleep 5
+          done
+          echo "Root not 200 yet; give edges a minute and refresh"
