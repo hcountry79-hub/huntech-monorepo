@@ -93,3 +93,152 @@ jobs:
                     - Id: S3Origin
                       DomainName: !Sub '${WebBucketName}.s3.${AWS::Region}.amazonaws.com'
                       S3OriginConfig: {}
+                      OriginAccessControlId: !GetAtt OAC.Id
+                  DefaultCacheBehavior:
+                    TargetOriginId: S3Origin
+                    ViewerProtocolPolicy: redirect-to-https
+                    AllowedMethods: [GET, HEAD]
+                    CachedMethods: [GET, HEAD]
+                    Compress: true
+                    CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6   # AWS CachingOptimized
+
+            BucketPolicy:
+              Type: AWS::S3::BucketPolicy
+              Properties:
+                Bucket: !Ref WebBucketName
+                PolicyDocument:
+                  Version: '2012-10-17'
+                  Statement:
+                    - Sid: AllowCloudFrontReadOAC
+                      Effect: Allow
+                      Principal:
+                        Service: cloudfront.amazonaws.com
+                      Action: s3:GetObject
+                      Resource: !Sub 'arn:aws:s3:::${WebBucketName}/*'
+                      Condition:
+                        StringEquals:
+                          AWS:SourceArn: !Sub 'arn:aws:cloudfront::${AWS::AccountId}:distribution/${Distribution.Id}'
+
+          Outputs:
+            DistributionId:
+              Value: !GetAtt Distribution.Id
+              Description: CloudFront distribution ID
+            DistributionDomainName:
+              Value: !GetAtt Distribution.DomainName
+              Description: CloudFront domain name
+          YAML
+
+      - name: Validate template
+        run: aws cloudformation validate-template --template-body file://${{ env.TEMPLATE_PATH }}
+
+      # === No change sets: create-stack / update-stack path ===
+      - name: Create stack (if missing)
+        id: create
+        shell: bash
+        run: |
+          set -e
+          if aws cloudformation describe-stacks --stack-name "${STACK_NAME}" >/dev/null 2>&1; then
+            echo "EXISTS=true" >> $GITHUB_OUTPUT
+            echo "Stack exists."
+          else
+            echo "EXISTS=false" >> $GITHUB_OUTPUT
+            echo "Creating stack..."
+            aws cloudformation create-stack \
+              --stack-name "${STACK_NAME}" \
+              --template-body file://${TEMPLATE_PATH} \
+              --capabilities CAPABILITY_NAMED_IAM \
+              --parameters ParameterKey=WebBucketName,ParameterValue="${WEB_BUCKET}"
+            echo "Waiting for CREATE_COMPLETE..."
+            aws cloudformation wait stack-create-complete --stack-name "${STACK_NAME}"
+          fi
+
+      - name: Update stack (if exists)
+        if: steps.create.outputs.EXISTS == 'true'
+        shell: bash
+        run: |
+          set -e
+          echo "Updating stack..."
+          set +e
+          aws cloudformation update-stack \
+            --stack-name "${STACK_NAME}" \
+            --template-body file://${TEMPLATE_PATH} \
+            --capabilities CAPABILITY_NAMED_IAM \
+            --parameters ParameterKey=WebBucketName,ParameterValue="${WEB_BUCKET}"
+          rc=$?
+          set -e
+          if [ "$rc" -ne 0 ]; then
+            echo "No updates (or benign ValidationError)."; exit 0
+          fi
+          echo "Waiting for UPDATE_COMPLETE..."
+          aws cloudformation wait stack-update-complete --stack-name "${STACK_NAME}"
+
+      - name: Read outputs
+        id: cfn
+        run: |
+          DIST_ID=$(aws cloudformation describe-stacks --stack-name "${STACK_NAME}" \
+            --query "Stacks[0].Outputs[?OutputKey=='DistributionId'].OutputValue" --output text)
+          DIST_DNS=$(aws cloudformation describe-stacks --stack-name "${STACK_NAME}" \
+            --query "Stacks[0].Outputs[?OutputKey=='DistributionDomainName'].OutputValue" --output text)
+          echo "DIST_ID=$DIST_ID" >> $GITHUB_ENV
+          echo "DIST_DNS=$DIST_DNS" >> $GITHUB_ENV
+          echo "CloudFront: $DIST_ID  $DIST_DNS"
+
+      - name: Create sample site files
+        run: |
+          mkdir -p site
+          cat > site/index.html <<'HTML'
+          <!doctype html>
+          <html lang="en">
+          <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1">
+            <title>HUNTΞCH — Core</title>
+            <style>
+              body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 0; padding: 48px; background:#111; color:#fefefe; }
+              .card { max-width: 720px; margin: auto; background:#222; padding: 32px; border-radius: 12px; }
+              h1 { margin-top: 0; letter-spacing: .5px; }
+              a { color: #ffd34d; text-decoration: none; }
+              .tag { display:inline-block; padding:4px 10px; border-radius:999px; background:#3a2e11; color:#ffd34d; font-weight:600; margin-bottom:12px;}
+            </style>
+          </head>
+          <body>
+            <div class="card">
+              <div class="tag">HUNTΞCH • Core Web</div>
+              <h1>Where Innovation Meets Tradition</h1>
+              <p>This static page is served from a private S3 bucket through CloudFront (OAC).</p>
+              <p>Next steps: brand theme, docs, and app shell.</p>
+            </div>
+          </body>
+          </html>
+          HTML
+
+      - name: Upload site to S3 (private bucket, accessed only by CloudFront)
+        run: |
+          aws s3 sync site/ "s3://${WEB_BUCKET}/" --delete --cache-control max-age=60
+
+      - name: Invalidate CloudFront
+        run: |
+          aws cloudfront create-invalidation --distribution-id "${DIST_ID}" --paths "/*" >/dev/null
+
+      - name: Wait for distribution to be Deployed
+        run: |
+          set -e
+          for i in {1..60}; do
+            STATUS=$(aws cloudfront get-distribution --id "${DIST_ID}" --query "Distribution.Status" --output text)
+            echo "CloudFront status: $STATUS"
+            [ "$STATUS" = "Deployed" ] && exit 0
+            sleep 10
+          done
+          echo "Distribution did not become Deployed in time"; exit 1
+
+      - name: Probe page
+        run: |
+          set -e
+          URL="https://${DIST_DNS}/"
+          echo "Visiting: $URL"
+          for i in {1..12}; do
+            CODE=$(curl -s -o /dev/null -w "%{http_code}" "$URL")
+            [ "$CODE" = "200" ] && echo "OK" && exit 0
+            echo "Waiting for edge propagation... ($i/12)"; sleep 10
+          done
+          echo "Site not reachable (HTTP $CODE)"; exit 1
