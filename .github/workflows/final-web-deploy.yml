@@ -1,0 +1,162 @@
+name: HUNTECH Final Web Deploy (simple, self-healing)
+
+on:
+  workflow_dispatch:
+    inputs:
+      cf_domain:
+        description: "CloudFront domain (leave blank to auto-discover). If you know it, paste e.g. d2stduzbo1av87.cloudfront.net"
+        required: false
+        default: ""
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    env:
+      AWS_REGION: us-east-1
+      ROLE_TO_ASSUME: arn:aws:iam::382773571217:role/HUNTECH-CICD
+      WEB_BUCKET: huntech-web-382773571217-us-east-1-core
+      SITE_FQDN: core.huntechusa.com
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.ROLE_TO_ASSUME }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Install tools
+        run: |
+          set -e
+          sudo apt-get update -y
+          sudo apt-get install -y jq dnsutils curl
+
+      - name: Resolve CloudFront distribution (domain → ID)
+        id: dist
+        env:
+          CF_DOMAIN_INPUT: ${{ github.event.inputs.cf_domain }}
+        run: |
+          set -e
+          DIST_DOMAIN=""
+          DIST_ID=""
+
+          # 1) If user supplied domain, use it
+          if [ -n "${CF_DOMAIN_INPUT}" ]; then
+            DIST_DOMAIN="${CF_DOMAIN_INPUT}"
+          fi
+
+          # 2) If missing, try site CNAME
+          if [ -z "${DIST_DOMAIN}" ]; then
+            CNAME=$(dig +short CNAME "${SITE_FQDN}" | sed 's/\.$//' || true)
+            if [ -n "${CNAME}" ]; then
+              DIST_DOMAIN="${CNAME}"
+            fi
+          fi
+
+          # 3) If still missing, fall back to the known working domain we attached earlier
+          if [ -z "${DIST_DOMAIN}" ]; then
+            DIST_DOMAIN="d2stduzbo1av87.cloudfront.net"
+          fi
+
+          # Resolve ID from domain
+          DIST_ID=$(aws cloudfront list-distributions \
+            --query "DistributionList.Items[?DomainName=='${DIST_DOMAIN}'].Id | [0]" \
+            --output text 2>/dev/null || true)
+
+          if [ -z "${DIST_ID}" ] || [ "${DIST_ID}" = "None" ]; then
+            echo "ERROR: Could not resolve distribution ID from domain ${DIST_DOMAIN}"; exit 1
+          fi
+
+          echo "DIST_ID=${DIST_ID}"      >> $GITHUB_ENV
+          echo "DIST_DOMAIN=${DIST_DOMAIN}" >> $GITHUB_ENV
+          echo "Using distribution: ${DIST_ID} (${DIST_DOMAIN})"
+
+      - name: Upload index.html to bucket root (safe default)
+        run: |
+          set -e
+          mkdir -p _site
+          cat > _site/index.html <<'HTML'
+<!doctype html><html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>HUNTΞCH — Core</title>
+<style>
+body{font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;margin:0;background:#111;color:#fff;padding:3rem}
+.wrap{max-width:720px;margin:5rem auto;background:#222;padding:2rem;border-radius:12px}
+h1{margin-top:0}.tag{display:inline-block;padding:4px 10px;border-radius:999px;background:#3a2e11;color:#ffd34d;font-weight:600;margin-bottom:12px}
+</style></head><body><div class="wrap">
+<div class="tag">HUNTΞCH • CDN</div><h1>Where Innovation Meets Tradition</h1>
+<p>Private S3 via CloudFront (OAC) — deployment OK.</p>
+</div></body></html>
+HTML
+          aws s3 sync _site/ "s3://${WEB_BUCKET}/" --delete --cache-control max-age=60
+
+      - name: Ensure DefaultRootObject = index.html
+        run: |
+          set -e
+          CFG=$(aws cloudfront get-distribution-config --id "${DIST_ID}")
+          ETAG=$(echo "$CFG" | jq -r .ETag)
+          DC=$(echo "$CFG" | jq -r '.DistributionConfig')
+          ROOT=$(echo "$DC" | jq -r '.DefaultRootObject // empty')
+          if [ "$ROOT" != "index.html" ]; then
+            NEW=$(echo "$DC" | jq '.DefaultRootObject = "index.html"')
+            printf '%s' "$NEW" > /tmp/new-cf.json
+            aws cloudfront update-distribution --id "${DIST_ID}" --if-match "${ETAG}" \
+              --distribution-config file:///tmp/new-cf.json >/dev/null
+            echo "Set DefaultRootObject=index.html"
+          else
+            echo "DefaultRootObject already index.html"
+          fi
+
+      - name: Apply OAC bucket policy (allow only this distribution)
+        run: |
+          set -e
+          POLICY=$(jq -n --arg bucket "${WEB_BUCKET}" --arg dist "${DIST_ID}" --arg acct "382773571217" '{
+            Version:"2012-10-17",
+            Statement:[{
+              Sid:"AllowCloudFrontServicePrincipalReadOnly",
+              Effect:"Allow",
+              Principal:{Service:"cloudfront.amazonaws.com"},
+              Action:"s3:GetObject",
+              Resource:("arn:aws:s3:::"+$bucket+"/*"),
+              Condition:{StringEquals:{"AWS:SourceArn":("arn:aws:cloudfront::"+$acct+":distribution/"+$dist)}}
+            }]
+          }')
+          printf '%s' "$POLICY" > /tmp/policy.json
+          aws s3api put-bucket-policy --bucket "${WEB_BUCKET}" --policy file:///tmp/policy.json
+          echo "Bucket policy applied for ${DIST_ID}"
+
+      - name: Invalidate CloudFront
+        run: |
+          set -e
+          aws cloudfront create-invalidation --distribution-id "${DIST_ID}" --paths "/*" >/dev/null
+          echo "Invalidation created"
+
+      - name: Probe /index.html (expect 200)
+        run: |
+          set -e
+          URL="https://${SITE_FQDN}/index.html"
+          for i in $(seq 1 48); do
+            CODE=$(curl -s -o /dev/null -w "%{http_code}" "$URL")
+            echo "GET $URL -> $CODE (try $i/48)"
+            [ "$CODE" = "200" ] && exit 0
+            sleep 5
+          done
+          echo "index.html did not return 200 yet"; exit 1
+
+      - name: Probe / (expect 200)
+        if: ${{ success() }}
+        run: |
+          set -e
+          URL="https://${SITE_FQDN}/"
+          for i in $(seq 1 48); do
+            CODE=$(curl -s -o /dev/null -w "%{http_code}" "$URL")
+            echo "GET $URL -> $CODE (try $i/48)"
+            [ "$CODE" = "200" ] && { echo "domain ok: $URL"; exit 0; }
+            sleep 5
+          done
+          echo "Root not 200 yet; wait a minute and refresh"
