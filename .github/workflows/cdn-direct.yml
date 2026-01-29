@@ -1,111 +1,4 @@
-name: HUNTECH CDN (Direct API)
-
-on:
-  workflow_dispatch:
-
-jobs:
-  cdn_direct:
-    runs-on: ubuntu-latest
-    permissions:
-      id-token: write
-      contents: read
-    env:
-      AWS_REGION: us-east-1
-      ACCOUNT_ID: '382773571217'
-      ROLE_TO_ASSUME: arn:aws:iam::382773571217:role/HUNTECH-CICD
-      WEB_BUCKET: huntech-web-382773571217-us-east-1-core
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Configure AWS credentials (OIDC)
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: ${{ env.ROLE_TO_ASSUME }}
-          aws-region: ${{ env.AWS_REGION }}
-
-      - name: Ensure jq is installed
-        shell: bash
-        run: |
-          set -e
-          if ! command -v jq >/dev/null 2>&1; then
-            sudo apt-get update -y
-            sudo apt-get install -y jq
-          fi
-
-      - name: Ensure minimal permissions for this run (inline policy)
-        shell: bash
-        run: |
-          set -e
-          POLICY=$(jq -n --arg bucket "$WEB_BUCKET" '{
-            Version:"2012-10-17",
-            Statement:[
-              {
-                Sid:"CloudFrontManage",
-                Effect:"Allow",
-                Action:[
-                  "cloudfront:CreateDistribution",
-                  "cloudfront:UpdateDistribution",
-                  "cloudfront:GetDistribution",
-                  "cloudfront:GetDistributionConfig",
-                  "cloudfront:ListDistributions",
-                  "cloudfront:CreateInvalidation",
-                  "cloudfront:CreateOriginAccessControl",
-                  "cloudfront:ListOriginAccessControls",
-                  "cloudfront:GetOriginAccessControl"
-                ],
-                Resource:"*"
-              },
-              {
-                Sid:"S3SiteOps",
-                Effect:"Allow",
-                Action:[
-                  "s3:GetBucketPolicy",
-                  "s3:PutBucketPolicy",
-                  "s3:PutObject",
-                  "s3:GetObject",
-                  "s3:DeleteObject"
-                ],
-                Resource:[
-                  ("arn:aws:s3:::"+$bucket),
-                  ("arn:aws:s3:::"+$bucket+"/*")
-                ]
-              }
-            ]
-          }')
-          printf '%s' "$POLICY" > /tmp/HUNTECH-CDN-Direct.json
-          aws iam put-role-policy \
-            --role-name HUNTECH-CICD \
-            --policy-name HUNTECH-CDN-Direct \
-            --policy-document file:///tmp/HUNTECH-CDN-Direct.json
-
-      - name: Resolve or create OAC (sigv4, always sign)
-        id: oac
-        shell: bash
-        run: |
-          set -e
-          NAME="oac-${WEB_BUCKET}"
-          OAC_ID=$(aws cloudfront list-origin-access-controls \
-            --query "OriginAccessControlList.Items[?Name=='${NAME}'].Id" \
-            --output text 2>/dev/null || true)
-
-          if [ -z "$OAC_ID" ] || [ "$OAC_ID" = "None" ]; then
-            CFG=$(jq -n \
-              --arg name "$NAME" \
-              --arg desc "OAC for $WEB_BUCKET" \
-              '{Name:$name,Description:$desc,SigningProtocol:"sigv4",SigningBehavior:"always",OriginAccessControlOriginType:"s3"}')
-
-            OAC_ID=$(aws cloudfront create-origin-access-control \
-              --origin-access-control-config "$CFG" \
-              --query "OriginAccessControl.Id" --output text)
-            echo "Created OAC: $OAC_ID"
-          else
-            echo "Using OAC: $OAC_ID"
-          fi
-          echo "OAC_ID=$OAC_ID" >> $GITHUB_ENV
-
-      - name: Find or create CloudFront distribution
+- name: Find or create CloudFront distribution
         id: dist
         shell: bash
         run: |
@@ -113,6 +6,7 @@ jobs:
           ORIGIN_DOMAIN="${WEB_BUCKET}.s3.${AWS_REGION}.amazonaws.com"
           COMMENT="HUNTECH Web CDN for ${WEB_BUCKET}"
 
+          # Try to find an existing distribution that already uses this origin domain and our comment
           DIST_ID=$(aws cloudfront list-distributions \
             --query "DistributionList.Items[?contains(Origins.Items[].DomainName, '${ORIGIN_DOMAIN}') && Comment=='${COMMENT}'].Id | [0]" \
             --output text 2>/dev/null || true)
@@ -121,35 +15,36 @@ jobs:
             echo "Creating distribution..."
             CALLER_REF="huntech-$(date +%s)"
 
+            # Build a distribution config for OAC: keep S3OriginConfig, set OriginAccessIdentity to an empty string,
+            # and attach OriginAccessControlId to the origin. Omit 'CachedMethods' (API doesn't accept it here).
             DIST_CFG=$(jq -n \
               --arg ref "$CALLER_REF" \
               --arg comment "$COMMENT" \
               --arg origin "$ORIGIN_DOMAIN" \
               --arg oac "$OAC_ID" \
               '{
-                CallerReference:$ref,
-                Comment:$comment,
-                Enabled:true,
-                Origins:{
-                  Quantity:1,
-                  Items:[{
-                    Id:"S3Origin",
-                    DomainName:$origin,
-                    S3OriginConfig:{},
-                    OriginAccessControlId:$oac
+                CallerReference: $ref,
+                Comment: $comment,
+                Enabled: true,
+                Origins: {
+                  Quantity: 1,
+                  Items: [{
+                    Id: "S3Origin",
+                    DomainName: $origin,
+                    S3OriginConfig: { OriginAccessIdentity: "" },
+                    OriginAccessControlId: $oac
                   }]
                 },
-                DefaultCacheBehavior:{
-                  TargetOriginId:"S3Origin",
-                  ViewerProtocolPolicy:"redirect-to-https",
-                  AllowedMethods:{Quantity:2,Items:["GET","HEAD"]},
-                  CachedMethods:{Quantity:2,Items:["GET","HEAD"]},
-                  Compress:true,
-                  CachePolicyId:"658327ea-f89d-4fab-a63d-7e88639e58f6"
+                DefaultCacheBehavior: {
+                  TargetOriginId: "S3Origin",
+                  ViewerProtocolPolicy: "redirect-to-https",
+                  AllowedMethods: { Quantity: 2, Items: ["GET","HEAD"] },
+                  Compress: true,
+                  CachePolicyId: "658327ea-f89d-4fab-a63d-7e88639e58f6"
                 },
-                DefaultRootObject:"index.html",
-                PriceClass:"PriceClass_100",
-                HttpVersion:"http2"
+                DefaultRootObject: "index.html",
+                PriceClass: "PriceClass_100",
+                HttpVersion: "http2"
               }')
 
             DIST_ID=$(aws cloudfront create-distribution \
@@ -159,74 +54,5 @@ jobs:
           else
             echo "Using distribution: $DIST_ID"
           fi
+
           echo "DIST_ID=$DIST_ID" >> $GITHUB_ENV
-
-      - name: Wait until distribution is Deployed
-        shell: bash
-        run: |
-          set -e
-          for i in $(seq 1 90); do
-            DNS=$(aws cloudfront get-distribution --id "$DIST_ID" --query "Distribution.DomainName" --output text 2>/dev/null || true)
-            STATUS=$(aws cloudfront get-distribution --id "$DIST_ID" --query "Distribution.Status" --output text 2>/dev/null || true)
-            if [ -n "$DNS" ] && [ "$DNS" != "None" ]; then
-              echo "Distribution: $DNS  Status: $STATUS"
-              if [ "$STATUS" = "Deployed" ]; then
-                echo "DIST_DNS=$DNS" >> $GITHUB_ENV
-                break
-              fi
-            else
-              echo "Waiting for distribution visibility... ($i/90)"
-            fi
-            sleep 7
-          done
-          if [ -z "${DIST_DNS:-}" ]; then
-            echo "Distribution not Deployed in time"; exit 1
-          fi
-
-      - name: Apply S3 bucket policy (allow only this distribution)
-        shell: bash
-        run: |
-          set -e
-          POLICY=$(jq -n \
-            --arg bucket "$WEB_BUCKET" \
-            --arg acct "$ACCOUNT_ID" \
-            --arg dist "$DIST_ID" \
-            '{
-              Version:"2012-10-17",
-              Statement:[{
-                Sid:"AllowCloudFrontServicePrincipalReadOnly",
-                Effect:"Allow",
-                Principal:{Service:"cloudfront.amazonaws.com"},
-                Action:"s3:GetObject",
-                Resource:("arn:aws:s3:::"+$bucket+"/*"),
-                Condition:{StringEquals:{"AWS:SourceArn":("arn:aws:cloudfront::"+$acct+":distribution/"+$dist)}}
-              }]
-            }')
-          printf '%s' "$POLICY" > /tmp/s3-policy.json
-          aws s3api put-bucket-policy --bucket "$WEB_BUCKET" --policy file:///tmp/s3-policy.json
-
-      - name: Upload sample page
-        shell: bash
-        run: |
-          set -e
-          mkdir -p site
-          printf '%s\n' '<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>HUNTECH — Core CDN</title><style>body{font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;margin:0;background:#111;color:#fefefe}.wrap{max-width:720px;margin:5rem auto;background:#222;padding:2rem;border-radius:12px}h1{margin-top:0}.tag{display:inline-block;padding:4px 10px;border-radius:999px;background:#3a2e11;color:#ffd34d;font-weight:600;margin-bottom:12px}</style></head><body><div class="wrap"><div class="tag">HUNTECH • CDN</div><h1>Where Innovation Meets Tradition</h1><p>Served privately from S3 via CloudFront (OAC).</p></div></body></html>' > site/index.html
-          aws s3 sync site/ "s3://${WEB_BUCKET}/" --delete --cache-control max-age=60
-
-      - name: Invalidate and probe
-        shell: bash
-        run: |
-          set -e
-          aws cloudfront create-invalidation --distribution-id "$DIST_ID" --paths "/*" >/dev/null
-          URL="https://${DIST_DNS}/"
-          echo "Visiting: $URL"
-          for i in $(seq 1 24); do
-            CODE=$(curl -s -o /dev/null -w "%{http_code}" "$URL")
-            echo "Attempt $i => $CODE"
-            if [ "$CODE" = "200" ]; then
-              echo "cdn ok: $URL"
-              exit 0
-            fi
-            sleep 5
-          done
-          echo "CDN not ready yet"; exit 1
