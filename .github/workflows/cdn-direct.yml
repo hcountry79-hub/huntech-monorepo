@@ -1,4 +1,4 @@
-name: HUNTECH CDN (Direct API — create OAC + Distribution + lock bucket)
+name: HUNTECH CDN (Direct API)
 
 on:
   workflow_dispatch:
@@ -25,11 +25,10 @@ jobs:
           role-to-assume: ${{ env.ROLE_TO_ASSUME }}
           aws-region: ${{ env.AWS_REGION }}
 
-      # Minimal, focused permissions for this run
-      - name: Ensure CloudFront/S3 read perms (inline)
+      - name: Ensure permissions for CloudFront/S3 (inline policy)
         shell: bash
         run: |
-          cat > /tmp/HUNTECH-CDN-Direct.json <<'JSON'
+          cat > /tmp/HUNTECH-CDN-Direct.json <<EOF
           {
             "Version": "2012-10-17",
             "Statement": [
@@ -50,14 +49,14 @@ jobs:
                 "Resource": "*"
               },
               {
-                "Sid": "S3Policy",
+                "Sid": "S3SiteOps",
                 "Effect": "Allow",
                 "Action": [
                   "s3:GetBucketPolicy",
                   "s3:PutBucketPolicy",
                   "s3:PutObject",
-                  "s3:DeleteObject",
-                  "s3:GetObject"
+                  "s3:GetObject",
+                  "s3:DeleteObject"
                 ],
                 "Resource": [
                   "arn:aws:s3:::${WEB_BUCKET}",
@@ -66,24 +65,23 @@ jobs:
               }
             ]
           }
-          JSON
+          EOF
           aws iam put-role-policy \
             --role-name HUNTECH-CICD \
             --policy-name HUNTECH-CDN-Direct \
             --policy-document file:///tmp/HUNTECH-CDN-Direct.json
 
-      - name: Resolve or create OAC (sigv4, always sign)
+      - name: Resolve or create OAC (sigv4, always)
         id: oac
         shell: bash
         run: |
           set -e
           NAME="oac-${WEB_BUCKET}"
-          # Try to find an existing OAC by name
           OAC_ID=$(aws cloudfront list-origin-access-controls \
-            --query "OriginAccessControlList.Items[?Name=='${NAME}'].Id" --output text 2>/dev/null || true)
+            --query "OriginAccessControlList.Items[?Name=='${NAME}'].Id" \
+            --output text 2>/dev/null || true)
           if [ -z "$OAC_ID" ] || [ "$OAC_ID" = "None" ]; then
-            # Create OAC
-            CFG=$(cat <<EOF
+            cat > /tmp/oac.json <<EOF
             {
               "Name": "${NAME}",
               "Description": "OAC for ${WEB_BUCKET}",
@@ -92,13 +90,12 @@ jobs:
               "OriginAccessControlOriginType": "s3"
             }
             EOF
-            )
             OAC_ID=$(aws cloudfront create-origin-access-control \
-              --origin-access-control-config "$CFG" \
+              --origin-access-control-config file:///tmp/oac.json \
               --query "OriginAccessControl.Id" --output text)
             echo "Created OAC: $OAC_ID"
           else
-            echo "Using existing OAC: $OAC_ID"
+            echo "Using OAC: $OAC_ID"
           fi
           echo "OAC_ID=$OAC_ID" >> $GITHUB_ENV
 
@@ -110,7 +107,6 @@ jobs:
           ORIGIN_DOMAIN="${WEB_BUCKET}.s3.${AWS_REGION}.amazonaws.com"
           COMMENT="HUNTECH Web CDN for ${WEB_BUCKET}"
 
-          # Try to find an existing dist referencing this origin domain
           DIST_ID=$(aws cloudfront list-distributions \
             --query "DistributionList.Items[?contains(Origins.Items[].DomainName, '${ORIGIN_DOMAIN}') && Comment=='${COMMENT}'].Id | [0]" \
             --output text 2>/dev/null || true)
@@ -118,7 +114,7 @@ jobs:
           if [ -z "$DIST_ID" ] || [ "$DIST_ID" = "None" ]; then
             echo "Creating distribution..."
             CALLER_REF="huntech-$(date +%s)"
-            DIST_CFG=$(cat <<EOF
+            cat > /tmp/dist.json <<EOF
             {
               "CallerReference": "${CALLER_REF}",
               "Comment": "${COMMENT}",
@@ -135,8 +131,8 @@ jobs:
               "DefaultCacheBehavior": {
                 "TargetOriginId": "S3Origin",
                 "ViewerProtocolPolicy": "redirect-to-https",
-                "AllowedMethods": {"Quantity": 2, "Items": ["GET","HEAD"]},
-                "CachedMethods": {"Quantity": 2, "Items": ["GET","HEAD"]},
+                "AllowedMethods": { "Quantity": 2, "Items": ["GET","HEAD"] },
+                "CachedMethods":  { "Quantity": 2, "Items": ["GET","HEAD"] },
                 "Compress": true,
                 "CachePolicyId": "658327ea-f89d-4fab-a63d-7e88639e58f6"
               },
@@ -145,35 +141,33 @@ jobs:
               "HttpVersion": "http2"
             }
             EOF
-            )
-            # Create and capture ID
-            CREATE_OUT=$(aws cloudfront create-distribution --distribution-config "$DIST_CFG")
-            DIST_ID=$(echo "$CREATE_OUT" | jq -r '.Distribution.Id')
+            DIST_ID=$(aws cloudfront create-distribution \
+              --distribution-config file:///tmp/dist.json \
+              --query "Distribution.Id" --output text)
             echo "Created distribution: $DIST_ID"
           else
-            echo "Using existing distribution: $DIST_ID"
+            echo "Using distribution: $DIST_ID"
           fi
 
           echo "DIST_ID=$DIST_ID" >> $GITHUB_ENV
 
-      - name: Wait until distribution is readable and Deployed
+      - name: Wait until distribution is Deployed and visible
         shell: bash
         run: |
           set -e
-          for i in {1..90}; do
-            set +e
-            DNS=$(aws cloudfront get-distribution --id "${DIST_ID}" --query "Distribution.DomainName" --output text 2>/dev/null)
-            STATUS=$(aws cloudfront get-distribution --id "${DIST_ID}" --query "Distribution.Status" --output text 2>/dev/null)
-            RC=$?
-            set -e
-            if [ "$RC" -eq 0 ] && [ -n "$DNS" ] && [ "$DNS" != "None" ]; then
+          for i in $(seq 1 90); do
+            DNS=$(aws cloudfront get-distribution --id "${DIST_ID}" \
+              --query "Distribution.DomainName" --output text 2>/dev/null || true)
+            STATUS=$(aws cloudfront get-distribution --id "${DIST_ID}" \
+              --query "Distribution.Status" --output text 2>/dev/null || true)
+            if [ -n "$DNS" ] && [ "$DNS" != "None" ]; then
               echo "Distribution: $DNS  Status: $STATUS"
               if [ "$STATUS" = "Deployed" ]; then
                 echo "DIST_DNS=$DNS" >> $GITHUB_ENV
                 break
               fi
             else
-              echo "Waiting for distribution to become visible... ($i/90)"
+              echo "Waiting for distribution visibility... ($i/90)"
             fi
             sleep 7
           done
@@ -181,11 +175,11 @@ jobs:
             echo "Distribution not Deployed in time"; exit 1
           fi
 
-      - name: Apply bucket policy (allow ONLY this distribution via OAC)
+      - name: Apply S3 bucket policy (allow only this distribution)
         shell: bash
         run: |
           set -e
-          POLICY=$(cat <<EOF
+          cat > /tmp/policy.json <<EOF
           {
             "Version": "2012-10-17",
             "Statement": [
@@ -204,46 +198,17 @@ jobs:
             ]
           }
           EOF
-          )
-          aws s3api put-bucket-policy --bucket "${WEB_BUCKET}" --policy "$POLICY"
+          aws s3api put-bucket-policy --bucket "${WEB_BUCKET}" --policy file:///tmp/policy.json
 
-      - name: Upload sample index.html
+      - name: Upload sample site
         shell: bash
         run: |
           set -e
           mkdir -p site
           cat > site/index.html <<'HTML'
           <!doctype html><html lang="en"><head>
-            <meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
-            <title>HUNTΞCH — Core CDN</title>
-            <style>
-              body{font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;margin:0;background:#111;color:#fefefe}
-              .wrap{max-width:720px;margin:5rem auto;background:#222;padding:2rem;border-radius:12px}
-              h1{margin-top:0}
-              .tag{display:inline-block;padding:4px 10px;border-radius:999px;background:#3a2e11;color:#ffd34d;font-weight:600;margin-bottom:12px}
-            </style>
-          </head><body><div class="wrap">
-          <div class="tag">HUNTΞCH • CDN</div>
-          <h1>Where Innovation Meets Tradition</h1>
-          <p>Served privately from S3 via CloudFront (OAC).</p>
-          </div></body></html>
-          HTML
-          aws s3 sync site/ "s3://${WEB_BUCKET}/" --delete --cache-control max-age=60
-
-      - name: Invalidate and probe
-        shell: bash
-        run: |
-          set -e
-          aws cloudfront create-invalidation --distribution-id "${DIST_ID}" --paths "/*" >/dev/null
-          URL="https://${DIST_DNS}/"
-          echo "Visiting: $URL"
-          for i in {1..24}; do
-            CODE=$(curl -s -o /dev/null -w "%{http_code}" "$URL")
-            echo "Attempt $i => $CODE"
-            [ "$CODE" = "200" ] && echo "cdn ok: $URL" && exit 0
-            sleep 5
-          done
-          echo "CDN not ready yet"; exit 1
-
-      - name: Done
-        run: echo "CDN URL: https://${DIST_DNS}/"
+          <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+          <title>HUNTΞCH — Core CDN</title>
+          <style>
+          body{font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;margin:0;background:#111;color:#fefefe}
+          .wrap{max-width:720px;margin:5rem auto;background:#222;padding:2rem;border-radius:12px}
