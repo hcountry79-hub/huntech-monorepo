@@ -12,9 +12,15 @@ jobs:
     env:
       AWS_REGION: us-east-1
       ROLE_TO_ASSUME: arn:aws:iam::382773571217:role/HUNTECH-CICD
+      # If your CDN was created via CFN, this is the stack name; otherwise we’ll auto-discover
       CDN_STACK: HUNTECH-WebCore-CDN
+      # Your existing private web bucket created by the core stack
+      WEB_BUCKET: huntech-web-382773571217-us-east-1-core
+      # Domain to map
       CORE_FQDN: core.huntechusa.com
+      # Public hosted zone that owns the domain
       APEX_DOMAIN: huntechusa.com
+      # Route 53 ALIAS hosted zone ID for CloudFront (global constant)
       CLOUDFRONT_ZONE_ID: Z2FDTNDATAQYW2
 
     steps:
@@ -28,26 +34,40 @@ jobs:
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Ensure jq
-        run: |
-          if ! command -v jq >/dev/null 2>&1; then
-            sudo apt-get update -y && sudo apt-get install -y jq
-          fi
-
-      - name: Read CloudFront outputs (DistributionId + Domain)
-        id: cfn
         shell: bash
         run: |
           set -e
-          DIST_ID=$(aws cloudformation describe-stacks --stack-name "${CDN_STACK}" \
-            --query "Stacks[0].Outputs[?OutputKey=='DistributionId'].OutputValue" --output text)
-          DIST_DNS=$(aws cloudformation describe-stacks --stack-name "${CDN_STACK}" \
-            --query "Stacks[0].Outputs[?OutputKey=='DistributionDomainName'].OutputValue" --output text)
-          [ -z "$DIST_ID" -o "$DIST_ID" = "None" ] && { echo "No CDN stack outputs found"; exit 1; }
-          echo "DIST_ID=$DIST_ID" >> $GITHUB_ENV
-          echo "DIST_DNS=$DIST_DNS" >> $GITHUB_ENV
-          echo "CDN: $DIST_ID  $DIST_DNS"
+          if ! command -v jq >/dev/null 2>&1; then
+            sudo apt-get update -y
+            sudo apt-get install -y jq
+          fi
 
-      - name: Resolve Hosted Zone for apex domain
+      # Minimal safety: allow this job to manage ACM/Route53/CloudFront if not already granted
+      - name: Ensure Route53 + ACM + CloudFront permissions (inline)
+        shell: bash
+        run: |
+          set -e
+          POLICY=$(jq -n '{
+            Version:"2012-10-17",
+            Statement:[
+              {Sid:"ACM",Effect:"Allow",Action:[
+                "acm:RequestCertificate","acm:DescribeCertificate","acm:ListCertificates","acm:AddTagsToCertificate","acm:DeleteCertificate"
+              ],Resource:"*"},
+              {Sid:"R53",Effect:"Allow",Action:[
+                "route53:ListHostedZonesByName","route53:GetHostedZone","route53:ListResourceRecordSets","route53:ChangeResourceRecordSets"
+              ],Resource:"*"},
+              {Sid:"CF",Effect:"Allow",Action:[
+                "cloudfront:GetDistribution","cloudfront:GetDistributionConfig","cloudfront:UpdateDistribution","cloudfront:CreateInvalidation","cloudfront:ListDistributions"
+              ],Resource:"*"}
+            ]
+          }')
+          printf '%s' "$POLICY" > /tmp/HUNTECH-DNS-ACM.json
+          aws iam put-role-policy \
+            --role-name HUNTECH-CICD \
+            --policy-name HUNTECH-DNS-ACM \
+            --policy-document file:///tmp/HUNTECH-DNS-ACM.json || true
+
+      - name: Resolve Route53 Hosted Zone for apex domain
         id: hz
         shell: bash
         run: |
@@ -58,7 +78,37 @@ jobs:
           echo "HZ_ID=$HZ_ID" >> $GITHUB_ENV
           echo "HostedZoneId: $HZ_ID"
 
-      - name: Request ACM certificate (DNS validation, us-east-1)
+      - name: Resolve distribution (CFN outputs or fallback search by S3 origin)
+        id: dist
+        shell: bash
+        run: |
+          set -e
+          # Try by CloudFormation outputs
+          DIST_ID=$(aws cloudformation describe-stacks --stack-name "${CDN_STACK}" \
+            --query "Stacks[0].Outputs[?OutputKey=='DistributionId'].OutputValue" --output text 2>/dev/null || true)
+          DIST_DNS=$(aws cloudformation describe-stacks --stack-name "${CDN_STACK}" \
+            --query "Stacks[0].Outputs[?OutputKey=='DistributionDomainName'].OutputValue" --output text 2>/dev/null || true)
+
+          # Fallback: search CloudFront by S3 origin domain
+          if [ -z "$DIST_ID" ] || [ "$DIST_ID" = "None" ]; then
+            ORIGIN_DOMAIN="${WEB_BUCKET}.s3.${AWS_REGION}.amazonaws.com"
+            DIST_ID=$(aws cloudfront list-distributions \
+              --query "DistributionList.Items[?contains(Origins.Items[].DomainName, '${ORIGIN_DOMAIN}')].Id | [0]" \
+              --output text 2>/dev/null || true)
+            if [ -n "$DIST_ID" ] && [ "$DIST_ID" != "None" ]; then
+              DIST_DNS=$(aws cloudfront get-distribution --id "$DIST_ID" \
+                --query "Distribution.DomainName" --output text 2>/dev/null || true)
+            fi
+          fi
+
+          if [ -z "$DIST_ID" ] || [ "$DIST_ID" = "None" ]; then
+            echo "Could not resolve CloudFront distribution."; exit 1
+          fi
+          echo "DIST_ID=$DIST_ID" >> $GITHUB_ENV
+          echo "DIST_DNS=$DIST_DNS" >> $GITHUB_ENV
+          echo "CDN: $DIST_ID  $DIST_DNS"
+
+      - name: Request ACM certificate (DNS validation, us-east-1 is required for CloudFront)
         id: cert
         shell: bash
         run: |
@@ -71,7 +121,7 @@ jobs:
           echo "CERT_ARN=$CERT_ARN" >> $GITHUB_ENV
           echo "Requested cert: $CERT_ARN"
 
-      - name: Create DNS validation CNAME in Route53
+      - name: Create/Upsert DNS validation CNAME
         shell: bash
         run: |
           set -e
@@ -88,9 +138,9 @@ jobs:
           aws route53 change-resource-record-sets \
             --hosted-zone-id "${HZ_ID}" \
             --change-batch "$CHG" >/dev/null
-          echo "Upserted validation CNAME: $NAME -> $VALUE"
+          echo "Validation CNAME upserted: $NAME -> $VALUE"
 
-      - name: Wait for certificate to be ISSUED
+      - name: Wait for certificate ISSUED (ACM us-east-1)
         shell: bash
         run: |
           set -e
@@ -128,9 +178,9 @@ jobs:
             --if-match "${ETAG}" \
             --distribution-config file:///tmp/cf.json >/dev/null
 
-          echo "Updated distribution with alias + cert"
+          echo "Distribution updated with alias + cert"
 
-      - name: Create Route53 A/AAAA ALIAS records
+      - name: Create Route53 A/AAAA ALIAS → CloudFront
         shell: bash
         run: |
           set -e
@@ -146,7 +196,7 @@ jobs:
               ]
             }')
           aws route53 change-resource-record-sets --hosted-zone-id "${HZ_ID}" --change-batch "$CHG" >/dev/null
-          echo "A/AAAA alias created for ${CORE_FQDN} → ${DIST_DNS}"
+          echo "Alias A/AAAA created for ${CORE_FQDN} → ${DIST_DNS}"
 
       - name: Invalidate and probe
         shell: bash
