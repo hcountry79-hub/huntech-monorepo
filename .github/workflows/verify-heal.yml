@@ -1,0 +1,238 @@
+name: HUNTECH Verify & Heal (auto)
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  verify_heal:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    env:
+      AWS_REGION: us-east-1
+      ROLE_TO_ASSUME: arn:aws:iam::382773571217:role/HUNTECH-CICD
+      WEB_BUCKET: huntech-web-382773571217-us-east-1-core
+      SITE_FQDN: core.huntechusa.com
+      # Fallback CF domain we already attached:
+      CF_FALLBACK: d2stduzbo1av87.cloudfront.net
+      ACCOUNT_ID: "382773571217"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.ROLE_TO_ASSUME }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Install tools
+        run: |
+          set -e
+          sudo apt-get update -y
+          sudo apt-get install -y jq dnsutils curl
+
+      # ---------- DNS / CFN DISCOVERY ----------
+      - name: Discover CloudFront distribution
+        id: discover
+        run: |
+          set -e
+          SITE_FQDN="${SITE_FQDN}"
+          CF_FALLBACK="${CF_FALLBACK}"
+          DIST_DOMAIN=""
+          DIST_ID=""
+
+          # Prefer public CNAME of the site
+          CNAME=$(dig +short CNAME "${SITE_FQDN}" | sed 's/\.$//' || true)
+          if [ -n "$CNAME" ]; then
+            DIST_DOMAIN="$CNAME"
+          else
+            DIST_DOMAIN="$CF_FALLBACK"
+          fi
+
+          # Resolve ID from domain
+          DIST_ID=$(aws cloudfront list-distributions \
+            --query "DistributionList.Items[?DomainName=='${DIST_DOMAIN}'].Id | [0]" \
+            --output text 2>/dev/null || true)
+
+          if [ -z "${DIST_ID}" ] || [ "${DIST_ID}" = "None" ]; then
+            # As a last resort, match any distribution whose origin points to our bucket
+            ORIGIN="${WEB_BUCKET}.s3.${AWS_REGION}.amazonaws.com"
+            DIST_ID=$(aws cloudfront list-distributions \
+              --query "DistributionList.Items[?contains(Origins.Items[].DomainName, '${ORIGIN}')].Id | [0]" \
+              --output text 2>/dev/null || true)
+            [ "${DIST_ID}" != "None" ] && DIST_DOMAIN=$(aws cloudfront get-distribution --id "${DIST_ID}" \
+              --query "Distribution.DomainName" --output text 2>/dev/null || true)
+          fi
+
+          if [ -z "${DIST_ID}" ] || [ "${DIST_ID}" = "None" ]; then
+            echo "::error::Unable to resolve CloudFront distribution. Ensure ${SITE_FQDN} CNAME → CloudFront exists."
+            exit 1
+          fi
+
+          echo "DIST_ID=${DIST_ID}"       >> $GITHUB_ENV
+          echo "DIST_DOMAIN=${DIST_DOMAIN}" >> $GITHUB_ENV
+          echo "Using CloudFront: ${DIST_ID} (${DIST_DOMAIN})"
+
+      # ---------- VERIFY DEFAULT ROOT ----------
+      - name: Verify DefaultRootObject
+        id: root
+        run: |
+          set -e
+          CFG=$(aws cloudfront get-distribution-config --id "${DIST_ID}")
+          DC=$(echo "$CFG" | jq -r '.DistributionConfig')
+          ROOT=$(echo "$DC" | jq -r '.DefaultRootObject // empty')
+          echo "ROOT=${ROOT}" >> $GITHUB_ENV
+          echo "Current DefaultRootObject: ${ROOT:-<empty>}"
+
+      # ---------- VERIFY index.html EXISTS ----------
+      - name: Verify index.html exists at bucket root
+        id: obj
+        continue-on-error: true
+        run: |
+          set -e
+          if aws s3api head-object --bucket "${WEB_BUCKET}" --key "index.html" >/dev/null 2>&1; then
+            echo "INDEX_OK=true" >> $GITHUB_ENV
+            echo "index.html present."
+          else
+            echo "INDEX_OK=false" >> $GITHUB_ENV
+            echo "index.html missing."
+          fi
+
+      # ---------- VERIFY BUCKET POLICY ----------
+      - name: Verify OAC bucket policy scoped to this distribution
+        id: policy
+        continue-on-error: true
+        run: |
+          set -e
+          POL=$(aws s3api get-bucket-policy --bucket "${WEB_BUCKET}" --query 'Policy' --output text 2>/dev/null || echo "")
+          echo "$POL" > /tmp/policy.json || true
+          MATCH=$(jq -r --arg acct "${ACCOUNT_ID}" --arg did "${DIST_ID}" \
+            'try (.Statement[] | select(.Principal.Service=="cloudfront.amazonaws.com")
+                | select(.Action=="s3:GetObject")
+                | select(.Condition."StringEquals"."AWS:SourceArn"=="arn:aws:cloudfront::"+$acct+":distribution/"+$did)) | .Sid' /tmp/policy.json 2>/dev/null || true)
+          if [ -n "$MATCH" ]; then
+            echo "POLICY_OK=true" >> $GITHUB_ENV
+            echo "OAC bucket policy matches distribution ${DIST_ID}."
+          else
+            echo "POLICY_OK=false" >> $GITHUB_ENV
+            echo "OAC bucket policy missing/mismatched."
+          fi
+
+      # ---------- PROBE HTTP ----------
+      - name: Probe /index.html (HTTP)
+        id: probe_index
+        run: |
+          set -e
+          URL="https://${SITE_FQDN}/index.html"
+          CODE=$(curl -s -o /dev/null -w "%{http_code}" "$URL" || echo "000")
+          echo "INDEX_STATUS=${CODE}" >> $GITHUB_ENV
+          echo "GET $URL -> $CODE"
+
+      - name: Probe / (HTTP)
+        id: probe_root
+        run: |
+          set -e
+          URL="https://${SITE_FQDN}/"
+          CODE=$(curl -s -o /dev/null -w "%{http_code}" "$URL" || echo "000")
+          echo "ROOT_STATUS=${CODE}" >> $GITHUB_ENV
+          echo "GET $URL -> $CODE"
+
+      # ---------- HEAL IF NEEDED ----------
+      - name: Heal — set DefaultRootObject=index.html (if missing)
+        if: env.ROOT != 'index.html'
+        run: |
+          set -e
+          CFG=$(aws cloudfront get-distribution-config --id "${DIST_ID}")
+          ETAG=$(echo "$CFG" | jq -r .ETag)
+          DC=$(echo "$CFG" | jq -r '.DistributionConfig')
+          NEW=$(echo "$DC" | jq '.DefaultRootObject = "index.html"')
+          printf '%s' "$NEW" > /tmp/new-cf.json
+          aws cloudfront update-distribution --id "${DIST_ID}" --if-match "${ETAG}" \
+            --distribution-config file:///tmp/new-cf.json >/dev/null
+          echo "DefaultRootObject set to index.html"
+
+      - name: Heal — upload index.html (if missing)
+        if: env.INDEX_OK != 'true'
+        run: |
+          set -e
+          mkdir -p _site
+          printf '%s\n' '<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>HUNTΞCH — Core</title><body style="font-family:system-ui;background:#111;color:#fff;padding:3rem"><h1>HUNTΞCH — Core</h1><p>Private S3 via CloudFront (OAC) — verification fixed.</p></body>' > _site/index.html
+          aws s3 sync _site/ "s3://${WEB_BUCKET}/" --delete --cache-control max-age=60
+          echo "Uploaded fallback index.html"
+
+      - name: Heal — apply OAC bucket policy (if mismatched)
+        if: env.POLICY_OK != 'true'
+        run: |
+          set -e
+          POLICY=$(jq -n --arg bucket "${WEB_BUCKET}" --arg dist "${DIST_ID}" --arg acct "${ACCOUNT_ID}" '{
+            Version:"2012-10-17",
+            Statement:[{
+              Sid:"AllowCloudFrontServicePrincipalReadOnly",
+              Effect:"Allow",
+              Principal:{Service:"cloudfront.amazonaws.com"},
+              Action:"s3:GetObject",
+              Resource:("arn:aws:s3:::"+$bucket+"/*"),
+              Condition:{StringEquals:{"AWS:SourceArn":("arn:aws:cloudfront::"+$acct+":distribution/"+$dist)}}
+            }]
+          }')
+          printf '%s' "$POLICY" > /tmp/policy.json
+          aws s3api put-bucket-policy --bucket "${WEB_BUCKET}" --policy file:///tmp/policy.json
+          echo "Applied OAC bucket policy for distribution ${DIST_ID}"
+
+      - name: Heal — Invalidate CloudFront (if any heal ran)
+        if: env.ROOT != 'index.html' || env.INDEX_OK != 'true' || env.POLICY_OK != 'true'
+        run: |
+          set -e
+          aws cloudfront create-invalidation --distribution-id "${DIST_ID}" --paths "/*" >/dev/null
+          echo "Invalidation created"
+
+      # ---------- RE-PROBE AFTER HEAL ----------
+      - name: Re-probe /index.html
+        if: env.ROOT != 'index.html' || env.INDEX_OK != 'true' || env.POLICY_OK != 'true'
+        run: |
+          set -e
+          URL="https://${SITE_FQDN}/index.html"
+          for i in $(seq 1 36); do
+            CODE=$(curl -s -o /dev/null -w "%{http_code}" "$URL")
+            echo "GET $URL -> $CODE (try $i/36)"
+            [ "$CODE" = "200" ] && { echo "INDEX_STATUS=$CODE" >> $GITHUB_ENV; exit 0; }
+            sleep 5
+          done
+          echo "INDEX_STATUS=000" >> $GITHUB_ENV
+          echo "::warning::/index.html still not 200; edges may be propagating."
+
+      - name: Re-probe /
+        if: env.ROOT != 'index.html' || env.INDEX_OK != 'true' || env.POLICY_OK != 'true'
+        run: |
+          set -e
+          URL="https://${SITE_FQDN}/"
+          for i in $(seq 1 36); do
+            CODE=$(curl -s -o /dev/null -w "%{http_code}" "$URL")
+            echo "GET $URL -> $CODE (try $i/36)"
+            [ "$CODE" = "200" ] && { echo "ROOT_STATUS=$CODE" >> $GITHUB_ENV; exit 0; }
+            sleep 5
+          done
+          echo "ROOT_STATUS=000" >> $GITHUB_ENV
+          echo "::warning::/ still not 200; edges may be propagating."
+
+      # ---------- SUMMARY ----------
+      - name: Summary
+        run: |
+          echo "---- HUNTECH Verify Summary ----"
+          echo "CloudFront:  ${DIST_ID} (${DIST_DOMAIN})"
+          echo "DefaultRoot: ${ROOT:-<empty>}"
+          echo "index.html:  ${INDEX_OK:-unknown}"
+          echo "Policy OK:   ${POLICY_OK:-unknown}"
+          echo "HTTP /index: ${INDEX_STATUS:-unknown}"
+          echo "HTTP /:      ${ROOT_STATUS:-unknown}"
+
+          if [ "${INDEX_STATUS}" = "200" ] && [ "${ROOT_STATUS}" = "200" ]; then
+            echo "domain ok: https://${SITE_FQDN}/"
+          else
+            echo "::warning::Site not 200 yet. Give it a minute, then refresh https://${SITE_FQDN}/"
+          fi
