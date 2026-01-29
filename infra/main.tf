@@ -4,9 +4,9 @@
 ############################################
 
 resource "aws_wafv2_web_acl" "global" {
-  provider = aws.use1
-  name     = "${var.project}-global-waf"
-  scope    = "CLOUDFRONT"
+  provider    = aws.use1
+  name        = "${var.project}-global-waf"
+  scope       = "CLOUDFRONT"
   description = "Global WAF for CloudFront"
 
   default_action {
