@@ -1,0 +1,140 @@
+name: HUNTECH Guardian (TRIPLE-CHECK)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  guardian:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    env:
+      AWS_REGION: us-east-1
+      ACCOUNT_ID: 382773571217
+      ROLE_TO_ASSUME: arn:aws:iam::382773571217:role/HUNTECH-CICD
+      # Pre-flight targets (adjust if we add more stacks later)
+      STACKS_TO_CHECK: "HUNTECH-Foundation-core HUNTECH-WebCore-CDN"
+      REQUIRED_ACTIONS: >
+        cloudformation:CreateStack
+        cloudformation:UpdateStack
+        cloudformation:DescribeStacks
+        cloudformation:ListStackResources
+        cloudformation:ValidateTemplate
+        cloudformation:GetTemplate
+        cloudformation:GetTemplateSummary
+        iam:PassRole
+        iam:SimulatePrincipalPolicy
+        cloudfront:CreateDistribution
+        cloudfront:UpdateDistribution
+        cloudfront:GetDistribution
+        cloudfront:GetDistributionConfig
+        cloudfront:CreateInvalidation
+        s3:PutObject
+        s3:GetObject
+        s3:DeleteObject
+        dynamodb:PutItem
+        dynamodb:GetItem
+        apigateway:GET
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.ROLE_TO_ASSUME }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Ensure role can simulate policies (one-time inline policy)
+        shell: bash
+        run: |
+          cat > /tmp/HUNTECH-Guardian-IAM.json <<'JSON'
+          {
+            "Version": "2012-10-17",
+            "Statement": [{
+              "Sid": "AllowIamSimulate",
+              "Effect": "Allow",
+              "Action": ["iam:SimulatePrincipalPolicy"],
+              "Resource": "*"
+            }]
+          }
+          JSON
+          aws iam put-role-policy \
+            --role-name HUNTECH-CICD \
+            --policy-name HUNTECH-Guardian-IAM \
+            --policy-document file:///tmp/HUNTECH-Guardian-IAM.json
+
+      - name: Pre-flight A — Verify caller & region
+        shell: bash
+        run: |
+          set -e
+          WHO=$(aws sts get-caller-identity --query Arn --output text)
+          echo "Caller: $WHO"
+          echo "Region: ${AWS_REGION}"
+          case "$WHO" in
+            arn:aws:sts::${ACCOUNT_ID}:assumed-role/HUNTECH-CICD/*) echo "Caller OK";;
+            *) echo "Unexpected caller: $WHO"; exit 1;;
+          esac
+
+      - name: Pre-flight B — Simulate required permissions for CICD role
+        shell: bash
+        run: |
+          set -e
+          ROLE_ARN="arn:aws:iam::${ACCOUNT_ID}:role/HUNTECH-CICD"
+          ACTIONS=($REQUIRED_ACTIONS)
+          # Simulate in batches of 20 (API limit)
+          ok=true
+          for (( i=0; i<${#ACTIONS[@]}; i+=20 )); do
+            slice=("${ACTIONS[@]:i:20}")
+            RES=$(aws iam simulate-principal-policy \
+              --policy-source-arn "$ROLE_ARN" \
+              --action-names ${slice[@]} \
+              --query 'EvaluationResults[?EvalDecision!=`allowed`].{Action:EvalActionName,Decision:EvalDecision}' \
+              --output text)
+            if [ -n "$RES" ]; then
+              echo "Denied actions:"
+              echo "$RES"
+              ok=false
+            fi
+          done
+          $ok || { echo "Missing permissions. Fix role before deploying."; exit 1; }
+
+      - name: Pre-flight C — Detect blocked stack states & name collisions
+        shell: bash
+        run: |
+          set -e
+          # Fail fast if any target stack is in a blocked state
+          for S in $STACKS_TO_CHECK; do
+            if aws cloudformation describe-stacks --stack-name "$S" >/dev/null 2>&1; then
+              STATUS=$(aws cloudformation describe-stacks --stack-name "$S" \
+                --query 'Stacks[0].StackStatus' --output text)
+              echo "$S => $STATUS"
+              case "$STATUS" in
+                ROLLBACK_*|UPDATE_ROLLBACK_*|DELETE_FAILED)
+                  echo "Stack $S is in blocked state: $STATUS"
+                  echo "Run cleanup job or let the pipeline delete/recreate before continuing."
+                  exit 1;;
+              esac
+            else
+              echo "$S => (not present) OK"
+            fi
+          done
+
+      - name: Pre-flight D — Sanity check bucket names used by pipelines
+        shell: bash
+        run: |
+          set -e
+          CORE_WEB="huntech-web-${ACCOUNT_ID}-${AWS_REGION}-core"
+          CORE_MEDIA="huntech-media-${ACCOUNT_ID}-${AWS_REGION}-core"
+          for B in "$CORE_WEB" "$CORE_MEDIA"; do
+            echo "Checking bucket: $B"
+            if aws s3api head-bucket --bucket "$B" 2>/dev/null; then
+              echo "Exists: $B (OK)"
+            else
+              echo "Not found yet (OK) — will be created by stack when needed."
+            fi
+          done
+
+      - name: Result
+        run: echo "Guardian pre-flight PASSED. Safe to run deploy workflows."
