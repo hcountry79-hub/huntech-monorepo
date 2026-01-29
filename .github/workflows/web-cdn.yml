@@ -27,7 +27,7 @@ jobs:
           role-to-assume: ${{ env.ROLE_TO_ASSUME }}
           aws-region: ${{ env.AWS_REGION }}
 
-      # Minimal CloudFront permissions for this job (no change-set needed)
+      # Minimal CloudFront permissions for this job
       - name: Ensure CloudFront permissions (inline policy)
         shell: bash
         run: |
@@ -93,10 +93,3 @@ jobs:
                     - Id: S3Origin
                       DomainName: !Sub '${WebBucketName}.s3.${AWS::Region}.amazonaws.com'
                       S3OriginConfig: {}
-                      OriginAccessControlId: !GetAtt OAC.Id
-                  DefaultCacheBehavior:
-                    TargetOriginId: S3Origin
-                    ViewerProtocolPolicy: redirect-to-https
-                    AllowedMethods: [GET, HEAD]
-                    CachedMethods: [GET, HEAD]
-                    Compress: true
