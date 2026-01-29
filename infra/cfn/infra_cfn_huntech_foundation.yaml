@@ -8,17 +8,6 @@ Parameters:
   Environment:
     Type: String
     Default: dev
-  WebBucketName:
-    Type: String
-    Default: !Sub 'huntech-web-${AWS::AccountId}-${AWS::Region}'
-    Description: S3 bucket for static web/media assets (served via CloudFront later)
-  MediaBucketName:
-    Type: String
-    Default: !Sub 'huntech-media-${AWS::AccountId}-${AWS::Region}'
-    Description: S3 bucket for user uploads/media
-  DynamoTableName:
-    Type: String
-    Default: !Sub '${ProjectName}-${Environment}-AppData'
   CreateApiAuthorizer:
     Type: String
     AllowedValues: ['true','false']
@@ -29,14 +18,16 @@ Parameters:
     Description: Optional. Provide ARN only if CreateApiAuthorizer=true.
 
 Conditions:
-  UseAuthorizer: !And [ !Equals [ !Ref CreateApiAuthorizer, 'true' ], !Not [ !Equals [ !Ref CognitoUserPoolArn, '' ] ] ]
+  UseAuthorizer: !And
+    - !Equals [ !Ref CreateApiAuthorizer, 'true' ]
+    - !Not [ !Equals [ !Ref CognitoUserPoolArn, '' ] ]
 
 Resources:
-  # ------------------- S3 Buckets -------------------
+  # ------------------- S3 Buckets (private, versioned, SSE) -------------------
   WebBucket:
     Type: AWS::S3::Bucket
     Properties:
-      BucketName: !Ref WebBucketName
+      BucketName: !Sub 'huntech-web-${AWS::AccountId}-${AWS::Region}'
       PublicAccessBlockConfiguration:
         BlockPublicAcls: true
         BlockPublicPolicy: true
@@ -44,10 +35,15 @@ Resources:
         RestrictPublicBuckets: true
       VersioningConfiguration:
         Status: Enabled
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+
   MediaBucket:
     Type: AWS::S3::Bucket
     Properties:
-      BucketName: !Ref MediaBucketName
+      BucketName: !Sub 'huntech-media-${AWS::AccountId}-${AWS::Region}'
       PublicAccessBlockConfiguration:
         BlockPublicAcls: true
         BlockPublicPolicy: true
@@ -55,12 +51,16 @@ Resources:
         RestrictPublicBuckets: true
       VersioningConfiguration:
         Status: Enabled
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
 
   # ------------------- DynamoDB -------------------
   AppTable:
     Type: AWS::DynamoDB::Table
     Properties:
-      TableName: !Ref DynamoTableName
+      TableName: !Sub '${ProjectName}-${Environment}-AppData'
       BillingMode: PAY_PER_REQUEST
       AttributeDefinitions:
         - AttributeName: pk
@@ -105,132 +105,3 @@ Resources:
             Version: '2012-10-17'
             Statement:
               - Effect: Allow
-                Action:
-                  - s3:PutObject
-                  - s3:GetObject
-                  - s3:DeleteObject
-                Resource: !Sub '${MediaBucket.Arn}/*'
-
-  # ------------------- Lambda Function -------------------
-  AppFunction:
-    Type: AWS::Lambda::Function
-    Properties:
-      FunctionName: !Sub '${ProjectName}-${Environment}-ApiHandler'
-      Description: Minimal handler (health + put/get sample)
-      Runtime: python3.12
-      Handler: index.handler
-      Role: !GetAtt AppFunctionRole.Arn
-      Timeout: 15
-      MemorySize: 256
-      Environment:
-        Variables:
-          TABLE_NAME: !Ref DynamoTableName
-          MEDIA_BUCKET: !Ref MediaBucketName
-      Code:
-        ZipFile: !Sub |
-          import json, os, boto3
-          ddb = boto3.resource('dynamodb')
-          s3 = boto3.client('s3')
-          table = ddb.Table(os.environ['TABLE_NAME'])
-
-          def handler(event, context):
-              path = event.get('rawPath','/')
-              if path == '/health':
-                  return { 'statusCode': 200, 'headers': {'content-type':'application/json'}, 'body': json.dumps({'ok': True}) }
-              if path == '/seed':
-                  table.put_item(Item={'pk':'DEMO','sk':'SEED','ts':context.aws_request_id})
-                  return { 'statusCode': 200, 'headers': {'content-type':'application/json'}, 'body': json.dumps({'seeded': True}) }
-              return { 'statusCode': 404, 'headers': {'content-type':'application/json'}, 'body': json.dumps({'error':'Not Found'}) }
-
-  # ------------------- API Gateway (HTTP) -------------------
-  HttpApi:
-    Type: AWS::ApiGatewayV2::Api
-    Properties:
-      Name: !Sub '${ProjectName}-${Environment}-HttpApi'
-      ProtocolType: HTTP
-
-  # Optional Authorizer (Cognito)
-  HttpAuthorizer:
-    Type: AWS::ApiGatewayV2::Authorizer
-    Condition: UseAuthorizer
-    Properties:
-      ApiId: !Ref HttpApi
-      AuthorizerType: JWT
-      IdentitySource:
-        - '$request.header.Authorization'
-      Name: CognitoJwt
-      JwtConfiguration:
-        Audience:
-          - sts.amazonaws.com
-        Issuer: !Sub '${CognitoUserPoolArn}'
-
-  # Integration and Routes
-  HttpIntegration:
-    Type: AWS::ApiGatewayV2::Integration
-    Properties:
-      ApiId: !Ref HttpApi
-      IntegrationType: AWS_PROXY
-      IntegrationUri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${AppFunction.Arn}/invocations'
-      PayloadFormatVersion: '2.0'
-
-  RouteHealth:
-    Type: AWS::ApiGatewayV2::Route
-    Properties:
-      ApiId: !Ref HttpApi
-      RouteKey: 'GET /health'
-      Target: !Sub 'integrations/${HttpIntegration}'
-
-  StageDefault:
-    Type: AWS::ApiGatewayV2::Stage
-    Properties:
-      ApiId: !Ref HttpApi
-      StageName: '$default'
-      AutoDeploy: true
-
-  # Permission for API GW to invoke Lambda
-  LambdaInvokePermission:
-    Type: AWS::Lambda::Permission
-    Properties:
-      Action: lambda:InvokeFunction
-      FunctionName: !Ref AppFunction
-      Principal: apigateway.amazonaws.com
-
-  # ------------------- EventBridge (optional heartbeat) -------------------
-  HeartbeatRule:
-    Type: AWS::Events::Rule
-    Properties:
-      Name: !Sub '${ProjectName}-${Environment}-Heartbeat'
-      ScheduleExpression: rate(30 minutes)
-      State: ENABLED
-      Targets:
-        - Arn: !GetAtt AppFunction.Arn
-          Id: AppFn
-  HeartbeatInvokePermission:
-    Type: AWS::Lambda::Permission
-    Properties:
-      Action: lambda:InvokeFunction
-      FunctionName: !Ref AppFunction
-      Principal: events.amazonaws.com
-      SourceArn: !GetAtt HeartbeatRule.Arn
-
-  # ------------------- Secrets Manager (placeholder) -------------------
-  VendorKeys:
-    Type: AWS::SecretsManager::Secret
-    Properties:
-      Name: !Sub '${ProjectName}/${Environment}/TrailCam/VendorKeys'
-      Description: Placeholder for partner API keys
-      SecretString: '{}'
-
-Outputs:
-  ApiEndpoint:
-    Description: Invoke URL of the HTTP API (default stage)
-    Value: !Sub 'https://${HttpApi}.execute-api.${AWS::Region}.amazonaws.com'
-  WebBucketOut:
-    Value: !Ref WebBucketName
-  MediaBucketOut:
-    Value: !Ref MediaBucketName
-  DynamoTableOut:
-    Value: !Ref DynamoTableName
-  FunctionName:
-    Value: !Ref AppFunction
-``
