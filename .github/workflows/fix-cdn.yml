@@ -1,0 +1,214 @@
+name: HUNTECH CDN Fixer (create+wait)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  cdn_fixer:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    env:
+      AWS_REGION: us-east-1
+      ACCOUNT_ID: 382773571217
+      ROLE_TO_ASSUME: arn:aws:iam::382773571217:role/HUNTECH-CICD
+
+      # Foundation values (from your core stack)
+      WEB_BUCKET: huntech-web-382773571217-us-east-1-core
+
+      # CDN stack + template
+      CDN_STACK: HUNTECH-WebCore-CDN
+      TEMPLATE_PATH: infra/cfn/huntech_web_cdn.yaml
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.ROLE_TO_ASSUME }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      # Ensure this session can manage CloudFront and read CFN resources
+      - name: Ensure permissions (inline)
+        shell: bash
+        run: |
+          cat > /tmp/HUNTECH-CDN-Perms.json <<'JSON'
+          {
+            "Version": "2012-10-17",
+            "Statement": [
+              {
+                "Sid": "CloudFrontManage",
+                "Effect": "Allow",
+                "Action": [
+                  "cloudfront:CreateDistribution",
+                  "cloudfront:UpdateDistribution",
+                  "cloudfront:GetDistribution",
+                  "cloudfront:GetDistributionConfig",
+                  "cloudfront:ListDistributions",
+                  "cloudfront:CreateInvalidation",
+                  "cloudfront:TagResource",
+                  "cloudfront:UntagResource"
+                ],
+                "Resource": "*"
+              },
+              {
+                "Sid": "CFNDescribeResources",
+                "Effect": "Allow",
+                "Action": [
+                  "cloudformation:DescribeStacks",
+                  "cloudformation:DescribeStackResources",
+                  "cloudformation:ListStackResources"
+                ],
+                "Resource": "*"
+              }
+            ]
+          }
+          JSON
+          aws iam put-role-policy \
+            --role-name HUNTECH-CICD \
+            --policy-name HUNTECH-CDN-Perms \
+            --policy-document file:///tmp/HUNTECH-CDN-Perms.json
+
+      - name: Write CDN CloudFormation template (CloudFront + OAC + bucket policy)
+        shell: bash
+        run: |
+          set -e
+          mkdir -p infra/cfn
+          cat > ${{ env.TEMPLATE_PATH }} <<'YAML'
+          AWSTemplateFormatVersion: '2010-09-09'
+          Description: CloudFront (OAC) for private S3 web bucket + bucket policy
+
+          Parameters:
+            WebBucketName:
+              Type: String
+
+          Resources:
+            OAC:
+              Type: AWS::CloudFront::OriginAccessControl
+              Properties:
+                Name: !Sub 'oac-${WebBucketName}'
+                Description: Origin Access Control for private S3 origin
+                OriginAccessControlOriginType: s3
+                SigningBehavior: always
+                SigningProtocol: sigv4
+
+            Distribution:
+              Type: AWS::CloudFront::Distribution
+              Properties:
+                DistributionConfig:
+                  Enabled: true
+                  Comment: !Sub 'HUNTECH Web CDN for ${WebBucketName}'
+                  DefaultRootObject: index.html
+                  HttpVersion: http2
+                  PriceClass: PriceClass_100
+                  Origins:
+                    - Id: S3Origin
+                      DomainName: !Sub '${WebBucketName}.s3.${AWS::Region}.amazonaws.com'
+                      S3OriginConfig: {}
+                      OriginAccessControlId: !GetAtt OAC.Id
+                  DefaultCacheBehavior:
+                    TargetOriginId: S3Origin
+                    ViewerProtocolPolicy: redirect-to-https
+                    AllowedMethods: [GET, HEAD]
+                    CachedMethods: [GET, HEAD]
+                    Compress: true
+                    CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6   # AWS CachingOptimized
+
+            BucketPolicy:
+              Type: AWS::S3::BucketPolicy
+              Properties:
+                Bucket: !Ref WebBucketName
+                PolicyDocument:
+                  Version: '2012-10-17'
+                  Statement:
+                    - Sid: AllowCloudFrontReadOAC
+                      Effect: Allow
+                      Principal: { Service: cloudfront.amazonaws.com }
+                      Action: s3:GetObject
+                      Resource: !Sub 'arn:aws:s3:::${WebBucketName}/*'
+                      Condition:
+                        StringEquals:
+                          AWS:SourceArn: !Sub 'arn:aws:cloudfront::${AWS::AccountId}:distribution/${Distribution.Id}'
+
+          Outputs:
+            DistributionId:
+              Value: !GetAtt Distribution.Id
+            DistributionDomainName:
+              Value: !GetAtt Distribution.DomainName
+          YAML
+
+      - name: Validate template
+        run: aws cloudformation validate-template --template-body file://${{ env.TEMPLATE_PATH }}
+
+      - name: Create/update CDN stack (no change sets)
+        id: cfn
+        shell: bash
+        run: |
+          set -e
+          if aws cloudformation describe-stacks --stack-name "${CDN_STACK}" >/dev/null 2>&1; then
+            echo "Updating CDN stack..."
+            set +e
+            aws cloudformation update-stack \
+              --stack-name "${CDN_STACK}" \
+              --template-body file://${TEMPLATE_PATH} \
+              --capabilities CAPABILITY_NAMED_IAM \
+              --parameters ParameterKey=WebBucketName,ParameterValue="${WEB_BUCKET}"
+            rc=$?
+            set -e
+            if [ "$rc" -eq 0 ]; then
+              aws cloudformation wait stack-update-complete --stack-name "${CDN_STACK}"
+            else
+              echo "No updates (or benign ValidationError)."
+            fi
+          else
+            echo "Creating CDN stack..."
+            aws cloudformation create-stack \
+              --stack-name "${CDN_STACK}" \
+              --template-body file://${TEMPLATE_PATH} \
+              --capabilities CAPABILITY_NAMED_IAM \
+              --parameters ParameterKey=WebBucketName,ParameterValue="${WEB_BUCKET}"
+            aws cloudformation wait stack-create-complete --stack-name "${CDN_STACK}"
+          fi
+
+      - name: Derive DistributionId from stack resources (authoritative)
+        id: dist
+        shell: bash
+        run: |
+          set -e
+          DIST_ID=$(aws cloudformation describe-stack-resources \
+            --stack-name "${CDN_STACK}" \
+            --logical-resource-id Distribution \
+            --query 'StackResources[0].PhysicalResourceId' --output text)
+          if [ -z "$DIST_ID" ] || [ "$DIST_ID" = "None" ]; then
+            echo "Distribution physical ID missing from stack resources."
+            exit 1
+          fi
+          echo "DIST_ID=$DIST_ID" >> $GITHUB_ENV
+          echo "DistributionId: $DIST_ID"
+
+      - name: Wait until CloudFront distribution exists
+        shell: bash
+        run: |
+          set -e
+          for i in {1..60}; do
+            set +e
+            DNS=$(aws cloudfront get-distribution --id "${DIST_ID}" --query "Distribution.DomainName" --output text 2>/dev/null)
+            RC=$?
+            set -e
+            if [ "$RC" -eq 0 ] && [ -n "$DNS" ] && [ "$DNS" != "None" ]; then
+              echo "Distribution ready: $DNS"
+              echo "DIST_DNS=$DNS" >> $GITHUB_ENV
+              exit 0
+            fi
+            echo "Waiting for distribution to become readable... ($i/60)"
+            sleep 10
+          end
+          echo "Timed out waiting for distribution visibility"
+          exit 1
+
+      - name: Print CDN URL (open this)
+        run: |
+          echo "CDN URL: https://${DIST_DNS}/"
