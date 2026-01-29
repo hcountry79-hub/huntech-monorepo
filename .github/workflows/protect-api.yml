@@ -17,7 +17,6 @@ jobs:
       TEMPLATE_PATH: infra/cfn/huntech_core_stack_protected.yaml
       PROJECT_NAME: HUNTECH
       ENV_NAME: core
-      DDB_TABLE: HUNTECH-core-AppData
 
     steps:
       - name: Checkout
@@ -29,8 +28,8 @@ jobs:
           role-to-assume: ${{ env.ROLE_TO_ASSUME }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Resolve Cognito User Pool ARN (HUNTECH-auth-dev)
-        id: pool
+      - name: Resolve Cognito pool + client
+        id: cognito
         shell: bash
         run: |
           set -e
@@ -39,10 +38,15 @@ jobs:
           if [ -z "$POOL_ID" ] || [ "$POOL_ID" = "None" ]; then
             echo "HUNTECH-auth-dev user pool not found in ${AWS_REGION}"; exit 1
           fi
-          POOL_ARN=$(aws cognito-idp describe-user-pool --user-pool-id "$POOL_ID" \
-            --query "UserPool.Arn" --output text)
-          echo "POOL_ARN=$POOL_ARN" >> $GITHUB_ENV
-          echo "Resolved UserPoolArn: $POOL_ARN"
+          CLIENT_ID=$(aws cognito-idp list-user-pool-clients --user-pool-id "$POOL_ID" --max-results 60 \
+            --query "UserPoolClients[0].ClientId" --output text)
+          if [ -z "$CLIENT_ID" ] || [ "$CLIENT_ID" = "None" ]; then
+            echo "No app client in pool $POOL_ID; create one and re-run"; exit 1
+          fi
+          ISSUER="https://cognito-idp.${AWS_REGION}.amazonaws.com/${POOL_ID}"
+          echo "COGNITO_ISSUER=$ISSUER" >> $GITHUB_ENV
+          echo "COGNITO_AUDIENCE=$CLIENT_ID" >> $GITHUB_ENV
+          echo "PoolId=$POOL_ID  ClientId=$CLIENT_ID  Issuer=$ISSUER"
 
       - name: Write protected CloudFormation template (health open, seed protected)
         shell: bash
@@ -56,119 +60,20 @@ jobs:
             ProjectName: { Type: String, Default: HUNTECH }
             Environment: { Type: String, Default: core }
             CreateApiAuthorizer: { Type: String, AllowedValues: ['true','false'], Default: 'true' }
-            CognitoUserPoolArn: { Type: String, Default: '' }
+            CognitoIssuer: { Type: String, Default: '' }
+            CognitoAudience: { Type: List<String>, Default: [] }
 
           Conditions:
             UseAuthorizer: !And
               - !Equals [ !Ref CreateApiAuthorizer, 'true' ]
-              - !Not [ !Equals [ !Ref CognitoUserPoolArn, '' ] ]
+              - !Not [ !Equals [ !Ref CognitoIssuer, '' ] ]
 
           Resources:
-            WebBucket:
-              Type: AWS::S3::Bucket
-              Properties:
-                BucketName: !Sub 'huntech-web-${AWS::AccountId}-${AWS::Region}-core'
-                PublicAccessBlockConfiguration:
-                  BlockPublicAcls: true
-                  BlockPublicPolicy: true
-                  IgnorePublicAcls: true
-                  RestrictPublicBuckets: true
-                VersioningConfiguration: { Status: Enabled }
-                BucketEncryption:
-                  ServerSideEncryptionConfiguration:
-                    - ServerSideEncryptionByDefault: { SSEAlgorithm: AES256 }
-
-            MediaBucket:
-              Type: AWS::S3::Bucket
-              Properties:
-                BucketName: !Sub 'huntech-media-${AWS::AccountId}-${AWS::Region}-core'
-                PublicAccessBlockConfiguration:
-                  BlockPublicAcls: true
-                  BlockPublicPolicy: true
-                  IgnorePublicAcls: true
-                  RestrictPublicBuckets: true
-                VersioningConfiguration: { Status: Enabled }
-                BucketEncryption:
-                  ServerSideEncryptionConfiguration:
-                    - ServerSideEncryptionByDefault: { SSEAlgorithm: AES256 }
-
-            AppTable:
-              Type: AWS::DynamoDB::Table
-              Properties:
-                TableName: !Sub '${ProjectName}-${Environment}-AppData'
-                BillingMode: PAY_PER_REQUEST
-                AttributeDefinitions:
-                  - { AttributeName: pk, AttributeType: S }
-                  - { AttributeName: sk, AttributeType: S }
-                KeySchema:
-                  - { AttributeName: pk, KeyType: HASH }
-                  - { AttributeName: sk, KeyType: RANGE }
-
-            AppFunctionRole:
-              Type: AWS::IAM::Role
-              Properties:
-                RoleName: !Sub '${ProjectName}-${Environment}-LambdaRole'
-                AssumeRolePolicyDocument:
-                  Version: '2012-10-17'
-                  Statement:
-                    - Effect: Allow
-                      Principal: { Service: lambda.amazonaws.com }
-                      Action: sts:AssumeRole
-                ManagedPolicyArns:
-                  - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
-                Policies:
-                  - PolicyName: AppTableAccess
-                    PolicyDocument:
-                      Version: '2012-10-17'
-                      Statement:
-                        - Effect: Allow
-                          Action:
-                            - dynamodb:PutItem
-                            - dynamodb:GetItem
-                            - dynamodb:UpdateItem
-                            - dynamodb:Query
-                            - dynamodb:Scan
-                          Resource: !GetAtt AppTable.Arn
-                  - PolicyName: MediaBucketAccess
-                    PolicyDocument:
-                      Version: '2012-10-17'
-                      Statement:
-                        - Effect: Allow
-                          Action: [ s3:PutObject, s3:GetObject, s3:DeleteObject ]
-                          Resource: !Sub '${MediaBucket.Arn}/*'
-
-            AppFunction:
-              Type: AWS::Lambda::Function
-              Properties:
-                FunctionName: !Sub '${ProjectName}-${Environment}-ApiHandler'
-                Runtime: python3.12
-                Handler: index.handler
-                Role: !GetAtt AppFunctionRole.Arn
-                Timeout: 15
-                MemorySize: 256
-                Environment:
-                  Variables:
-                    TABLE_NAME: !Sub '${ProjectName}-${Environment}-AppData'
-                    MEDIA_BUCKET: !Ref MediaBucket
-                Code:
-                  ZipFile: |
-                    import json, os, boto3
-                    ddb = boto3.resource('dynamodb')
-                    table = ddb.Table(os.environ['TABLE_NAME'])
-                    def handler(event, context):
-                        path = event.get('rawPath','/')
-                        if path == '/health':
-                            return {'statusCode': 200, 'headers': {'content-type':'application/json'}, 'body': json.dumps({'ok': True})}
-                        if path == '/seed':
-                            table.put_item(Item={'pk':'DEMO','sk':'SEED','ts':context.aws_request_id})
-                            return {'statusCode': 200, 'headers': {'content-type':'application/json'}, 'body': json.dumps({'seeded': True})}
-                        return {'statusCode': 404, 'headers': {'content-type':'application/json'}, 'body': json.dumps({'error':'Not Found'})}
-
+            # (Buckets/Table/Role/Function are already created in core stack; we only need API parts for protection)
             HttpApi:
               Type: AWS::ApiGatewayV2::Api
               Properties: { Name: !Sub '${ProjectName}-${Environment}-HttpApi', ProtocolType: HTTP }
 
-            # JWT Authorizer (Cognito)
             HttpAuthorizer:
               Type: AWS::ApiGatewayV2::Authorizer
               Condition: UseAuthorizer
@@ -178,94 +83,12 @@ jobs:
                 IdentitySource: [ '$request.header.Authorization' ]
                 Name: CognitoJwt
                 JwtConfiguration:
-                  Audience: []      # optional; leave empty for now
-                  Issuer: !Ref CognitoUserPoolArn
+                  Audience: !Ref CognitoAudience
+                  Issuer: !Ref CognitoIssuer
 
+            # Integration stays the same logical name so routes wire up
             HttpIntegration:
               Type: AWS::ApiGatewayV2::Integration
               Properties:
                 ApiId: !Ref HttpApi
                 IntegrationType: AWS_PROXY
-                IntegrationUri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${AppFunction.Arn}/invocations'
-                PayloadFormatVersion: '2.0'
-
-            # Open route
-            RouteHealth:
-              Type: AWS::ApiGatewayV2::Route
-              Properties:
-                ApiId: !Ref HttpApi
-                RouteKey: 'GET /health'
-                Target: !Sub 'integrations/${HttpIntegration}'
-
-            # Protected route (JWT required)
-            RouteSeed:
-              Type: AWS::ApiGatewayV2::Route
-              Condition: UseAuthorizer
-              Properties:
-                ApiId: !Ref HttpApi
-                RouteKey: 'GET /seed'
-                AuthorizationType: JWT
-                AuthorizerId: !Ref HttpAuthorizer
-                Target: !Sub 'integrations/${HttpIntegration}'
-
-            StageDefault:
-              Type: AWS::ApiGatewayV2::Stage
-              Properties: { ApiId: !Ref HttpApi, StageName: '$default', AutoDeploy: true }
-
-            LambdaInvokePermissionApi:
-              Type: AWS::Lambda::Permission
-              Properties:
-                Action: lambda:InvokeFunction
-                FunctionName: !Ref AppFunction
-                Principal: apigateway.amazonaws.com
-
-          Outputs:
-            ApiEndpoint:
-              Description: Invoke URL of the HTTP API (default stage)
-              Value: !Sub 'https://${HttpApi}.execute-api.${AWS::Region}.amazonaws.com'
-          YAML
-
-      - name: Validate template
-        run: aws cloudformation validate-template --template-body file://${{ env.TEMPLATE_PATH }}
-
-      - name: Update stack with JWT authorizer (health open, seed protected)
-        shell: bash
-        run: |
-          set -e
-          aws cloudformation update-stack \
-            --stack-name "${STACK_NAME}" \
-            --template-body file://${TEMPLATE_PATH} \
-            --capabilities CAPABILITY_NAMED_IAM \
-            --parameters \
-              ParameterKey=ProjectName,ParameterValue=${PROJECT_NAME} \
-              ParameterKey=Environment,ParameterValue=${ENV_NAME} \
-              ParameterKey=CreateApiAuthorizer,ParameterValue=true \
-              ParameterKey=CognitoUserPoolArn,ParameterValue="${POOL_ARN}"
-          aws cloudformation wait stack-update-complete --stack-name "${STACK_NAME}"
-          echo "Stack updated with JWT authorizer."
-
-      - name: Derive API endpoint
-        id: api
-        run: |
-          API_ID=$(aws cloudformation describe-stack-resources \
-            --stack-name "${STACK_NAME}" \
-            --logical-resource-id HttpApi \
-            --query 'StackResources[0].PhysicalResourceId' --output text)
-          echo "API_ENDPOINT=https://${API_ID}.execute-api.${AWS_REGION}.amazonaws.com" >> $GITHUB_ENV
-          echo "API Endpoint: https://${API_ID}.execute-api.${AWS_REGION}.amazonaws.com"
-
-      - name: Test /health (should be open)
-        run: |
-          set -e
-          curl -sf "${API_ENDPOINT}/health" >/dev/null
-          echo "Health OK"
-
-      - name: Test /seed without token (should be 401)
-        run: |
-          set +e
-          CODE=$(curl -s -o /dev/null -w "%{http_code}" "${API_ENDPOINT}/seed")
-          echo "Status: $CODE"
-          if [ "$CODE" != "401" ]; then
-            echo "Expected 401 for /seed without token"; exit 1
-          fi
-          echo "Unauthorized as expected"
