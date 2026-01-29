@@ -1,0 +1,185 @@
+name: HUNTECH Fix AccessDenied (one-click)
+
+on:
+  workflow_dispatch:
+    inputs:
+      dist_input:
+        description: "CloudFront Distribution ID (E...) OR Domain (dxxxxx.cloudfront.net). Leave empty to auto-discover from core.huntechusa.com"
+        required: false
+        default: ""
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    env:
+      AWS_REGION: us-east-1
+      ROLE_TO_ASSUME: arn:aws:iam::382773571217:role/HUNTECH-CICD
+      WEB_BUCKET: huntech-web-382773571217-us-east-1-core
+      SITE_FQDN: core.huntechusa.com
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.ROLE_TO_ASSUME }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Install jq & dig & curl
+        run: |
+          set -e
+          sudo apt-get update -y
+          sudo apt-get install -y jq dnsutils curl
+
+      - name: Resolve Dist ID (input → domain → CNAME of site)
+        id: dist
+        env:
+          DIST_INPUT: ${{ github.event.inputs.dist_input }}
+        run: |
+          set -e
+          DIST_ID=""
+          DIST_DOMAIN=""
+
+          # 1) If user provided an ID or a domain — try that first
+          if [ -n "${DIST_INPUT}" ]; then
+            if echo "${DIST_INPUT}" | grep -qiE '\.cloudfront\.net$'; then
+              DIST_DOMAIN="${DIST_INPUT}"
+              DIST_ID=$(aws cloudfront list-distributions \
+                --query "DistributionList.Items[?DomainName=='${DIST_DOMAIN}'].Id | [0]" \
+                --output text 2>/dev/null || true)
+            else
+              DIST_ID="${DIST_INPUT}"
+              DIST_DOMAIN=$(aws cloudfront get-distribution --id "${DIST_ID}" \
+                --query "Distribution.DomainName" --output text 2>/dev/null || true)
+            fi
+          fi
+
+          # 2) If still not found, discover from the site's CNAME
+          if [ -z "$DIST_ID" ] || [ "$DIST_ID" = "None" ]; then
+            CF_CNAME=$(dig +short CNAME "${SITE_FQDN}" | sed 's/\.$//' || true)
+            if [ -n "$CF_CNAME" ]; then
+              DIST_DOMAIN="$CF_CNAME"
+              DIST_ID=$(aws cloudfront list-distributions \
+                --query "DistributionList.Items[?DomainName=='${DIST_DOMAIN}'].Id | [0]" \
+                --output text 2>/dev/null || true)
+            fi
+          fi
+
+          # 3) If still not found, try any distribution whose origin points to this bucket
+          if [ -z "$DIST_ID" ] || [ "$DIST_ID" = "None" ]; then
+            ORIGIN="${WEB_BUCKET}.s3.${AWS_REGION}.amazonaws.com"
+            DIST_ID=$(aws cloudfront list-distributions \
+              --query "DistributionList.Items[?contains(Origins.Items[].DomainName, '${ORIGIN}')].Id | [0]" \
+              --output text 2>/dev/null || true)
+            [ "$DIST_ID" != "None" ] && DIST_DOMAIN=$(aws cloudfront get-distribution --id "${DIST_ID}" \
+              --query "Distribution.DomainName" --output text 2>/dev/null || true)
+          fi
+
+          if [ -z "$DIST_ID" ] || [ "$DIST_ID" = "None" ]; then
+            echo "ERROR: Could not resolve a CloudFront distribution. Provide dist_input or ensure DNS CNAME exists."
+            exit 1
+          fi
+
+          echo "DIST_ID=$DIST_ID" >> $GITHUB_ENV
+          echo "DIST_DOMAIN=$DIST_DOMAIN" >> $GITHUB_ENV
+          echo "Using Distribution: $DIST_ID ($DIST_DOMAIN)"
+
+      - name: Ensure Default Root Object is index.html
+        run: |
+          set -e
+          CFG=$(aws cloudfront get-distribution-config --id "${DIST_ID}")
+          ETAG=$(echo "$CFG" | jq -r .ETag)
+          DC=$(echo "$CFG" | jq -r '.DistributionConfig')
+          ROOT=$(echo "$DC" | jq -r '.DefaultRootObject // empty')
+          if [ "$ROOT" = "index.html" ]; then
+            echo "DefaultRootObject already index.html"
+          else
+            NEW=$(echo "$DC" | jq '.DefaultRootObject = "index.html"')
+            printf '%s' "$NEW" > /tmp/new-cf.json
+            aws cloudfront update-distribution --id "${DIST_ID}" --if-match "${ETAG}" \
+              --distribution-config file:///tmp/new-cf.json >/dev/null
+            echo "Set DefaultRootObject=index.html"
+          fi
+
+      - name: Verify index.html exists at bucket root; upload if missing
+        run: |
+          set -e
+          if aws s3api head-object --bucket "${WEB_BUCKET}" --key "index.html" >/dev/null 2>&1; then
+            echo "index.html found in bucket root"
+          else
+            echo "Uploading known-good index.html"
+            mkdir -p site
+            cat > site/index.html <<'HTML'
+<!doctype html><html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HUNTΞCH — Core</title>
+<style>
+body{font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;margin:0;background:#111;color:#fefefe}
+.wrap{max-width:720px;margin:5rem auto;background:#222;padding:2rem;border-radius:12px}
+h1{margin-top:0}.tag{display:inline-block;padding:4px 10px;border-radius:999px;background:#3a2e11;color:#ffd34d;font-weight:600;margin-bottom:12px}
+</style></head><body><div class="wrap">
+<div class="tag">HUNTΞCH • CDN</div><h1>Where Innovation Meets Tradition</h1>
+<p>Private S3 via CloudFront (OAC). If you can read this, access is fixed.</p>
+</div></body></html>
+HTML
+            aws s3 sync site/ "s3://${WEB_BUCKET}/" --delete --cache-control max-age=60
+          fi
+
+      - name: Re-apply OAC bucket policy for this distribution
+        run: |
+          set -e
+          cat > /tmp/policy.json <<EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [{
+    "Sid": "AllowCloudFrontServicePrincipalReadOnly",
+    "Effect": "Allow",
+    "Principal": { "Service": "cloudfront.amazonaws.com" },
+    "Action": "s3:GetObject",
+    "Resource": "arn:aws:s3:::${WEB_BUCKET}/*",
+    "Condition": {
+      "StringEquals": {
+        "AWS:SourceArn": "arn:aws:cloudfront::382773571217:distribution/${DIST_ID}"
+      }
+    }
+  }]
+}
+EOF
+          aws s3api put-bucket-policy --bucket "${WEB_BUCKET}" --policy file:///tmp/policy.json
+          echo "Bucket policy applied for distribution ${DIST_ID}"
+
+      - name: Invalidate CloudFront
+        run: |
+          set -e
+          aws cloudfront create-invalidation --distribution-id "${DIST_ID}" --paths "/*" >/dev/null
+          echo "Invalidation created"
+
+      - name: Probe /index.html (200 expected)
+        run: |
+          set -e
+          URL="https://${{ env.SITE_FQDN }}/index.html"
+          for i in $(seq 1 36); do
+            CODE=$(curl -s -o /dev/null -w "%{http_code}" "$URL")
+            echo "GET $URL -> $CODE (try $i/36)"
+            [ "$CODE" = "200" ] && exit 0
+            sleep 5
+          done
+          echo "index.html not 200 yet"; exit 1
+
+      - name: Probe / (200 expected)
+        if: ${{ success() }}
+        run: |
+          set -e
+          URL="https://${{ env.SITE_FQDN }}/"
+          for i in $(seq 1 24); do
+            CODE=$(curl -s -o /dev/null -w "%{http_code}" "$URL")
+            echo "GET $URL -> $CODE (try $i/24)"
+            [ "$CODE" = "200" ] && { echo "domain ok: $URL"; exit 0; }
+            sleep 5
+          done
+          echo "Root path not 200 yet; wait a minute and refresh"
