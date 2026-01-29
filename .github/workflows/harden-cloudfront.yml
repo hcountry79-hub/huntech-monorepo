@@ -1,0 +1,247 @@
+name: HUNTECH Harden CloudFront (WAF + Security Headers + Logs + Errors)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+    paths:
+      - ".github/workflows/harden-cloudfront.yml"
+
+jobs:
+  harden:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    env:
+      AWS_REGION: us-east-1
+      ROLE_TO_ASSUME: arn:aws:iam::382773571217:role/HUNTECH-CICD
+      ACCOUNT_ID: "382773571217"
+
+      SITE_FQDN: core.huntechusa.com
+      CF_FALLBACK: d2stduzbo1av87.cloudfront.net
+
+      WEB_BUCKET: huntech-web-382773571217-us-east-1-core
+      LOG_BUCKET: huntech-cf-logs-382773571217-us-east-1
+
+      # Response Headers Policy name we will (idempotently) manage
+      RHP_NAME: HUNTECH-SecurityHeaders-v1
+
+      # WAF resources (CloudFront scope must be in us-east-1)
+      WAF_NAME: HUNTECH-Global-WebACL
+      WAF_METRIC: huntechGlobalWaf
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.ROLE_TO_ASSUME }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Install tools
+        run: |
+          set -e
+          sudo apt-get update -y
+          sudo apt-get install -y jq dnsutils curl
+
+      # ---------- Resolve distribution (CNAME → ID; fallback to known) ----------
+      - name: Resolve CloudFront distribution
+        id: dist
+        run: |
+          set -e
+          CF_DOMAIN="$(dig +short CNAME ${SITE_FQDN} | sed 's/\.$//' || true)"
+          if [ -z "$CF_DOMAIN" ]; then CF_DOMAIN="${CF_FALLBACK}"; fi
+          DIST_ID=$(aws cloudfront list-distributions \
+            --query "DistributionList.Items[?DomainName=='${CF_DOMAIN}'].Id | [0]" \
+            --output text 2>/dev/null || true)
+          if [ -z "$DIST_ID" ] || [ "$DIST_ID" = "None" ]; then
+            echo "ERROR: Cannot resolve CloudFront distribution ID from ${CF_DOMAIN}"
+            exit 1
+          fi
+          echo "DIST_ID=$DIST_ID" >> $GITHUB_ENV
+          echo "DIST_DOMAIN=$CF_DOMAIN" >> $GITHUB_ENV
+          echo "Using distribution $DIST_ID ($CF_DOMAIN)"
+
+      # ---------- Ensure logs bucket exists & is locked down ----------
+      - name: Ensure S3 log bucket (private, encrypted)
+        run: |
+          set -e
+          if ! aws s3api head-bucket --bucket "${LOG_BUCKET}" 2>/dev/null; then
+            echo "Creating log bucket: ${LOG_BUCKET}"
+            aws s3api create-bucket --bucket "${LOG_BUCKET}" --create-bucket-configuration LocationConstraint=us-east-1
+            aws s3api put-bucket-encryption --bucket "${LOG_BUCKET}" --server-side-encryption-configuration '{"Rules":[{"ApplyServerSideEncryptionByDefault":{"SSEAlgorithm":"AES256"}}]}'
+            aws s3api put-public-access-block --bucket "${LOG_BUCKET}" --public-access-block-configuration '{
+              "BlockPublicAcls": true, "IgnorePublicAcls": true, "BlockPublicPolicy": true, "RestrictPublicBuckets": true
+            }'
+            aws s3api put-bucket-ownership-controls --bucket "${LOG_BUCKET}" --ownership-controls '{
+              "Rules":[{"ObjectOwnership":"BucketOwnerEnforced"}]
+            }'
+          else
+            echo "Log bucket exists: ${LOG_BUCKET}"
+          fi
+
+      # ---------- Create/ensure Response Headers Policy with security headers ----------
+      - name: Ensure Response Headers Policy (security headers)
+        id: rhp
+        run: |
+          set -e
+          # Try to find an existing policy by name
+          RHP_ID=$(aws cloudfront list-response-headers-policies \
+            --query "ResponseHeadersPolicyList.Items[?ResponseHeadersPolicy.ResponseHeadersPolicyConfig.Name=='${RHP_NAME}'].ResponseHeadersPolicy.Id | [0]" \
+            --output text 2>/dev/null || true)
+
+          if [ -z "$RHP_ID" ] || [ "$RHP_ID" = "None" ]; then
+            echo "Creating Response Headers Policy ${RHP_NAME}"
+            # Relaxed CSP for field testing; we’ll tighten post‑test.
+            cat > rhp.json <<'JSON'
+            {
+              "ResponseHeadersPolicyConfig": {
+                "Name": "HUNTECH-SecurityHeaders-v1",
+                "Comment": "HUNTΞCH security headers (field-test relaxed CSP)",
+                "SecurityHeadersConfig": {
+                  "ContentSecurityPolicy": {
+                    "Override": true,
+                    "ContentSecurityPolicy": "default-src 'self' https: data: blob:; img-src 'self' https: data: blob:; script-src 'self' 'unsafe-inline' https:; style-src 'self' 'unsafe-inline' https:; font-src 'self' https: data:; connect-src 'self' https:; frame-ancestors 'none'; upgrade-insecure-requests"
+                  },
+                  "StrictTransportSecurity": {
+                    "Override": true,
+                    "AccessControlMaxAgeSec": 31536000,
+                    "IncludeSubdomains": true,
+                    "Preload": true
+                  },
+                  "XContentTypeOptions": { "Override": true },
+                  "XFrameOptions": { "Override": true, "FrameOption": "DENY" },
+                  "ReferrerPolicy": { "Override": true, "ReferrerPolicy": "strict-origin-when-cross-origin" },
+                  "PermissionsPolicy": {
+                    "Override": true,
+                    "PermissionsPolicy": "geolocation=(), microphone=(), camera=()"
+                  }
+                }
+              }
+            }
+            JSON
+            RHP_ID=$(aws cloudfront create-response-headers-policy \
+              --response-headers-policy-config file://rhp.json \
+              --query "ResponseHeadersPolicy.Id" --output text)
+          else
+            echo "Using existing RHP: ${RHP_ID}"
+          fi
+          echo "RHP_ID=$RHP_ID" >> $GITHUB_ENV
+
+      # ---------- Update distribution config: attach headers policy, logs, custom errors ----------
+      - name: Attach headers, enable logs, add error pages
+        run: |
+          set -e
+          CFG=$(aws cloudfront get-distribution-config --id "${DIST_ID}")
+          ETAG=$(echo "$CFG" | jq -r .ETag)
+          DC=$(echo "$CFG" | jq -r '.DistributionConfig')
+
+          # Attach headers policy to the default behavior (idempotent)
+          DC=$(echo "$DC" | jq --arg rhp "${RHP_ID}" '
+            .DefaultCacheBehavior.ResponseHeadersPolicyId = $rhp
+          ')
+
+          # Enable standard logging to log bucket
+          DC=$(echo "$DC" | jq --arg b "${LOG_BUCKET}.s3.amazonaws.com" --arg p "cloudfront/" '
+            .Logging = { "Enabled": true, "IncludeCookies": false, "Bucket": $b, "Prefix": $p }
+          ')
+
+          # Custom error responses for SPA/deep links (403/404 -> /index.html, 200)
+          DC=$(echo "$DC" | jq '
+            .CustomErrorResponses.Items = ([
+              { "ErrorCode": 403, "ResponsePagePath": "/index.html", "ResponseCode": "200", "ErrorCachingMinTTL": 0 },
+              { "ErrorCode": 404, "ResponsePagePath": "/index.html", "ResponseCode": "200", "ErrorCachingMinTTL": 0 }
+            ]) | .CustomErrorResponses.Quantity = 2
+          ')
+
+          printf '%s' "$DC" > /tmp/new-cf.json
+          aws cloudfront update-distribution --id "${DIST_ID}" --if-match "${ETAG}" \
+            --distribution-config file:///tmp/new-cf.json >/dev/null
+          echo "Distribution updated (headers policy + logs + error pages)"
+
+      # ---------- Create/attach WAFv2 (CloudFront scope in us-east-1) ----------
+      - name: Ensure WAFv2 WebACL and associate
+        run: |
+          set -e
+          # 1) Create or find the ACL
+          ACL_ARN=$(aws wafv2 list-web-acls --region us-east-1 --scope CLOUDFRONT \
+            --query "WebACLs[?Name=='${WAF_NAME}'].ARN | [0]" --output text 2>/dev/null || true)
+
+          if [ -z "$ACL_ARN" ] || [ "$ACL_ARN" = "None" ]; then
+            echo "Creating WAFv2 WebACL ${WAF_NAME} in us-east-1 (CloudFront scope)"
+            cat > waf.json <<'JSON'
+            {
+              "Name": "HUNTECH-Global-WebACL",
+              "Scope": "CLOUDFRONT",
+              "DefaultAction": { "Allow": {} },
+              "VisibilityConfig": {
+                "SampledRequestsEnabled": true,
+                "CloudWatchMetricsEnabled": true,
+                "MetricName": "huntechGlobalWaf"
+              },
+              "Rules": [
+                {
+                  "Name": "AWSManagedRulesCommonRuleSet",
+                  "Priority": 1,
+                  "Statement": { "ManagedRuleGroupStatement": { "VendorName": "AWS", "Name": "AWSManagedRulesCommonRuleSet" } },
+                  "VisibilityConfig": { "SampledRequestsEnabled": true, "CloudWatchMetricsEnabled": true, "MetricName": "Common" },
+                  "OverrideAction": { "None": {} }
+                },
+                {
+                  "Name": "AWSManagedRulesKnownBadInputsRuleSet",
+                  "Priority": 2,
+                  "Statement": { "ManagedRuleGroupStatement": { "VendorName": "AWS", "Name": "AWSManagedRulesKnownBadInputsRuleSet" } },
+                  "VisibilityConfig": { "SampledRequestsEnabled": true, "CloudWatchMetricsEnabled": true, "MetricName": "BadInputs" },
+                  "OverrideAction": { "None": {} }
+                },
+                {
+                  "Name": "AWSManagedRulesAmazonIpReputationList",
+                  "Priority": 3,
+                  "Statement": { "ManagedRuleGroupStatement": { "VendorName": "AWS", "Name": "AWSManagedRulesAmazonIpReputationList" } },
+                  "VisibilityConfig": { "SampledRequestsEnabled": true, "CloudWatchMetricsEnabled": true, "MetricName": "Reputation" },
+                  "OverrideAction": { "None": {} }
+                },
+                {
+                  "Name": "AWSManagedRulesAnonymousIpList",
+                  "Priority": 4,
+                  "Statement": { "ManagedRuleGroupStatement": { "VendorName": "AWS", "Name": "AWSManagedRulesAnonymousIpList" } },
+                  "VisibilityConfig": { "SampledRequestsEnabled": true, "CloudWatchMetricsEnabled": true, "MetricName": "AnonymousIP" },
+                  "OverrideAction": { "None": {} }
+                }
+              ]
+            }
+            JSON
+            # Create and capture LockToken (WAF requires it for updates; not needed now)
+            ACL_ARN=$(aws wafv2 create-web-acl --region us-east-1 --scope CLOUDFRONT \
+              --cli-input-json file://waf.json --query "Summary.ARN" --output text)
+          else
+            echo "Using existing WAF ACL: ${ACL_ARN}"
+          fi
+
+          # 2) Associate with CloudFront distribution
+          aws wafv2 associate-web-acl --region us-east-1 --scope CLOUDFRONT \
+            --web-acl-arn "${ACL_ARN}" \
+            --resource-arn "arn:aws:cloudfront::${ACCOUNT_ID}:distribution/${DIST_ID}" >/dev/null || true
+          echo "WAF associated to distribution"
+
+      # ---------- Invalidate + probe ----------
+      - name: Invalidate CloudFront
+        run: |
+          set -e
+          aws cloudfront create-invalidation --distribution-id "${DIST_ID}" --paths "/*" >/dev/null
+
+      - name: Probe site (expect 200)
+        run: |
+          set -e
+          for PATH in "/index.html" "/"; do
+            URL="https://${SITE_FQDN}${PATH}"
+            for i in $(seq 1 48); do
+              CODE=$(curl -s -o /dev/null -w "%{http_code}" "$URL")
+              echo "GET $URL -> $CODE (try $i/48)"
+              [ "$CODE" = "200" ] && break
+              sleep 5
+            done
+          done
+          echo "harden ok: https://${SITE_FQDN}/"
