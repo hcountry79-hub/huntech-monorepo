@@ -1,4 +1,4 @@
-name: HUNTECH Web + CDN + Domain (ONE CLICK)
+name: HUNTECH Web + CDN + Domain (ONE CLICK, deterministic)
 
 on:
   workflow_dispatch:
@@ -13,15 +13,19 @@ jobs:
       AWS_REGION: us-east-1
       ACCOUNT_ID: 382773571217
       ROLE_TO_ASSUME: arn:aws:iam::382773571217:role/HUNTECH-CICD
-      # Core resources from your foundation
+
+      # Core assets from your foundation stack
       WEB_BUCKET: huntech-web-382773571217-us-east-1-core
-      # CloudFormation stack for CDN
+
+      # CDN stack + template
       CDN_STACK: HUNTECH-WebCore-CDN
       TEMPLATE_PATH: infra/cfn/huntech_web_cdn.yaml
-      # DNS / cert targets
+
+      # Domain settings
       CORE_FQDN: core.huntechusa.com
       APEX_DOMAIN: huntechusa.com
-      CLOUDFRONT_ZONE_ID: Z2FDTNDATAQYW2   # CloudFront ALIAS zone (constant)
+      CLOUDFRONT_ZONE_ID: Z2FDTNDATAQYW2   # CloudFront hosted zone (constant)
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -32,12 +36,11 @@ jobs:
           role-to-assume: ${{ env.ROLE_TO_ASSUME }}
           aws-region: ${{ env.AWS_REGION }}
 
-      # Make sure the CI role can manage CloudFront, Route53, and ACM
-      - name: Ensure CloudFront + Route53 + ACM permissions (inline)
+      # Ensure this session can manage CloudFront/Route53/ACM and read CFN resources
+      - name: Ensure permissions (inline)
         shell: bash
         run: |
-          set -e
-          cat > /tmp/HUNTECH-Web-DNS-StackOps.json <<'JSON'
+          cat > /tmp/HUNTECH-WebDNS-Perms.json <<'JSON'
           {
             "Version": "2012-10-17",
             "Statement": [
@@ -78,16 +81,26 @@ jobs:
                   "acm:DeleteCertificate"
                 ],
                 "Resource": "*"
+              },
+              {
+                "Sid": "CFNDescribeResources",
+                "Effect": "Allow",
+                "Action": [
+                  "cloudformation:DescribeStacks",
+                  "cloudformation:DescribeStackResources",
+                  "cloudformation:ListStackResources"
+                ],
+                "Resource": "*"
               }
             ]
           }
           JSON
           aws iam put-role-policy \
             --role-name HUNTECH-CICD \
-            --policy-name HUNTECH-Web-DNS-StackOps \
-            --policy-document file:///tmp/HUNTECH-Web-DNS-StackOps.json
+            --policy-name HUNTECH-WebDNS-Perms \
+            --policy-document file:///tmp/HUNTECH-WebDNS-Perms.json
 
-      - name: Write CloudFormation template (CloudFront + OAC + bucket policy)
+      - name: Write CDN CloudFormation template (CloudFront + OAC + bucket policy)
         shell: bash
         run: |
           set -e
@@ -130,7 +143,7 @@ jobs:
                     AllowedMethods: [GET, HEAD]
                     CachedMethods: [GET, HEAD]
                     Compress: true
-                    CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6 # AWS CachingOptimized
+                    CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6   # AWS CachingOptimized
 
             BucketPolicy:
               Type: AWS::S3::BucketPolicy
@@ -141,8 +154,7 @@ jobs:
                   Statement:
                     - Sid: AllowCloudFrontReadOAC
                       Effect: Allow
-                      Principal:
-                        Service: cloudfront.amazonaws.com
+                      Principal: { Service: cloudfront.amazonaws.com }
                       Action: s3:GetObject
                       Resource: !Sub 'arn:aws:s3:::${WebBucketName}/*'
                       Condition:
@@ -152,25 +164,34 @@ jobs:
           Outputs:
             DistributionId:
               Value: !GetAtt Distribution.Id
-              Description: CloudFront distribution ID
             DistributionDomainName:
               Value: !GetAtt Distribution.DomainName
-              Description: CloudFront domain name
           YAML
 
       - name: Validate template
         run: aws cloudformation validate-template --template-body file://${{ env.TEMPLATE_PATH }}
 
-      - name: Create CDN stack if missing (no change sets)
-        id: create
+      - name: Create/update CDN stack (no change sets)
+        id: cfn
         shell: bash
         run: |
           set -e
           if aws cloudformation describe-stacks --stack-name "${CDN_STACK}" >/dev/null 2>&1; then
-            echo "EXISTS=true" >> $GITHUB_OUTPUT
-            echo "CDN stack exists."
+            echo "Updating CDN stack..."
+            set +e
+            aws cloudformation update-stack \
+              --stack-name "${CDN_STACK}" \
+              --template-body file://${TEMPLATE_PATH} \
+              --capabilities CAPABILITY_NAMED_IAM \
+              --parameters ParameterKey=WebBucketName,ParameterValue="${WEB_BUCKET}"
+            rc=$?
+            set -e
+            if [ "$rc" -eq 0 ]; then
+              aws cloudformation wait stack-update-complete --stack-name "${CDN_STACK}"
+            else
+              echo "No updates (or benign ValidationError)."
+            fi
           else
-            echo "EXISTS=false" >> $GITHUB_OUTPUT
             echo "Creating CDN stack..."
             aws cloudformation create-stack \
               --stack-name "${CDN_STACK}" \
@@ -180,52 +201,38 @@ jobs:
             aws cloudformation wait stack-create-complete --stack-name "${CDN_STACK}"
           fi
 
-      - name: Update CDN stack if exists (idempotent)
-        if: steps.create.outputs.EXISTS == 'true'
+      - name: Derive DistributionId/Domain (resources first, then search by origin)
+        id: dist
         shell: bash
         run: |
           set -e
-          set +e
-          aws cloudformation update-stack \
+          # Try to read the physical ID from stack resources
+          DIST_ID=$(aws cloudformation describe-stack-resources \
             --stack-name "${CDN_STACK}" \
-            --template-body file://${TEMPLATE_PATH} \
-            --capabilities CAPABILITY_NAMED_IAM \
-            --parameters ParameterKey=WebBucketName,ParameterValue="${WEB_BUCKET}"
-          rc=$?
-          set -e
-          if [ "$rc" -eq 0 ]; then
-            aws cloudformation wait stack-update-complete --stack-name "${CDN_STACK}"
-          else
-            echo "No updates (or benign ValidationError)."
-          fi
-
-      - name: Read CDN outputs (with fallback)
-        id: cfn
-        shell: bash
-        run: |
-          set -e
-          DIST_ID=$(aws cloudformation describe-stacks --stack-name "${CDN_STACK}" \
-            --query "Stacks[0].Outputs[?OutputKey=='DistributionId'].OutputValue" --output text 2>/dev/null || true)
-          DIST_DNS=$(aws cloudformation describe-stacks --stack-name "${CDN_STACK}" \
-            --query "Stacks[0].Outputs[?OutputKey=='DistributionDomainName'].OutputValue" --output text 2>/dev/null || true)
+            --logical-resource-id Distribution \
+            --query 'StackResources[0].PhysicalResourceId' --output text 2>/dev/null || true)
 
           if [ -z "$DIST_ID" ] || [ "$DIST_ID" = "None" ]; then
-            echo "Outputs missing; falling back to list-distributions..."
+            echo "Stack resource lookup empty; searching by origin..."
+            ORIGIN_DOMAIN="${WEB_BUCKET}.s3.${AWS_REGION}.amazonaws.com"
             DIST_ID=$(aws cloudfront list-distributions \
-              --query "DistributionList.Items[?Comment=='HUNTECH Web CDN for ${WEB_BUCKET}'].Id" --output text)
-            DIST_DNS=$(aws cloudfront list-distributions \
-              --query "DistributionList.Items[?Comment=='HUNTECH Web CDN for ${WEB_BUCKET}'].DomainName" --output text)
+              --query "DistributionList.Items[?contains(Origins.Items[].DomainName, '${ORIGIN_DOMAIN}')].Id | [0]" \
+              --output text 2>/dev/null || true)
           fi
 
           if [ -z "$DIST_ID" ] || [ "$DIST_ID" = "None" ]; then
-            echo "Could not resolve CloudFront distribution. Aborting."; exit 1
+            echo "Could not resolve CloudFront distribution."
+            exit 1
           fi
+
+          DIST_DNS=$(aws cloudfront get-distribution --id "${DIST_ID}" \
+            --query "Distribution.DomainName" --output text)
 
           echo "DIST_ID=$DIST_ID" >> $GITHUB_ENV
           echo "DIST_DNS=$DIST_DNS" >> $GITHUB_ENV
-          echo "CDN: $DIST_ID  $DIST_DNS"
+          echo "Resolved CDN: $DIST_ID  $DIST_DNS"
 
-      - name: Create sample site and upload to S3
+      - name: Create sample site and upload
         shell: bash
         run: |
           set -e
@@ -255,7 +262,7 @@ jobs:
           HTML
           aws s3 sync site/ "s3://${WEB_BUCKET}/" --delete --cache-control max-age=60
 
-      - name: Invalidate CloudFront and wait for Deployed
+      - name: Invalidate and wait for Deployed
         shell: bash
         run: |
           set -e
@@ -266,7 +273,8 @@ jobs:
             [ "$STATUS" = "Deployed" ] && exit 0
             sleep 10
           done
-          echo "Distribution did not reach Deployed in time"; exit 1
+          echo "Distribution did not reach Deployed in time"
+          exit 1
 
       - name: Resolve Route53 Hosted Zone
         id: hz
@@ -274,3 +282,152 @@ jobs:
         run: |
           set -e
           HZ_ID=$(aws route53 list-hosted-zones-by-name --dns-name "${APEX_DOMAIN}" \
+            --query "HostedZones[?Name=='${APEX_DOMAIN}.'].Id" --output text | sed 's#/hostedzone/##')
+          if [ -z "$HZ_ID" ] || [ "$HZ_ID" = "None" ]; then
+            echo "Hosted zone for ${APEX_DOMAIN} not found in Route53."
+            exit 1
+          fi
+          echo "HZ_ID=$HZ_ID" >> $GITHUB_ENV
+          echo "HostedZoneId: $HZ_ID"
+
+      - name: Request ACM certificate (DNS validation, us-east-1)
+        id: cert
+        shell: bash
+        run: |
+          set -e
+          CERT_ARN=$(aws acm request-certificate \
+            --domain-name "${CORE_FQDN}" \
+            --validation-method DNS \
+            --region us-east-1 \
+            --query CertificateArn --output text)
+          echo "CERT_ARN=$CERT_ARN" >> $GITHUB_ENV
+          echo "Requested cert: $CERT_ARN"
+
+      - name: Create/Update DNS validation CNAME
+        shell: bash
+        run: |
+          set -e
+          VALID_JSON=$(aws acm describe-certificate --certificate-arn "${CERT_ARN}" --region us-east-1 \
+            --query "Certificate.DomainValidationOptions[0].ResourceRecord")
+          NAME=$(echo "$VALID_JSON" | jq -r .Name)
+          TYPE=$(echo "$VALID_JSON" | jq -r .Type)
+          VALUE=$(echo "$VALID_JSON" | jq -r .Value)
+          if [ -z "$NAME" ] || [ "$NAME" = "null" ]; then
+            echo "Could not obtain DNS validation record."
+            exit 1
+          fi
+          CHANGE_BATCH=$(cat <<EOF
+          {
+            "Comment": "ACM DNS validation for ${CORE_FQDN}",
+            "Changes": [{
+              "Action": "UPSERT",
+              "ResourceRecordSet": {
+                "Name": "${NAME}",
+                "Type": "${TYPE}",
+                "TTL": 60,
+                "ResourceRecords": [{"Value": "${VALUE}"}]
+              }
+            }]
+          }
+          EOF
+          )
+          aws route53 change-resource-record-sets \
+            --hosted-zone-id "${HZ_ID}" \
+            --change-batch "${CHANGE_BATCH}" >/dev/null
+          echo "Created/updated validation CNAME."
+
+      - name: Wait for certificate ISSUED
+        shell: bash
+        run: |
+          set -e
+          for i in {1..60}; do
+            STATUS=$(aws acm describe-certificate --certificate-arn "${CERT_ARN}" --region us-east-1 \
+              --query "Certificate.Status" --output text)
+            echo "Cert status: $STATUS"
+            [ "$STATUS" = "ISSUED" ] && exit 0
+            sleep 10
+          done
+          echo "Certificate not issued in time"; exit 1
+
+      - name: Attach domain + cert to CloudFront
+        shell: bash
+        run: |
+          set -e
+          CFG_JSON=$(aws cloudfront get-distribution-config --id "${DIST_ID}")
+          ETAG=$(echo "$CFG_JSON" | jq -r .ETag)
+          DIST_CFG=$(echo "$CFG_JSON" | jq -r '.DistributionConfig')
+          NEW_CFG=$(echo "$DIST_CFG" | jq --arg dom "${CORE_FQDN}" --arg arn "${CERT_ARN}" '
+              .Aliases.Items = ((.Aliases.Items // []) + [$dom] | unique) |
+              .Aliases.Quantity = (.Aliases.Items | length) |
+              .ViewerCertificate = {
+                "ACMCertificateArn": $arn,
+                "SSLSupportMethod": "sni-only",
+                "MinimumProtocolVersion": "TLSv1.2_2021"
+              }')
+          echo "$NEW_CFG" > /tmp/new-cf.json
+          aws cloudfront update-distribution --id "${DIST_ID}" \
+            --if-match "${ETAG}" \
+            --distribution-config file:///tmp/new-cf.json >/dev/null
+          echo "Updated distribution with alias + cert"
+
+      - name: Create Route53 A/AAAA ALIAS to CloudFront
+        shell: bash
+        run: |
+          set -e
+          CHANGE_BATCH=$(cat <<EOF
+          {
+            "Comment": "Map ${CORE_FQDN} to CloudFront",
+            "Changes": [
+              {
+                "Action": "UPSERT",
+                "ResourceRecordSet": {
+                  "Name": "${CORE_FQDN}",
+                  "Type": "A",
+                  "AliasTarget": {
+                    "HostedZoneId": "${CLOUDFRONT_ZONE_ID}",
+                    "DNSName": "${DIST_DNS}",
+                    "EvaluateTargetHealth": false
+                  }
+                }
+              },
+              {
+                "Action": "UPSERT",
+                "ResourceRecordSet": {
+                  "Name": "${CORE_FQDN}",
+                  "Type": "AAAA",
+                  "AliasTarget": {
+                    "HostedZoneId": "${CLOUDFRONT_ZONE_ID}",
+                    "DNSName": "${DIST_DNS}",
+                    "EvaluateTargetHealth": false
+                  }
+                }
+              }
+            ]
+          }
+          EOF
+          )
+          aws route53 change-resource-record-sets \
+            --hosted-zone-id "${HZ_ID}" \
+            --change-batch "${CHANGE_BATCH}" >/dev/null
+          echo "Created/updated alias records."
+
+      - name: Invalidate and probe https endpoint
+        shell: bash
+        run: |
+          set -e
+          aws cloudfront create-invalidation --distribution-id "${DIST_ID}" --paths "/*" >/dev/null
+          for i in {1..60}; do
+            STATUS=$(aws cloudfront get-distribution --id "${DIST_ID}" --query "Distribution.Status" --output text)
+            echo "CloudFront status: $STATUS"
+            [ "$STATUS" = "Deployed" ] && break
+            sleep 10
+          done
+          URL="https://${CORE_FQDN}/"
+          echo "Visiting: $URL"
+          for i in {1..24}; do
+            CODE=$(curl -s -o /dev/null -w "%{http_code}" "$URL")
+            echo "Attempt $i -> $CODE"
+            [ "$CODE" = "200" ] && echo "cdn ok: $URL" && exit 0
+            sleep 5
+          done
+          echo "Site not reachable yet"; exit 1
