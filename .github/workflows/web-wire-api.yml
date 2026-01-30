@@ -29,22 +29,23 @@ jobs:
           role-to-assume: ${{ env.ROLE_TO_ASSUME }}
           aws-region: ${{ env.AWS_REGION }}
 
-      # --- Read API endpoint from Terraform output ---
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: 1.7.5
-
-      - name: Terraform init (backend)
-        working-directory: infra/backend
-        run: terraform init -input=false -upgrade
-
-      - name: Get API endpoint
+      # --- Discover API endpoint directly from API Gateway (no Terraform state needed) ---
+      - name: Discover API endpoint
         id: api
-        working-directory: infra/backend
+        shell: bash
         run: |
           set -e
-          EP=$(terraform output -raw api_endpoint)
+          # Our TF named the API "${var.project}-http" with project default "huntech"
+          EP=$(aws apigatewayv2 get-apis \
+                --query "Items[?Name=='huntech-http'].ApiEndpoint | [0]" \
+                --output text)
+          # Fallback: pick the first API Gateway v2 endpoint if the expected name isn't found
+          if [ -z "$EP" ] || [ "$EP" = "None" ]; then
+            EP=$(aws apigatewayv2 get-apis --query "Items[0].ApiEndpoint" --output text || echo "")
+          fi
+          if [ -z "$EP" ] || [ "$EP" = "None" ]; then
+            echo "::error::No API Gateway v2 endpoint found in ${AWS_REGION}"; exit 1
+          fi
           echo "API_ENDPOINT=$EP" >> $GITHUB_ENV
           echo "API: $EP"
 
@@ -93,11 +94,28 @@ JS
         run: aws s3 sync _wired/ "s3://${WEB_BUCKET}/" --delete --cache-control max-age=30
 
       - name: Invalidate CloudFront
+        shell: bash
         run: |
+          set -e
           ORIGIN="${WEB_BUCKET}.s3.${AWS_REGION}.amazonaws.com"
-          DIST_ID=$(aws cloudfront list-distributions --query "DistributionList.Items[?contains(Origins.Items[].DomainName, '${ORIGIN}')].Id | [0]" --output text)
+          DIST_ID=$(aws cloudfront list-distributions \
+            --query "DistributionList.Items[?contains(Origins.Items[].DomainName, '${ORIGIN}')].Id | [0]" \
+            --output text)
+          if [ -z "$DIST_ID" ] || [ "$DIST_ID" = "None" ]; then
+            echo "::error::Could not resolve CloudFront distribution for origin ${ORIGIN}"; exit 1
+          fi
           aws cloudfront create-invalidation --distribution-id "${DIST_ID}" --paths "/app/*" > /dev/null
           echo "Invalidation created for /app/*"
 
-      - name: Done — Visit the wired page
-        run: echo "Open: https://${SITE_FQDN}/app/"
+      - name: Probe wired page
+        shell: bash
+        run: |
+          set -e
+          URL="https://${SITE_FQDN}/app/"
+          for i in $(seq 1 24); do
+            CODE=$(curl -s -o /dev/null -w "%{http_code}" "$URL")
+            echo "GET $URL -> $CODE (try $i/24)"
+            [ "$CODE" = "200" ] && break
+            sleep 5
+          done
+          echo "Open: $URL"
