@@ -1,10 +1,14 @@
-name: HUNTECH CFN Heal — Foundation Stack
+name: HUNTECH Web — Wire API (auto)
 
 on:
   workflow_dispatch:
+  push:
+    branches: [ "main" ]
+    paths:
+      - ".github/workflows/web-wire-api.yml"
 
 jobs:
-  heal:
+  wire_api:
     runs-on: ubuntu-latest
     permissions:
       id-token: write
@@ -12,7 +16,8 @@ jobs:
     env:
       AWS_REGION: us-east-1
       ROLE_TO_ASSUME: arn:aws:iam::382773571217:role/HUNTECH-CICD
-      STACK_NAME: HUNTECH-Foundation-dev
+      WEB_BUCKET: huntech-web-382773571217-us-east-1-core
+      SITE_FQDN: core.huntechusa.com
 
     steps:
       - name: Checkout
@@ -24,10 +29,75 @@ jobs:
           role-to-assume: ${{ env.ROLE_TO_ASSUME }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Detect stack
-        id: detect
+      # --- Read API endpoint from Terraform output ---
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.7.5
+
+      - name: Terraform init (backend)
+        working-directory: infra/backend
+        run: terraform init -input=false -upgrade
+
+      - name: Get API endpoint
+        id: api
+        working-directory: infra/backend
+        run: |
+          set -e
+          EP=$(terraform output -raw api_endpoint)
+          echo "API_ENDPOINT=$EP" >> $GITHUB_ENV
+          echo "API: $EP"
+
+      # --- Create a tiny UI at /app/ that calls GET /pins ---
+      - name: Build test UI
         shell: bash
         run: |
           set -e
-          STATUS=$(aws cloudformation describe-stacks \
-            --stack-name "${STACK_NAME}" \
+          mkdir -p _wired/app
+          cat > _wired/app/index.html <<'HTML'
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>HUNTΞCH — API Wire</title>
+</head>
+<body style="font-family:system-ui;background:#111;color:#ffd34d;padding:2rem">
+  <h1>HUNTΞCH — API Wire</h1>
+  <p id="status">Checking API…</p>
+  <pre id="out" style="white-space:pre-wrap;background:#201a10;color:#ffdf66;padding:1rem;border-radius:8px"></pre>
+  <script src="./app.js"></script>
+</body>
+</html>
+HTML
+          cat > _wired/app/app.js <<'JS'
+(async ()=>{
+  const API = "{{API_URL}}";
+  const s = document.getElementById('status');
+  const out = document.getElementById('out');
+  s.textContent = `GET ${API}/pins …`;
+  try {
+    const r = await fetch(`${API}/pins`, {method:'GET'});
+    s.textContent = `Status: ${r.status}`;
+    out.textContent = await r.text();
+  } catch(e){
+    s.textContent = 'Request failed';
+    out.textContent = String(e);
+  }
+})();
+JS
+          # inject the real API URL
+          sed -i "s#{{API_URL}}#${API_ENDPOINT}#g" _wired/app/app.js
+
+      - name: Upload to S3 under /app/
+        run: aws s3 sync _wired/ "s3://${WEB_BUCKET}/" --delete --cache-control max-age=30
+
+      - name: Invalidate CloudFront
+        run: |
+          ORIGIN="${WEB_BUCKET}.s3.${AWS_REGION}.amazonaws.com"
+          DIST_ID=$(aws cloudfront list-distributions --query "DistributionList.Items[?contains(Origins.Items[].DomainName, '${ORIGIN}')].Id | [0]" --output text)
+          aws cloudfront create-invalidation --distribution-id "${DIST_ID}" --paths "/app/*" > /dev/null
+          echo "Invalidation created for /app/*"
+
+      - name: Done — Visit the wired page
+        run: echo "Open: https://${SITE_FQDN}/app/"
