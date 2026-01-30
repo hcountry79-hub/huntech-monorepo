@@ -1,0 +1,180 @@
+name: HUNTECH Web Auto‑Deploy (smart build → S3 → CloudFront → probe)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+    paths:
+      - "apps/**"
+      - "web/**"
+      - "frontend/**"
+      - "client/**"
+      - "**/package.json"
+      - "**/pnpm-lock.yaml"
+      - "**/yarn.lock"
+      - "**/package-lock.json"
+      - ".github/workflows/huntech_web_autodeploy_smart.yml"
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    env:
+      AWS_REGION: us-east-1
+      ROLE_TO_ASSUME: arn:aws:iam::382773571217:role/HUNTECH-CICD
+      WEB_BUCKET: huntech-web-382773571217-us-east-1-core
+      SITE_FQDN: core.huntechusa.com
+      # If the CNAME isn’t visible yet, we’ll fall back to this known domain
+      CF_FALLBACK: d2stduzbo1av87.cloudfront.net
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.ROLE_TO_ASSUME }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Install tools
+        run: |
+          set -e
+          sudo apt-get update -y
+          sudo apt-get install -y jq dnsutils curl
+
+      - name: Use Node 20 + Corepack (npm / yarn / pnpm ready)
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+      - run: corepack enable
+
+      # ---------- Auto-detect frontend folder ----------
+      - name: Detect app path (folder with package.json and a build script)
+        id: app
+        shell: bash
+        run: |
+          set -e
+          candidates=("apps/web" "web" "frontend" "client" ".")
+          APP=""
+          for d in "${candidates[@]}"; do
+            if [ -f "$d/package.json" ]; then
+              if jq -e '.scripts.build' "$d/package.json" >/dev/null 2>&1; then
+                APP="$d"
+                break
+              fi
+            fi
+          done
+          # Fallback: first package.json with any build script anywhere in repo
+          if [ -z "$APP" ]; then
+            mapfile -t found < <(git ls-files | grep -E 'package.json$' || true)
+            for pj in "${found[@]}"; do
+              dir="$(dirname "$pj")"
+              if jq -e '.scripts.build' "$pj" >/dev/null 2>&1; then
+                APP="$dir"
+                break
+              fi
+            done
+          fi
+          if [ -z "$APP" ]; then
+            echo "::error ::No buildable frontend (package.json with scripts.build) found."
+            exit 1
+          fi
+          echo "APP_PATH=$APP" >> $GITHUB_ENV
+          echo "App path: $APP"
+
+      # ---------- Install deps & build (smart PM detection) ----------
+      - name: Install & build
+        working-directory: ${{ env.APP_PATH }}
+        shell: bash
+        run: |
+          set -e
+          PM="npm" ; LOCK=""
+          [ -f pnpm-lock.yaml ] && LOCK="pnpm"
+          [ -f yarn.lock ] && LOCK="yarn"
+          if [ "$LOCK" = "pnpm" ]; then
+            echo "Using pnpm"
+            pnpm install --frozen-lockfile || pnpm install
+            pnpm run build
+          elif [ "$LOCK" = "yarn" ]; then
+            echo "Using yarn"
+            yarn install --frozen-lockfile || yarn install
+            yarn build
+          else
+            echo "Using npm"
+            npm ci || npm install
+            npm run build
+          fi
+
+      # ---------- Detect build output dir ----------
+      - name: Detect output directory
+        id: outdir
+        working-directory: ${{ env.APP_PATH }}
+        shell: bash
+        run: |
+          set -e
+          OUT=""
+          for d in dist build out public; do
+            if [ -d "$d" ]; then OUT="$d"; break; fi
+          done
+          if [ -z "$OUT" ]; then
+            echo "::error ::Could not find build output (dist/build/out/public)."
+            exit 1
+          fi
+          echo "OUT_DIR=$OUT" >> $GITHUB_ENV
+          echo "Using build output: $OUT"
+
+      # ---------- Upload to S3 (private origin) ----------
+      - name: Upload site to S3
+        working-directory: ${{ env.APP_PATH }}
+        run: |
+          set -e
+          aws s3 sync "${OUT_DIR}/" "s3://${WEB_BUCKET}/" --delete --cache-control max-age=60
+
+      # ---------- Resolve CF distribution for invalidation ----------
+      - name: Resolve distribution
+        id: dist
+        shell: bash
+        run: |
+          set -e
+          CF_DOMAIN="$(dig +short CNAME ${SITE_FQDN} | sed 's/\.$//' || true)"
+          [ -z "$CF_DOMAIN" ] && CF_DOMAIN="${CF_FALLBACK}"
+          DIST_ID=$(aws cloudfront list-distributions \
+            --query "DistributionList.Items[?DomainName=='${CF_DOMAIN}'].Id | [0]" \
+            --output text 2>/dev/null || true)
+          if [ -z "$DIST_ID" ] || [ "$DIST_ID" = "None" ]; then
+            ORIGIN="${WEB_BUCKET}.s3.${AWS_REGION}.amazonaws.com"
+            DIST_ID=$(aws cloudfront list-distributions \
+              --query "DistributionList.Items[?contains(Origins.Items[].DomainName, '${ORIGIN}')].Id | [0]" \
+              --output text 2>/dev/null || true)
+          fi
+          if [ -z "$DIST_ID" ] || [ "$DIST_ID" = "None" ]; then
+            echo "::error ::Unable to resolve CloudFront distribution."
+            exit 1
+          fi
+          echo "DIST_ID=$DIST_ID" >> $GITHUB_ENV
+          echo "Using distribution: $DIST_ID"
+
+      # ---------- Invalidate + probe ----------
+      - name: Invalidate CloudFront
+        run: |
+          set -e
+          aws cloudfront create-invalidation --distribution-id "${DIST_ID}" --paths "/*" >/dev/null
+          echo "Invalidation created"
+
+      - name: Probe /index.html and /
+        run: |
+          set -e
+          for PATH in "/index.html" "/"; do
+            URL="https://${SITE_FQDN}${PATH}"
+            for i in $(seq 1 48); do
+              CODE=$(curl -s -o /dev/null -w "%{http_code}" "$URL")
+              echo "GET $URL -> $CODE (try $i/48)"
+              [ "$CODE" = "200" ] && break
+              sleep 5
+            done
+          done
+          echo "deploy ok: https://${SITE_FQDN}/"
