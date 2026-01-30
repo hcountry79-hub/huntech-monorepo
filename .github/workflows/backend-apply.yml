@@ -1,0 +1,19 @@
+# Terraform init
+- name: Terraform init
+  working-directory: infra/backend
+  run: terraform init -input=false -upgrade
+
+# Terraform apply
+- name: Terraform apply (backend)
+  working-directory: infra/backend
+  env:
+    TF_VAR_cognito_issuer: ${{ steps.cognito.outputs.issuer }}
+    TF_VAR_cognito_audience: ${{ steps.cognito.outputs.audience }}
+  run: terraform apply -auto-approve
+
+# Print API endpoint
+- name: Output API endpoint
+  working-directory: infra/backend
+  run: |
+    EP=$(terraform output -raw api_endpoint)
+    echo "API: $EP"
