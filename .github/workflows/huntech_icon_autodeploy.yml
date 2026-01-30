@@ -174,3 +174,12 @@ PY
           if [ -z "$DID" ] || [ "$DID" = "None" ]; then
             ORIGIN="${WEB_BUCKET}.s3.${AWS_REGION}.amazonaws.com"
             DID=$(aws cloudfront list-distributions --query "DistributionList.Items[?contains(Origins.Items[].DomainName, '${ORIGIN}')].Id | [0]" --output text 2>/dev/null || true)
+          fi
+          aws cloudfront create-invalidation --distribution-id "$DID" --paths "/*" >/dev/null
+          for i in $(seq 1 36); do
+            CODE=$(curl -s -o /dev/null -w "%{http_code}" "https://${SITE_FQDN}/")
+            echo "GET / -> $CODE (try $i/36)"
+            [ "$CODE" = "200" ] && { echo "icon ok: https://${SITE_FQDN}/"; exit 0; }
+            sleep 5
+          done
+          echo "Edges still updating; icon will appear shortly."
