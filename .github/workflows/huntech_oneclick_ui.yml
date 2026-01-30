@@ -29,34 +29,30 @@ jobs:
           role-to-assume: ${{ env.ROLE_TO_ASSUME }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Install tools
-        run: |
-          set -e
-          sudo apt-get update -y
-          sudo apt-get install -y jq curl dnsutils
-
-      # --- Discover API endpoint directly from API Gateway (no Terraform state) ---
+      # Discover API Gateway (HTTP APIs / API Gateway v2)
       - name: Discover API endpoint
         id: api
         shell: bash
         run: |
           set -e
-          EP=$(aws apigatewayv2 get-apis --query "Items[?Name=='huntech-http'].ApiEndpoint | [0]" --output text || true)
+          EP="$(aws apigatewayv2 get-apis --query "Items[?Name=='huntech-http'].ApiEndpoint | [0]" --output text || true)"
           if [ -z "$EP" ] || [ "$EP" = "None" ]; then
-            EP=$(aws apigatewayv2 get-apis --query "Items[0].ApiEndpoint" --output text || true)
+            EP="$(aws apigatewayv2 get-apis --query "Items[0].ApiEndpoint" --output text || true)"
           fi
           if [ -z "$EP" ] || [ "$EP" = "None" ]; then
             echo "::error::No API Gateway v2 endpoint found in ${AWS_REGION}"; exit 1
           fi
-          echo "API_ENDPOINT=$EP" >> $GITHUB_ENV
+          echo "API_ENDPOINT=$EP" >> "$GITHUB_ENV"
           echo "API: $EP"
 
-      # --- Build a tiny UI under /app/ that calls your API ---
+      # Build a tiny UI under /app/ that calls your API
       - name: Build UI (index.html + styles.css + app.js)
         shell: bash
         run: |
           set -e
           mkdir -p _wired/app
+
+          # index.html
           cat > _wired/app/index.html <<'HTML'
 <!doctype html>
 <html lang="en">
@@ -67,12 +63,12 @@ jobs:
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <header>
+  <header class="header">
     <div class="brand">★ HUNTΞCH</div>
     <div class="tag">Where Innovation Meets Tradition</div>
   </header>
 
-  <main>
+  <main class="main">
     <section class="grid">
       <div class="card"><h2>Shed Hunting</h2><p>Plan grids, mark finds, export KML.</p></div>
       <div class="card"><h2>Fly Fishing</h2><p>USGS flows, access points, wade/float.</p></div>
@@ -92,32 +88,35 @@ jobs:
     </section>
   </main>
 
-  <footer><small>© HUNTΞCH — Core</small></footer>
+  <footer class="footer"><small>© HUNTΞCH — Core</small></footer>
+
   <script src="app.js"></script>
 </body>
 </html>
 HTML
 
+          # styles.css
           cat > _wired/app/styles.css <<'CSS'
 :root{--bg:#2d2416;--panel:#201a10;--accent:#ffd34d;--ink:#ffdf66;--line:#3a2e11}
-*{box-sizing:border-box} body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--ink)}
-header{padding:16px 24px;background:var(--panel);border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center}
-.brand{font-weight:800} .tag{color:#d9c26d}
-main{max-width:1000px;margin:24px auto;padding:0 16px}
+*{box-sizing:border-box}
+body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--ink)}
+.header{padding:16px 24px;background:var(--panel);border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center}
+.brand{font-weight:800}.tag{color:#d9c26d}
+.main{max-width:1000px;margin:24px auto;padding:0 16px}
 .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px}
 .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px}
 .panel{margin-top:18px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px}
 .btns{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 10px}
 button{background:var(--accent);color:#2d2416;border:0;padding:10px 14px;border-radius:8px;font-weight:700;cursor:pointer}
 pre{background:#17120a;color:var(--ink);padding:12px;border-radius:8px;min-height:120px;overflow:auto}
-footer{padding:24px;text-align:center;color:#d9c26d}
+.footer{padding:24px;text-align:center;color:#d9c26d}
 CSS
 
+          # app.js
           cat > _wired/app/app.js <<'JS'
 (function () {
   // Will be replaced below with your real API URL
   const API = '__API__';
-
   const outEl = document.getElementById('out');
   const log = (t) => (outEl.textContent = t);
 
@@ -162,24 +161,12 @@ JS
         run: |
           set -e
           ORIGIN="${WEB_BUCKET}.s3.${AWS_REGION}.amazonaws.com"
-          DIST_ID=$(aws cloudfront list-distributions \
-            --query "DistributionList.Items[?contains(Origins.Items[].DomainName, '${ORIGIN}')].Id | [0]" \
-            --output text)
+          DIST_ID="$(aws cloudfront list-distributions --query "DistributionList.Items[?contains(Origins.Items[].DomainName, '${ORIGIN}')].Id | [0]" --output text)"
           if [ -z "$DIST_ID" ] || [ "$DIST_ID" = "None" ]; then
             echo "::error::Could not resolve CloudFront distribution for origin ${ORIGIN}"; exit 1
           fi
           aws cloudfront create-invalidation --distribution-id "${DIST_ID}" --paths "/app/*" >/dev/null
           echo "Invalidation created for /app/*"
 
-      - name: Probe wired page
-        shell: bash
-        run: |
-          set -e
-          URL="https://${SITE_FQDN}/app/"
-          for i in $(seq 1 24); do
-            CODE=$(curl -s -o /dev/null -w "%{http_code}" "$URL")
-            echo "GET $URL -> $CODE (try $i/24)"
-            [ "$CODE" = "200" ] && break
-            sleep 5
-          done
-          echo "Open: $URL"
+      - name: Print link
+        run: echo "Open: https://${SITE_FQDN}/app/"
