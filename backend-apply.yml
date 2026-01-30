@@ -1,4 +1,3 @@
-
 name: HUNTECH Backend Apply
 
 on:
@@ -41,12 +40,10 @@ jobs:
           set -e
           POOL_NAME="HUNTECH-auth-dev"
           REGION="${AWS_REGION}"
-          # Find user pool id
           POOL_ID=$(aws cognito-idp list-user-pools --max-results 60 --query "UserPools[?Name=='${POOL_NAME}'].Id | [0]" --output text)
           if [ -z "$POOL_ID" ] || [ "$POOL_ID" = "None" ]; then
             echo "::error::Cognito user pool '${POOL_NAME}' not found in ${REGION}"; exit 1
           fi
-          # Ensure a public app client exists (no secret)
           CLIENT_ID=$(aws cognito-idp list-user-pool-clients --user-pool-id "$POOL_ID" --max-results 60 --query 'UserPoolClients[0].ClientId' --output text || true)
           if [ -z "$CLIENT_ID" ] || [ "$CLIENT_ID" = "None" ]; then
             CLIENT_ID=$(aws cognito-idp create-user-pool-client --user-pool-id "$POOL_ID" --client-name huntech-public-web --generate-secret false --query 'UserPoolClient.ClientId' --output text)
@@ -71,5 +68,4 @@ jobs:
         working-directory: infra/backend
         run: |
           EP=$(terraform output -raw api_endpoint)
-          echo "api=$EP" >> $GITHUB_OUTPUT
           echo "API: $EP"
