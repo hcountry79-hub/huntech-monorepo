@@ -1,10 +1,10 @@
-name: HUNTECH Icon Autodeploy (compass + wordmark + star)
+name: HUNTECH Icon Autodeploy (compass)
 
 on:
   workflow_dispatch:
     inputs:
       style:
-        description: "icon style: compass-gold | compass-white | wordmark-gold | wordmark-white | star-gold | star-white | monogram-gold | monogram-white"
+        description: "compass-gold | compass-white | wordmark-gold | wordmark-white | star-gold | star-white | monogram-gold | monogram-white"
         required: false
         default: "compass-gold"
 
@@ -19,21 +19,24 @@ jobs:
       ROLE_TO_ASSUME: arn:aws:iam::382773571217:role/HUNTECH-CICD
       WEB_BUCKET: huntech-web-382773571217-us-east-1-core
       SITE_FQDN: core.huntechusa.com
-      GOLD: "#FFD34D"
+
       BLACK: "#0B0B0B"
+      GOLD: "#FFD34D"
       WHITE: "#FFFFFF"
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - name: AWS creds
+      - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ env.ROLE_TO_ASSUME }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Tools
+      - name: Install ImageMagick + tools
         run: |
+          set -e
           sudo apt-get update -y
           sudo apt-get install -y imagemagick jq dnsutils curl
 
@@ -44,93 +47,70 @@ jobs:
           set -e
           mkdir -p icons
 
-          # helpers
-          pick_fill(){ case "$1" in *white*) echo "${WHITE}";; *) echo "${GOLD}";; esac; }
+          pick_fill() {
+            case "$1" in
+              *white*) echo "${WHITE}";;
+              *)       echo "${GOLD}";;
+            esac
+          }
 
-          draw_wordmark(){
+          draw_wordmark() {
             local fill="$1"
-            convert -size 1024x1024 xc:${BLACK} -gravity center \
-              -fill "$fill" -pointsize 210 -font DejaVu-Sans \
+            convert -size 1024x1024 xc:${BLACK} \
+              -gravity center -fill "$fill" -pointsize 210 -font DejaVu-Sans \
               -annotate +0+0 "HUNTΞCH" icons/1024.png
           }
 
-          draw_star(){
+          draw_star() {
             local fill="$1"
-            convert -size 1024x1024 xc:${BLACK} \
-              -stroke none -fill "$fill" \
-              -draw "rectangle 507,140 517,884" \
-              -draw "rectangle 140,507 884,517" \
-              -fill "$fill" -draw "polygon 512,180 532,512 512,844 492,512" \
-              -fill "$fill" -draw "polygon 180,512 512,532 844,512 512,492" \
-              icons/1024.png
-          }
-
-          # NEW: vintage compass with subtle north
-          draw_compass(){
-            local fill="$1"
-            # base: deep black
             convert -size 1024x1024 xc:${BLACK} icons/1024.png
-
-            # outer ring
-            convert icons/1024.png -fill none -stroke "$fill" -strokewidth 18 \
-              -draw "circle 512,512 512,140" icons/1024.png
-
-            # inner ring
-            convert icons/1024.png -fill none -stroke "$fill" -strokewidth 8 \
-              -draw "circle 512,512 512,220" icons/1024.png
-
-            # tick marks (every 30°, longer at N/E/S/W)
-            for deg in $(seq 0 30 330); do
-              len=36
-              [ "$deg" = "0" ] && len=64
-              [ "$deg" = "90" ] && len=50
-              [ "$deg" = "180" ] && len=50
-              [ "$deg" = "270" ] && len=50
-              convert icons/1024.png -fill "$fill" -stroke "$fill" -strokewidth 8 \
-                -draw "line \
-                  $(
-                    python3 - <<'PY'
-import math
-cx=512; cy=512; r1=220; 
-import os,sys
-deg=int(os.environ['DEG'])
-r2=r1-int(os.environ['LEN'])
-x1=round(cx + r1*math.sin(math.radians(deg)))
-y1=round(cy - r1*math.cos(math.radians(deg)))
-x2=round(cx + r2*math.sin(math.radians(deg)))
-y2=round(cy - r2*math.cos(math.radians(deg)))
-print(f"{x1},{y1} {x2},{y2}")
-PY
-                  )" icons/1024.png
-              export DEG=$deg LEN=$len
-            done
-
-            # compass needle pointing north (subtle)
+            # long N–S, short E–W
+            convert icons/1024.png -fill "$fill" -stroke none -draw "rectangle 507,140 517,884" icons/1024.png
+            convert icons/1024.png -fill "$fill" -stroke none -draw "rectangle 140,507 884,517" icons/1024.png
+            # fine tips
             convert icons/1024.png -fill "$fill" -stroke none \
-              -draw "polygon 512,235 532,512 492,512" \
-              -fill "$fill" -draw "polygon 512,789 532,512 492,512" \
-              icons/1024.png
-
-            # tiny north star at tip
-            convert icons/1024.png -fill "$fill" -stroke none \
-              -draw "polygon 512,160 516,178 512,196 508,178" \
-              -draw "polygon 496,176 512,180 528,176 512,172" \
-              icons/1024.png
+              -draw "polygon 512,180 532,512 512,844 492,512" \
+              -draw "polygon 180,512 512,532 844,512 512,492" icons/1024.png
           }
 
-          draw_monogram(){
+          draw_monogram() {
             local fill="$1"
             convert -size 1024x1024 xc:${BLACK} -gravity center \
-              -fill "$1" -pointsize 360 -font DejaVu-Sans \
-              -annotate +0-50 "HΞ" \
-              -fill "$1" -stroke none -draw "rectangle 507,650 517,910" \
-              icons/1024.png
+              -fill "$fill" -pointsize 360 -font DejaVu-Sans \
+              -annotate +0-50 "HΞ" icons/1024.png
+            convert icons/1024.png -fill "$fill" -stroke none \
+              -draw "rectangle 507,650 517,910" icons/1024.png
           }
 
-          FILL=$(pick_fill "${STYLE}")
+          # VINTAGE COMPASS (subtle north): rings + ticks + north needle + tiny mark
+          draw_compass() {
+            local fill="$1"
+            # base
+            convert -size 1024x1024 xc:${BLACK} icons/1024.png
+            # outer ring
+            convert icons/1024.png -fill none -stroke "$fill" -strokewidth 18 \
+              -draw "circle 512,512 512,160" icons/1024.png
+            # inner ring
+            convert icons/1024.png -fill none -stroke "$fill" -strokewidth 8 \
+              -draw "circle 512,512 512,230" icons/1024.png
+            # N/E/S/W ticks (N slightly longer)
+            convert icons/1024.png -fill "$fill" -stroke "$fill" -strokewidth 8 \
+              -draw "line 512,230 512,200" \
+              -draw "line 512,824 512,794" \
+              -draw "line 794,512 764,512" \
+              -draw "line 260,512 230,512" icons/1024.png
+            # north needle (subtle)
+            convert icons/1024.png -fill "$fill" -stroke none \
+              -draw "polygon 512,205 540,512 484,512" icons/1024.png
+            # tiny north mark (plus)
+            convert icons/1024.png -fill "$fill" -stroke "$fill" -strokewidth 6 \
+              -draw "line 512,165 512,185" \
+              -draw "line 502,175 522,175" icons/1024.png
+          }
 
-          case "${STYLE}" in
-            compass-gold|compass-white) draw_compass "${FILL}" ;;
+          FILL="$(pick_fill "$STYLE")"
+          case "$STYLE" in
+            compass-gold|compass-white) draw_compass "$FILL" ;;
             wordmark-gold)  draw_wordmark "${GOLD}" ;;
             wordmark-white) draw_wordmark "${WHITE}" ;;
             star-gold)      draw_star "${GOLD}" ;;
@@ -140,46 +120,31 @@ PY
             *)              draw_compass "${GOLD}" ;;
           esac
 
+          # Derivatives
           convert icons/1024.png -resize 512x512 icons/512.png
           convert icons/1024.png -resize 192x192 icons/192.png
           convert icons/1024.png -resize 180x180 icons/apple-touch-icon.png
 
-      - name: Upload + update manifest/meta
+      - name: Upload icons + update manifest/meta
         run: |
           set -e
           aws s3 cp icons/512.png "s3://${WEB_BUCKET}/icons/512.png" --cache-control max-age=86400
           aws s3 cp icons/192.png "s3://${WEB_BUCKET}/icons/192.png" --cache-control max-age=86400
           aws s3 cp icons/apple-touch-icon.png "s3://${WEB_BUCKET}/apple-touch-icon.png" --cache-control max-age=86400
 
+          # manifest
           aws s3 cp "s3://${WEB_BUCKET}/manifest.json" manifest.json || echo '{}' > manifest.json
           jq --argjson icons '[{"src":"/icons/192.png","sizes":"192x192","type":"image/png"},{"src":"/icons/512.png","sizes":"512x512","type":"image/png"}]' \
              '.name="HUNTΞCH" | .short_name="HUNTΞCH" | .display="standalone" | .start_url="/index.html" | .background_color="#111111" | .theme_color="#111111" | .icons=$icons' \
              manifest.json > manifest.new.json
           aws s3 cp manifest.new.json "s3://${WEB_BUCKET}/manifest.json" --cache-control max-age=300
 
+          # ensure apple-touch-icon link exists
           aws s3 cp "s3://${WEB_BUCKET}/index.html" index.html
           if ! grep -qi 'apple-touch-icon' index.html; then
-            sed -i 's#<head>#<head>/apple-touch-icon.png#' index.html
+            sed -i 's#<head>#<head><link rel="apple-touch-icon" href="/apple-touch-icon.png">#' index.html
             aws s3 cp index.html "s3://${WEB_BUCKET}/index.html" --cache-control max-age=300
           fi
 
-      - name: Invalidate CF + probe
+      - name: Invalidate CloudFront + probe
         run: |
-          set -e
-          # resolve distribution by CNAME or origin
-          CF=$(dig +short CNAME ${SITE_FQDN} | sed 's/\.$//' || true)
-          if [ -n "$CF" ]; then
-            DID=$(aws cloudfront list-distributions --query "DistributionList.Items[?DomainName=='${CF}'].Id | [0]" --output text 2>/dev/null || true)
-          fi
-          if [ -z "$DID" ] || [ "$DID" = "None" ]; then
-            ORIGIN="${WEB_BUCKET}.s3.${AWS_REGION}.amazonaws.com"
-            DID=$(aws cloudfront list-distributions --query "DistributionList.Items[?contains(Origins.Items[].DomainName, '${ORIGIN}')].Id | [0]" --output text 2>/dev/null || true)
-          fi
-          aws cloudfront create-invalidation --distribution-id "$DID" --paths "/*" >/dev/null
-          for i in $(seq 1 36); do
-            CODE=$(curl -s -o /dev/null -w "%{http_code}" "https://${SITE_FQDN}/")
-            echo "GET / -> $CODE (try $i/36)"
-            [ "$CODE" = "200" ] && { echo "icon ok: https://${SITE_FQDN}/"; exit 0; }
-            sleep 5
-          done
-          echo "Edges still updating; icon will appear shortly."
