@@ -1,27 +1,16 @@
-name: HUNTECH — OneFile CI (CDN + Web + Backend)
+name: HUNTECH Backend Apply
 
 on:
   workflow_dispatch:
   push:
-    branches: [ main ]
+    branches: [ "main" ]
     paths:
-      - ".github/workflows/huntech_onefile_ci.yml"
-      - "backend/**"
-      - "infra/**"
-      - "**/package.json"
-      - "**/pnpm-lock.yaml"
-      - "**/yarn.lock"
-      - "**/package-lock.json"
-      - "**/*.[jt]sx?"
-      - "**/*.css"
-      - "site/index.html"
-
-concurrency:
-  group: huntech-onefile
-  cancel-in-progress: true
+      - "infra/backend/**"
+      - "backend/handlers/**"
+      - ".github/workflows/backend-apply.yml"
 
 jobs:
-  all:
+  apply:
     runs-on: ubuntu-latest
     permissions:
       id-token: write
@@ -29,14 +18,8 @@ jobs:
     env:
       AWS_REGION: us-east-1
       ROLE_TO_ASSUME: arn:aws:iam::382773571217:role/HUNTECH-CICD
-      # ---- Web / CDN ----
-      WEB_BUCKET: huntech-web-382773571217-us-east-1-core
-      SITE_FQDN: core.huntechusa.com
-      CF_FALLBACK: d2stduzbo1av87.cloudfront.net
-      ACCOUNT_ID: "382773571217"
-      # ---- Frontend build defaults ----
-      APP_PATH: "."
-      BUILD_DIR_IN: ""
+      TF_IN_AUTOMATION: "true"
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -47,6 +30,16 @@ jobs:
           role-to-assume: ${{ env.ROLE_TO_ASSUME }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Install tools
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.7.5
+
+      - name: Resolve Cognito issuer & audience
+        id: cognito
+        shell: bash
         run: |
           set -e
+          POOL_NAME="HUNTECH-auth-dev"
+          REGION="${AWS_REGION}"
+          # Find user pool id
