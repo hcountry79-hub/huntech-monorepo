@@ -1,4 +1,4 @@
-name: HUNTECH — One-Click UI
+name: HUNTECH OneClick UI
 
 on:
   workflow_dispatch:
@@ -23,16 +23,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Configure AWS credentials (OIDC)
+      - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ env.ROLE_TO_ASSUME }}
           aws-region: ${{ env.AWS_REGION }}
 
-      # Discover API Gateway (HTTP APIs / API Gateway v2)
       - name: Discover API endpoint
         id: api
-        shell: bash
         run: |
           set -e
           EP="$(aws apigatewayv2 get-apis --query "Items[?Name=='huntech-http'].ApiEndpoint | [0]" --output text || true)"
@@ -45,34 +43,43 @@ jobs:
           echo "API_ENDPOINT=$EP" >> "$GITHUB_ENV"
           echo "API: $EP"
 
-      # Build a tiny UI under /app/ that calls your API
-      - name: Build UI (index.html + styles.css + app.js)
-        shell: bash
+      - name: Build UI (single index.html)
         run: |
           set -e
           mkdir -p _wired/app
-
-          # index.html
           cat > _wired/app/index.html <<'HTML'
 <!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>HUNTΞCH — MVP Console</title>
-  <link rel="stylesheet" href="styles.css" />
+  <title>HUNTECH — MVP Console</title>
+  <style>
+    :root{--bg:#2d2416;--panel:#201a10;--accent:#ffd34d;--ink:#ffdf66;--line:#3a2e11}
+    *{box-sizing:border-box}
+    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--ink)}
+    header{padding:16px 24px;background:var(--panel);border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center}
+    main{max-width:1000px;margin:24px auto;padding:0 16px}
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px}
+    .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px}
+    .panel{margin-top:18px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px}
+    .btns{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 10px}
+    button{background:var(--accent);color:#2d2416;border:0;padding:10px 14px;border-radius:8px;font-weight:700;cursor:pointer}
+    pre{background:#17120a;color:var(--ink);padding:12px;border-radius:8px;min-height:120px;overflow:auto}
+    footer{padding:24px;text-align:center;color:#d9c26d}
+  </style>
 </head>
 <body>
-  <header class="header">
-    <div class="brand">★ HUNTΞCH</div>
-    <div class="tag">Where Innovation Meets Tradition</div>
+  <header>
+    <div style="font-weight:800">★ HUNTECH</div>
+    <div style="color:#d9c26d">Where Innovation Meets Tradition</div>
   </header>
 
-  <main class="main">
+  <main>
     <section class="grid">
       <div class="card"><h2>Shed Hunting</h2><p>Plan grids, mark finds, export KML.</p></div>
       <div class="card"><h2>Fly Fishing</h2><p>USGS flows, access points, wade/float.</p></div>
-      <div class="card"><h2>Whitetail</h2><p>Funnels, 300‑yd sits, access routes.</p></div>
+      <div class="card"><h2>Whitetail</h2><p>Funnels, 300-yd sits, access routes.</p></div>
     </section>
 
     <section class="panel">
@@ -88,76 +95,52 @@ jobs:
     </section>
   </main>
 
-  <footer class="footer"><small>© HUNTΞCH — Core</small></footer>
+  <footer><small>© HUNTECH — Core</small></footer>
 
-  <script src="app.js"></script>
+  <script>
+    (function () {
+      var API = '__API__';
+      var out = document.getElementById('out');
+      function log(t){ out.textContent = t; }
+
+      document.getElementById('btnPins').onclick = function(){ getJSON(API + '/pins'); };
+      document.getElementById('btnJournal').onclick = function(){ getJSON(API + '/journal?userId=demo&journalId=demo'); };
+      document.getElementById('btnPostPin').onclick = function(){
+        postJSON(API + '/pins', { userId:'demo', pinId:String(Date.now()), lat:38.15, lon:-90.72, category:'demo' });
+      };
+      document.getElementById('btnPostJournal').onclick = function(){
+        postJSON(API + '/journal', { userId:'demo', journalId:String(Date.now()), note:'Hello from HUNTECH' });
+      };
+
+      async function getJSON(url){
+        log('GET ' + url + ' ...');
+        try{
+          var r = await fetch(url);
+          var t = await r.text();
+          log('Status ' + r.status + '\\n\\n' + t);
+        }catch(e){ log(String(e)); }
+      }
+      async function postJSON(url, body){
+        log('POST ' + url + ' ...');
+        try{
+          var r = await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+          var t = await r.text();
+          log('Status ' + r.status + '\\n\\n' + t);
+        }catch(e){ log(String(e)); }
+      }
+    })();
+  </script>
 </body>
 </html>
 HTML
 
-          # styles.css
-          cat > _wired/app/styles.css <<'CSS'
-:root{--bg:#2d2416;--panel:#201a10;--accent:#ffd34d;--ink:#ffdf66;--line:#3a2e11}
-*{box-sizing:border-box}
-body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--ink)}
-.header{padding:16px 24px;background:var(--panel);border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center}
-.brand{font-weight:800}.tag{color:#d9c26d}
-.main{max-width:1000px;margin:24px auto;padding:0 16px}
-.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px}
-.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px}
-.panel{margin-top:18px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px}
-.btns{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 10px}
-button{background:var(--accent);color:#2d2416;border:0;padding:10px 14px;border-radius:8px;font-weight:700;cursor:pointer}
-pre{background:#17120a;color:var(--ink);padding:12px;border-radius:8px;min-height:120px;overflow:auto}
-.footer{padding:24px;text-align:center;color:#d9c26d}
-CSS
-
-          # app.js
-          cat > _wired/app/app.js <<'JS'
-(function () {
-  // Will be replaced below with your real API URL
-  const API = '__API__';
-  const outEl = document.getElementById('out');
-  const log = (t) => (outEl.textContent = t);
-
-  document.getElementById('btnPins').onclick = () => getJSON(`${API}/pins`);
-  document.getElementById('btnJournal').onclick = () => getJSON(`${API}/journal?userId=demo&journalId=demo`);
-  document.getElementById('btnPostPin').onclick = () =>
-    postJSON(`${API}/pins`, { userId:'demo', pinId:Date.now().toString(), lat:38.15, lon:-90.72, category:'demo' });
-  document.getElementById('btnPostJournal').onclick = () =>
-    postJSON(`${API}/journal`, { userId:'demo', journalId:Date.now().toString(), note:'Hello from HUNTΞCH' });
-
-  async function getJSON(url){
-    log(`GET ${url} …`);
-    try{
-      const r = await fetch(url);
-      const t = await r.text();
-      log(`Status ${r.status}\n\n${t}`);
-    }catch(e){ log(String(e)); }
-  }
-
-  async function postJSON(url, body){
-    log(`POST ${url} …`);
-    try{
-      const r = await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
-      const t = await r.text();
-      log(`Status ${r.status}\n\n${t}`);
-    }catch(e){ log(String(e)); }
-  }
-})();
-JS
-
-      - name: Inject API URL
-        shell: bash
-        run: |
-          set -e
-          sed -i "s#__API__#${API_ENDPOINT}#g" _wired/app/app.js
+          # inject real API URL into the inline script
+          sed -i "s#__API__#${API_ENDPOINT}#g" _wired/app/index.html
 
       - name: Upload to S3 under /app/
         run: aws s3 sync _wired/ "s3://${WEB_BUCKET}/" --delete --cache-control max-age=30
 
       - name: Invalidate CloudFront
-        shell: bash
         run: |
           set -e
           ORIGIN="${WEB_BUCKET}.s3.${AWS_REGION}.amazonaws.com"
