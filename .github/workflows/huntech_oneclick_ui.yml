@@ -1,0 +1,185 @@
+name: HUNTECH — One-Click UI
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ "main" ]
+    paths:
+      - ".github/workflows/huntech_oneclick_ui.yml"
+
+jobs:
+  oneclick_ui:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    env:
+      AWS_REGION: us-east-1
+      ROLE_TO_ASSUME: arn:aws:iam::382773571217:role/HUNTECH-CICD
+      WEB_BUCKET: huntech-web-382773571217-us-east-1-core
+      SITE_FQDN: core.huntechusa.com
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.ROLE_TO_ASSUME }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Install tools
+        run: |
+          set -e
+          sudo apt-get update -y
+          sudo apt-get install -y jq curl dnsutils
+
+      # --- Discover API endpoint directly from API Gateway (no Terraform state) ---
+      - name: Discover API endpoint
+        id: api
+        shell: bash
+        run: |
+          set -e
+          EP=$(aws apigatewayv2 get-apis --query "Items[?Name=='huntech-http'].ApiEndpoint | [0]" --output text || true)
+          if [ -z "$EP" ] || [ "$EP" = "None" ]; then
+            EP=$(aws apigatewayv2 get-apis --query "Items[0].ApiEndpoint" --output text || true)
+          fi
+          if [ -z "$EP" ] || [ "$EP" = "None" ]; then
+            echo "::error::No API Gateway v2 endpoint found in ${AWS_REGION}"; exit 1
+          fi
+          echo "API_ENDPOINT=$EP" >> $GITHUB_ENV
+          echo "API: $EP"
+
+      # --- Build a tiny UI under /app/ that calls your API ---
+      - name: Build UI (index.html + styles.css + app.js)
+        shell: bash
+        run: |
+          set -e
+          mkdir -p _wired/app
+          cat > _wired/app/index.html <<'HTML'
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>HUNTΞCH — MVP Console</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header>
+    <div class="brand">★ HUNTΞCH</div>
+    <div class="tag">Where Innovation Meets Tradition</div>
+  </header>
+
+  <main>
+    <section class="grid">
+      <div class="card"><h2>Shed Hunting</h2><p>Plan grids, mark finds, export KML.</p></div>
+      <div class="card"><h2>Fly Fishing</h2><p>USGS flows, access points, wade/float.</p></div>
+      <div class="card"><h2>Whitetail</h2><p>Funnels, 300‑yd sits, access routes.</p></div>
+    </section>
+
+    <section class="panel">
+      <h3 id="panel-title">Welcome</h3>
+      <p id="panel-body">Use the buttons below to hit the live API.</p>
+      <div class="btns">
+        <button id="btnPins">GET /pins</button>
+        <button id="btnJournal">GET /journal</button>
+        <button id="btnPostPin">POST /pins</button>
+        <button id="btnPostJournal">POST /journal</button>
+      </div>
+      <pre id="out"></pre>
+    </section>
+  </main>
+
+  <footer><small>© HUNTΞCH — Core</small></footer>
+  <script src="app.js"></script>
+</body>
+</html>
+HTML
+
+          cat > _wired/app/styles.css <<'CSS'
+:root{--bg:#2d2416;--panel:#201a10;--accent:#ffd34d;--ink:#ffdf66;--line:#3a2e11}
+*{box-sizing:border-box} body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--ink)}
+header{padding:16px 24px;background:var(--panel);border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center}
+.brand{font-weight:800} .tag{color:#d9c26d}
+main{max-width:1000px;margin:24px auto;padding:0 16px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px}
+.panel{margin-top:18px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px}
+.btns{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 10px}
+button{background:var(--accent);color:#2d2416;border:0;padding:10px 14px;border-radius:8px;font-weight:700;cursor:pointer}
+pre{background:#17120a;color:var(--ink);padding:12px;border-radius:8px;min-height:120px;overflow:auto}
+footer{padding:24px;text-align:center;color:#d9c26d}
+CSS
+
+          cat > _wired/app/app.js <<'JS'
+(function () {
+  // Will be replaced below with your real API URL
+  const API = '__API__';
+
+  const outEl = document.getElementById('out');
+  const log = (t) => (outEl.textContent = t);
+
+  document.getElementById('btnPins').onclick = () => getJSON(`${API}/pins`);
+  document.getElementById('btnJournal').onclick = () => getJSON(`${API}/journal?userId=demo&journalId=demo`);
+  document.getElementById('btnPostPin').onclick = () =>
+    postJSON(`${API}/pins`, { userId:'demo', pinId:Date.now().toString(), lat:38.15, lon:-90.72, category:'demo' });
+  document.getElementById('btnPostJournal').onclick = () =>
+    postJSON(`${API}/journal`, { userId:'demo', journalId:Date.now().toString(), note:'Hello from HUNTΞCH' });
+
+  async function getJSON(url){
+    log(`GET ${url} …`);
+    try{
+      const r = await fetch(url);
+      const t = await r.text();
+      log(`Status ${r.status}\n\n${t}`);
+    }catch(e){ log(String(e)); }
+  }
+
+  async function postJSON(url, body){
+    log(`POST ${url} …`);
+    try{
+      const r = await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+      const t = await r.text();
+      log(`Status ${r.status}\n\n${t}`);
+    }catch(e){ log(String(e)); }
+  }
+})();
+JS
+
+      - name: Inject API URL
+        shell: bash
+        run: |
+          set -e
+          sed -i "s#__API__#${API_ENDPOINT}#g" _wired/app/app.js
+
+      - name: Upload to S3 under /app/
+        run: aws s3 sync _wired/ "s3://${WEB_BUCKET}/" --delete --cache-control max-age=30
+
+      - name: Invalidate CloudFront
+        shell: bash
+        run: |
+          set -e
+          ORIGIN="${WEB_BUCKET}.s3.${AWS_REGION}.amazonaws.com"
+          DIST_ID=$(aws cloudfront list-distributions \
+            --query "DistributionList.Items[?contains(Origins.Items[].DomainName, '${ORIGIN}')].Id | [0]" \
+            --output text)
+          if [ -z "$DIST_ID" ] || [ "$DIST_ID" = "None" ]; then
+            echo "::error::Could not resolve CloudFront distribution for origin ${ORIGIN}"; exit 1
+          fi
+          aws cloudfront create-invalidation --distribution-id "${DIST_ID}" --paths "/app/*" >/dev/null
+          echo "Invalidation created for /app/*"
+
+      - name: Probe wired page
+        shell: bash
+        run: |
+          set -e
+          URL="https://${SITE_FQDN}/app/"
+          for i in $(seq 1 24); do
+            CODE=$(curl -s -o /dev/null -w "%{http_code}" "$URL")
+            echo "GET $URL -> $CODE (try $i/24)"
+            [ "$CODE" = "200" ] && break
+            sleep 5
+          done
+          echo "Open: $URL"
