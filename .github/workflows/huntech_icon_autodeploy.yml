@@ -1,12 +1,12 @@
-name: HUNTECH Icon Autodeploy (generate → S3 → CF invalidate → probe)
+name: HUNTECH Icon Autodeploy (compass + wordmark + star)
 
 on:
   workflow_dispatch:
     inputs:
       style:
-        description: "icon style: wordmark-gold | wordmark-white | star-gold | star-white | monogram-gold | monogram-white"
+        description: "icon style: compass-gold | compass-white | wordmark-gold | wordmark-white | star-gold | star-white | monogram-gold | monogram-white"
         required: false
-        default: "wordmark-gold"
+        default: "compass-gold"
 
 jobs:
   icon:
@@ -19,52 +19,43 @@ jobs:
       ROLE_TO_ASSUME: arn:aws:iam::382773571217:role/HUNTECH-CICD
       WEB_BUCKET: huntech-web-382773571217-us-east-1-core
       SITE_FQDN: core.huntechusa.com
-      GOLD: "#FFD34D"     # heritage gold
-      BLACK: "#0B0B0B"    # deep black
+      GOLD: "#FFD34D"
+      BLACK: "#0B0B0B"
       WHITE: "#FFFFFF"
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Configure AWS credentials
+      - name: AWS creds
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ env.ROLE_TO_ASSUME }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Install ImageMagick + tools
+      - name: Tools
         run: |
           sudo apt-get update -y
-          sudo apt-get install -y imagemagick jq curl
+          sudo apt-get install -y imagemagick jq dnsutils curl
 
-      - name: Generate icons (1024 base → 512/192/180)
+      - name: Render icon (1024 base → 512/192/180)
         env:
           STYLE: ${{ github.event.inputs.style }}
         run: |
           set -e
           mkdir -p icons
 
-          color_fill() {
-            case "$1" in
-              *gold*) echo "${GOLD}";;
-              *white*) echo "${WHITE}";;
-              *) echo "${GOLD}";;
-            esac
+          # helpers
+          pick_fill(){ case "$1" in *white*) echo "${WHITE}";; *) echo "${GOLD}";; esac; }
+
+          draw_wordmark(){
+            local fill="$1"
+            convert -size 1024x1024 xc:${BLACK} -gravity center \
+              -fill "$fill" -pointsize 210 -font DejaVu-Sans \
+              -annotate +0+0 "HUNTΞCH" icons/1024.png
           }
 
-          draw_wordmark() {
+          draw_star(){
             local fill="$1"
-            convert -size 1024x1024 xc:${BLACK} \
-              -gravity center \
-              -fill "$fill" -pointsize 210 \
-              -font DejaVu-Sans \
-              -annotate +0+0 "HUNTΞCH" \
-              icons/1024.png
-          }
-
-          draw_star() {
-            local fill="$1"
-            # Base star: long N–S, shorter E–W, subtle diagonals
             convert -size 1024x1024 xc:${BLACK} \
               -stroke none -fill "$fill" \
               -draw "rectangle 507,140 517,884" \
@@ -74,81 +65,112 @@ jobs:
               icons/1024.png
           }
 
-          draw_monogram() {
+          # NEW: vintage compass with subtle north
+          draw_compass(){
             local fill="$1"
-            convert -size 1024x1024 xc:${BLACK} \
-              -gravity center \
-              -fill "$fill" -pointsize 360 -font DejaVu-Sans \
-              -annotate +0-50 "HΞ" \
-              -fill "$fill" -stroke none \
-              -draw "rectangle 507,650 517,910" \
+            # base: deep black
+            convert -size 1024x1024 xc:${BLACK} icons/1024.png
+
+            # outer ring
+            convert icons/1024.png -fill none -stroke "$fill" -strokewidth 18 \
+              -draw "circle 512,512 512,140" icons/1024.png
+
+            # inner ring
+            convert icons/1024.png -fill none -stroke "$fill" -strokewidth 8 \
+              -draw "circle 512,512 512,220" icons/1024.png
+
+            # tick marks (every 30°, longer at N/E/S/W)
+            for deg in $(seq 0 30 330); do
+              len=36
+              [ "$deg" = "0" ] && len=64
+              [ "$deg" = "90" ] && len=50
+              [ "$deg" = "180" ] && len=50
+              [ "$deg" = "270" ] && len=50
+              convert icons/1024.png -fill "$fill" -stroke "$fill" -strokewidth 8 \
+                -draw "line \
+                  $(
+                    python3 - <<'PY'
+import math
+cx=512; cy=512; r1=220; 
+import os,sys
+deg=int(os.environ['DEG'])
+r2=r1-int(os.environ['LEN'])
+x1=round(cx + r1*math.sin(math.radians(deg)))
+y1=round(cy - r1*math.cos(math.radians(deg)))
+x2=round(cx + r2*math.sin(math.radians(deg)))
+y2=round(cy - r2*math.cos(math.radians(deg)))
+print(f"{x1},{y1} {x2},{y2}")
+PY
+                  )" icons/1024.png
+              export DEG=$deg LEN=$len
+            done
+
+            # compass needle pointing north (subtle)
+            convert icons/1024.png -fill "$fill" -stroke none \
+              -draw "polygon 512,235 532,512 492,512" \
+              -fill "$fill" -draw "polygon 512,789 532,512 492,512" \
+              icons/1024.png
+
+            # tiny north star at tip
+            convert icons/1024.png -fill "$fill" -stroke none \
+              -draw "polygon 512,160 516,178 512,196 508,178" \
+              -draw "polygon 496,176 512,180 528,176 512,172" \
               icons/1024.png
           }
 
-          case "$STYLE" in
+          draw_monogram(){
+            local fill="$1"
+            convert -size 1024x1024 xc:${BLACK} -gravity center \
+              -fill "$1" -pointsize 360 -font DejaVu-Sans \
+              -annotate +0-50 "HΞ" \
+              -fill "$1" -stroke none -draw "rectangle 507,650 517,910" \
+              icons/1024.png
+          }
+
+          FILL=$(pick_fill "${STYLE}")
+
+          case "${STYLE}" in
+            compass-gold|compass-white) draw_compass "${FILL}" ;;
             wordmark-gold)  draw_wordmark "${GOLD}" ;;
             wordmark-white) draw_wordmark "${WHITE}" ;;
             star-gold)      draw_star "${GOLD}" ;;
             star-white)     draw_star "${WHITE}" ;;
             monogram-gold)  draw_monogram "${GOLD}" ;;
             monogram-white) draw_monogram "${WHITE}" ;;
-            *)              draw_wordmark "${GOLD}" ;;
+            *)              draw_compass "${GOLD}" ;;
           esac
 
-          # Derivatives
           convert icons/1024.png -resize 512x512 icons/512.png
           convert icons/1024.png -resize 192x192 icons/192.png
           convert icons/1024.png -resize 180x180 icons/apple-touch-icon.png
 
-      - name: Upload icons to S3 and update manifest/meta
+      - name: Upload + update manifest/meta
         run: |
           set -e
-          # Upload
           aws s3 cp icons/512.png "s3://${WEB_BUCKET}/icons/512.png" --cache-control max-age=86400
           aws s3 cp icons/192.png "s3://${WEB_BUCKET}/icons/192.png" --cache-control max-age=86400
           aws s3 cp icons/apple-touch-icon.png "s3://${WEB_BUCKET}/apple-touch-icon.png" --cache-control max-age=86400
 
-          # Ensure manifest references 192/512 icons
           aws s3 cp "s3://${WEB_BUCKET}/manifest.json" manifest.json || echo '{}' > manifest.json
-          if ! jq -e '.icons' manifest.json >/dev/null 2>&1; then
-            echo '{}' > manifest.json
-          fi
           jq --argjson icons '[{"src":"/icons/192.png","sizes":"192x192","type":"image/png"},{"src":"/icons/512.png","sizes":"512x512","type":"image/png"}]' \
              '.name="HUNTΞCH" | .short_name="HUNTΞCH" | .display="standalone" | .start_url="/index.html" | .background_color="#111111" | .theme_color="#111111" | .icons=$icons' \
              manifest.json > manifest.new.json
           aws s3 cp manifest.new.json "s3://${WEB_BUCKET}/manifest.json" --cache-control max-age=300
 
-          # Inject <link rel="apple-touch-icon"> if missing
           aws s3 cp "s3://${WEB_BUCKET}/index.html" index.html
           if ! grep -qi 'apple-touch-icon' index.html; then
-            sed -i 's#<head>#<head><link rel="apple-touch-icon" href="/apple-touch-icon.png">#' index.html
+            sed -i 's#<head>#<head>/apple-touch-icon.png#' index.html
             aws s3 cp index.html "s3://${WEB_BUCKET}/index.html" --cache-control max-age=300
           fi
 
-      - name: Invalidate CloudFront
+      - name: Invalidate CF + probe
         run: |
           set -e
-          # Find distribution by CNAME or origin
-          CF_DOMAIN=$(dig +short CNAME ${SITE_FQDN} | sed 's/\.$//' || true)
-          [ -z "$CF_DOMAIN" ] && CF_DOMAIN=""
-          if [ -n "$CF_DOMAIN" ]; then
-            DIST_ID=$(aws cloudfront list-distributions --query "DistributionList.Items[?DomainName=='${CF_DOMAIN}'].Id | [0]" --output text 2>/dev/null || true)
+          # resolve distribution by CNAME or origin
+          CF=$(dig +short CNAME ${SITE_FQDN} | sed 's/\.$//' || true)
+          if [ -n "$CF" ]; then
+            DID=$(aws cloudfront list-distributions --query "DistributionList.Items[?DomainName=='${CF}'].Id | [0]" --output text 2>/dev/null || true)
           fi
-          if [ -z "$DIST_ID" ] || [ "$DIST_ID" = "None" ]; then
+          if [ -z "$DID" ] || [ "$DID" = "None" ]; then
             ORIGIN="${WEB_BUCKET}.s3.${AWS_REGION}.amazonaws.com"
-            DIST_ID=$(aws cloudfront list-distributions --query "DistributionList.Items[?contains(Origins.Items[].DomainName, '${ORIGIN}')].Id | [0]" --output text 2>/dev/null || true)
-          fi
-          aws cloudfront create-invalidation --distribution-id "${DIST_ID}" --paths "/*" >/dev/null
-          echo "Invalidation created for ${DIST_ID}"
-
-      - name: Probe /
-        run: |
-          set -e
-          URL="https://${SITE_FQDN}/"
-          for i in $(seq 1 36); do
-            CODE=$(curl -s -o /dev/null -w "%{http_code}" "$URL")
-            echo "GET $URL -> $CODE (try $i/36)"
-            [ "$CODE" = "200" ] && { echo "icon ok: $URL"; exit 0; }
-            sleep 5
-          done
-          echo "Site not 200 yet; edges still updating."
+            DID=$(aws cloudfront list-distributions --query "DistributionList.Items[?contains(Origins.Items[].DomainName, '${ORIGIN}')].Id | [0]" --output text 2>/dev/null || true)
