@@ -1,1 +1,111 @@
+name: HUNTECH OneClick UI
 
+on:
+  workflow_dispatch:
+
+jobs:
+  oneclick_ui:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    env:
+      AWS_REGION: us-east-1
+      ROLE_TO_ASSUME: arn:aws:iam::382773571217:role/HUNTECH-CICD
+      WEB_BUCKET: huntech-web-382773571217-us-east-1-core
+      SITE_FQDN: core.huntechusa.com
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.ROLE_TO_ASSUME }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Discover API endpoint
+        shell: bash
+        run: |
+          set -e
+          EP=$(aws apigatewayv2 get-apis --query 'Items[0].ApiEndpoint' --output text 2>/dev/null || true)
+          if [ -z "$EP" ] || [ "$EP" = "None" ]; then
+            echo "::error::No API Gateway v2 endpoint found in ${AWS_REGION}"; exit 1
+          fi
+          echo "API_ENDPOINT=$EP" >> "$GITHUB_ENV"
+          echo "API: $EP"
+
+      - name: Build UI files
+        shell: bash
+        run: |
+          set -e
+          mkdir -p _wired/app
+
+          # index.html (ASCII only)
+          printf '%s\n' '<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>HUNTECH MVP</title><link rel="stylesheet" href="styles.css"></head><body><header class="hdr"><strong>HUNTECH</strong><span class="tag">Where Innovation Meets Tradition</span></header><main class="main"><section class="cards"><div class="card"><h2>Shed Hunting</h2><p>Plan grids, mark finds, export KML.</p></div><div class="card"><h2>Fly Fishing</h2><p>USGS flows, access points, wade/float.</p></div><div class="card"><h2>Whitetail</h2><p>Funnels, 300-yd sits, access routes.</p></div></section><section class="panel"><h3 id="t">Welcome</h3><p id="b">Use the buttons below to hit the live API.</p><div class="btns"><button id="b1">GET /pins</button><button id="b2">GET /journal</button><button id="b3">POST /pins</button><button id="b4">POST /journal</button></div><pre id="out"></pre></section></main><footer class="ftr"><small>© HUNTECH</small></footer><script src="app.js"></script></body></html>' > _wired/app/index.html
+
+          # styles.css (ASCII only)
+          cat > _wired/app/styles.css <<'CSS'
+body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:#2d2416;color:#ffdf66}
+.hdr{padding:16px;background:#201a10;border-bottom:1px solid #3a2e11;display:flex;gap:12px;align-items:center}
+.tag{color:#d9c26d}
+.main{max-width:1000px;margin:24px auto;padding:0 16px}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px}
+.card{background:#201a10;border:1px solid #3a2e11;border-radius:8px;padding:16px}
+.panel{margin-top:18px;background:#201a10;border:1px solid #3a2e11;border-radius:8px;padding:16px}
+.btns{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 10px}
+button{background:#ffd34d;color:#2d2416;border:0;padding:10px 14px;border-radius:8px;font-weight:700;cursor:pointer}
+pre{background:#17120a;color:#ffdf66;padding:12px;border-radius:8px;min-height:120px;overflow:auto}
+.ftr{padding:24px;text-align:center;color:#d9c26d}
+CSS
+
+          # app.js with placeholder token
+          cat > _wired/app/app.js <<'JS'
+(function(){
+  var API="__API__";
+  var out=document.getElementById("out");
+  function log(t){ out.textContent=t; }
+
+  document.getElementById("b1").onclick=function(){ get(API+"/pins"); };
+  document.getElementById("b2").onclick=function(){ get(API+"/journal?userId=demo&journalId=demo"); };
+  document.getElementById("b3").onclick=function(){ post(API+"/pins",{userId:"demo",pinId:String(Date.now()),lat:38.15,lon:-90.72,category:"demo"}); };
+  document.getElementById("b4").onclick=function(){ post(API+"/journal",{userId:"demo",journalId:String(Date.now()),note:"Hello from HUNTECH"}); };
+
+  async function get(u){
+    log("GET "+u+" ...");
+    try{ var r=await fetch(u); var t=await r.text(); log("Status "+r.status+"\n\n"+t); }
+    catch(e){ log(String(e)); }
+  }
+  async function post(u,b){
+    log("POST "+u+" ...");
+    try{ var r=await fetch(u,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(b)}); var t=await r.text(); log("Status "+r.status+"\n\n"+t); }
+    catch(e){ log(String(e)); }
+  }
+})();
+JS
+
+          # inject API URL
+          sed -i "s#__API__#${API_ENDPOINT}#g" _wired/app/app.js
+
+      - name: Upload to S3 under /app/
+        shell: bash
+        run: |
+          set -e
+          aws s3 sync _wired/ "s3://${WEB_BUCKET}/" --delete --cache-control max-age=30
+
+      - name: Invalidate CloudFront
+        shell: bash
+        run: |
+          set -e
+          ORIGIN="${WEB_BUCKET}.s3.${AWS_REGION}.amazonaws.com"
+          DIST_ID=$(aws cloudfront list-distributions --query 'DistributionList.Items[?contains(Origins.Items[].DomainName, `'"${ORIGIN}"'`)].Id | [0]' --output text 2>/dev/null || true)
+          if [ -z "$DIST_ID" ] || [ "$DIST_ID" = "None" ]; then
+            echo "::error::Could not resolve CloudFront distribution for origin ${ORIGIN}"; exit 1
+          fi
+          aws cloudfront create-invalidation --distribution-id "$DIST_ID" --paths "/app/*" >/dev/null
+          echo "Invalidation created for /app/*"
+
+      - name: Print link
+        run: echo "Open: https://${SITE_FQDN}/app/"
+``
