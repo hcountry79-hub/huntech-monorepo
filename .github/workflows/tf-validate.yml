@@ -16,23 +16,12 @@ on:
 jobs:
   validate:
     runs-on: ubuntu-latest
-    permissions:
-      id-token: write
-      contents: read
-    env:
-      TF_IN_AUTOMATION: "true"
-      AWS_REGION: us-east-1
-      ROLE_TO_ASSUME: arn:aws:iam::382773571217:role/HUNTECH-CICD
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
+      - uses: actions/checkout@v4
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: 1.7.5
-
       - name: Resolve module path
         id: mp
         shell: bash
@@ -41,23 +30,12 @@ jobs:
           if [ -z "$MP" ]; then MP="."; fi
           echo "MODULE_PATH=$MP" >> $GITHUB_ENV
           echo "Module path: $MP"
-
-      # fmt: just checks formatting (no repo changes)
       - name: terraform fmt (check)
         working-directory: ${{ env.MODULE_PATH }}
         run: terraform fmt -recursive -check
-
-      # Some providers need AWS creds even for init
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: ${{ env.ROLE_TO_ASSUME }}
-          aws-region: ${{ env.AWS_REGION }}
-
       - name: terraform init
         working-directory: ${{ env.MODULE_PATH }}
         run: terraform init -input=false -upgrade
-
       - name: terraform validate
         working-directory: ${{ env.MODULE_PATH }}
         run: terraform validate
