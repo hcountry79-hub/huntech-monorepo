@@ -1,0 +1,62 @@
+name: HUNTECH Web — UI Bootstrap
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ "main" ]
+    paths:
+      - ".github/workflows/web-ui-bootstrap.yml"
+      - "ui-bootstrap/**"
+
+jobs:
+  ui:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    env:
+      AWS_REGION: us-east-1
+      ROLE_TO_ASSUME: arn:aws:iam::382773571217:role/HUNTECH-CICD
+      WEB_BUCKET: huntech-web-382773571217-us-east-1-core
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.ROLE_TO_ASSUME }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Discover API endpoint (API Gateway v2)
+        id: api
+        shell: bash
+        run: |
+          set -e
+          EP=$(aws apigatewayv2 get-apis --query "Items[?Name=='huntech-http'].ApiEndpoint | [0]" --output text || true)
+          if [ -z "$EP" ] || [ "$EP" = "None" ]; then
+            EP=$(aws apigatewayv2 get-apis --query "Items[0].ApiEndpoint" --output text || true)
+          fi
+          if [ -z "$EP" ] || [ "$EP" = "None" ]; then
+            echo "::error::No API Gateway v2 endpoint found"; exit 1
+          fi
+          echo "API_ENDPOINT=$EP" >> $GITHUB_ENV
+          echo "API: $EP"
+
+      - name: Inject API URL into app.js
+        shell: bash
+        run: sed -i "s#__API__#${API_ENDPOINT}#g" ui-bootstrap/app/app.js
+
+      - name: Upload UI to S3 under /app/
+        shell: bash
+        run: aws s3 sync ui-bootstrap/ "s3://${WEB_BUCKET}/" --delete --cache-control max-age=30
+
+      - name: Invalidate CloudFront for /app/*
+        shell: bash
+        run: |
+          ORIGIN="${WEB_BUCKET}.s3.${AWS_REGION}.amazonaws.com"
+          DIST_ID=$(aws cloudfront list-distributions --query "DistributionList.Items[?contains(Origins.Items[].DomainName, '${ORIGIN}')].Id | [0]" --output text)
+          aws cloudfront create-invalidation --distribution-id "${DIST_ID}" --paths "/app/*" >/dev/null
+          echo "Invalidation created for /app/*"
+
+      - name: Done
+        run: echo "Open: https://core.huntechusa.com/app/"
