@@ -872,6 +872,7 @@ function initializeMap() {
   map = L.map('map', {
     center: [38.26, -90.55],
     zoom: 10,
+    maxZoom: 22,                   // allow deep zoom; layers CSS-upscale via maxNativeZoom
     zoomControl: false,
     zoomSnap: 0.5,
     zoomDelta: 0.5,
@@ -969,37 +970,41 @@ function initializeMap() {
   };
 
   // keepBuffer: extra tile rows beyond viewport for rotation coverage + smooth scrolling
-  const _tileOpts = { keepBuffer: 6, updateWhenZooming: false, updateWhenIdle: true };
+  // maxZoom: 22 on every layer allows deep zoom; maxNativeZoom tells Leaflet where real
+  // tiles stop so it CSS-upscales cleanly beyond that (no wash-out / blank tiles).
+  const _tileOpts = { keepBuffer: 6, updateWhenZooming: false, updateWhenIdle: true, maxZoom: 22 };
 
-  const satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-    attribution: '&copy; Esri',
-    maxZoom: 19,
+  const satellite = L.tileLayer('https://mt{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
+    attribution: '&copy; Google',
+    subdomains: ['0','1','2','3'],
+    maxNativeZoom: 21,        // Google Satellite serves real tiles to z21
     ..._tileOpts
   });
   satellite.on('tileerror', tileErrorNotice('satellite-tiles', 'Base map tiles failed to load. Check internet access.'));
-  const satelliteHybrid = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-    attribution: '&copy; Esri',
-    maxZoom: 19,
+  const satelliteHybrid = L.tileLayer('https://mt{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
+    attribution: '&copy; Google',
+    subdomains: ['0','1','2','3'],
+    maxNativeZoom: 21,        // Google Satellite serves real tiles to z21
     ..._tileOpts
   });
   satelliteHybrid.on('tileerror', tileErrorNotice('hybrid-tiles', 'Hybrid base tiles failed to load. Check internet access.'));
   const hybridRoads = L.tileLayer('https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}', {
     attribution: '&copy; Esri',
-    maxZoom: 19,
+    maxNativeZoom: 19,
     pane: 'hybridRoadsPane',
     ..._tileOpts
   });
   hybridRoads.on('tileerror', tileErrorNotice('hybrid-roads-tiles', 'Hybrid road tiles failed to load.'));
   const hybridHydro = L.tileLayer('https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Hydro_Reference/MapServer/tile/{z}/{y}/{x}', {
     attribution: '&copy; Esri',
-    maxZoom: 19,
+    maxNativeZoom: 19,
     pane: 'hybridLabelsPane',
     ..._tileOpts
   });
   hybridHydro.on('tileerror', tileErrorNotice('hybrid-hydro-tiles', 'Hybrid hydro tiles failed to load.'));
   const hybridLabels = L.tileLayer('https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', {
     attribution: '&copy; Esri',
-    maxZoom: 19,
+    maxNativeZoom: 19,
     pane: 'hybridLabelsPane',
     ..._tileOpts
   });
@@ -1009,11 +1014,11 @@ function initializeMap() {
   const latestImageryUrl = String(window.LATEST_IMAGERY_TILE_URL || '').trim();
   const latestImageryNoteText = String(window.LATEST_IMAGERY_NOTE || '').trim();
   const latestImagery = latestImageryUrl
-    ? L.tileLayer(latestImageryUrl, { attribution: '&copy; Esri', maxZoom: 19, ..._tileOpts })
+    ? L.tileLayer(latestImageryUrl, { attribution: '&copy; Esri', maxNativeZoom: 19, ..._tileOpts })
     : null;
   const topo = L.tileLayer('https://basemap.nationalmap.gov/arcgis/rest/services/USGSTopo/MapServer/tile/{z}/{y}/{x}', {
     attribution: '&copy; USGS The National Map',
-    maxZoom: 19,
+    maxNativeZoom: 16,        // USGS Topo serves real tiles to z16
     ..._tileOpts
   });
   topo.on('tileerror', tileErrorNotice('topo-tiles', 'USGS topo tiles failed to load.'));
@@ -1031,7 +1036,7 @@ function initializeMap() {
   } else {
     const lidarUrl = (window.LIDAR_TILE_URL || '').trim();
     if (lidarUrl) {
-      lidarHillshadeLayer = L.tileLayer(lidarUrl, { opacity: 0.55, maxZoom: 19, zIndex: 350, ..._tileOpts });
+      lidarHillshadeLayer = L.tileLayer(lidarUrl, { opacity: 0.55, maxNativeZoom: 19, zIndex: 350, ..._tileOpts });
       lidarHillshadeLayer.on('tileerror', () => {
         showNoticeThrottled('lidar-tiles', 'LiDAR/Hillshade overlay failed to load tiles.', 'warning', 4200);
       });
@@ -1046,7 +1051,7 @@ function initializeMap() {
   try {
     const tileUrl = (window.PUBLIC_LAND_TILE_URL || DEFAULT_PUBLIC_LAND_TILE_URL || '').trim();
     if (tileUrl) {
-      publicLandLayer = L.tileLayer(tileUrl, { opacity: 0.7, maxZoom: 19, zIndex: 450, ..._tileOpts });
+      publicLandLayer = L.tileLayer(tileUrl, { opacity: 0.7, maxNativeZoom: 19, zIndex: 450, ..._tileOpts });
       publicLandLayer.on('tileerror', () => {
         showNoticeThrottled('public-land-tiles', 'Public land overlay failed to load tiles.', 'warning', 4200);
       });
@@ -1060,7 +1065,7 @@ function initializeMap() {
   try {
     const privateUrl = (window.PRIVATE_PARCELS_TILE_URL || '').trim();
     if (privateUrl) {
-      privateParcelsLayer = L.tileLayer(privateUrl, { opacity: 0.65, maxZoom: 19, zIndex: 460, ..._tileOpts });
+      privateParcelsLayer = L.tileLayer(privateUrl, { opacity: 0.65, maxNativeZoom: 19, zIndex: 460, ..._tileOpts });
       privateParcelsLayer.on('tileerror', () => {
         showNoticeThrottled('private-parcels-tiles', 'Private parcels overlay failed to load tiles.', 'warning', 4200);
       });
