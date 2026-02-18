@@ -974,17 +974,15 @@ function initializeMap() {
   // tiles stop so it CSS-upscales cleanly beyond that (no wash-out / blank tiles).
   const _tileOpts = { keepBuffer: 6, updateWhenZooming: false, updateWhenIdle: true, maxZoom: 22 };
 
-  const satellite = L.tileLayer('https://mt{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
-    attribution: '&copy; Google',
-    subdomains: ['0','1','2','3'],
-    maxNativeZoom: 21,        // Google Satellite serves real tiles to z21
+  const satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+    attribution: '&copy; Esri',
+    maxNativeZoom: 19,        // Esri serves real tiles to z19; CSS-upscale beyond
     ..._tileOpts
   });
   satellite.on('tileerror', tileErrorNotice('satellite-tiles', 'Base map tiles failed to load. Check internet access.'));
-  const satelliteHybrid = L.tileLayer('https://mt{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
-    attribution: '&copy; Google',
-    subdomains: ['0','1','2','3'],
-    maxNativeZoom: 21,        // Google Satellite serves real tiles to z21
+  const satelliteHybrid = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+    attribution: '&copy; Esri',
+    maxNativeZoom: 19,        // Esri serves real tiles to z19; CSS-upscale beyond
     ..._tileOpts
   });
   satelliteHybrid.on('tileerror', tileErrorNotice('hybrid-tiles', 'Hybrid base tiles failed to load. Check internet access.'));
