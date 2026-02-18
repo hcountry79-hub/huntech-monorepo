@@ -477,7 +477,11 @@ const onboardingSteps = [
 ];
 
 // Educational content for different habitat types
-// \n//   Education & Habitat Content Data\n// \nconst SHED_EDUCATION = {
+
+// ===================================================================
+//   Education & Habitat Content Data
+// ===================================================================
+const SHED_EDUCATION = {
   bedding: {
     priority: 1,
     title: "Bedding Area (HIGHEST PRIORITY)",
@@ -778,7 +782,11 @@ function buildCustomHotspotEducation({ habitat, base, latlng, bounds, windDir, c
   };
 }
 
-// \n//   Map Initialization & Tile Layers\n// \nfunction setupPillFastTap() {
+
+// ===================================================================
+//   Map Initialization & Tile Layers
+// ===================================================================
+function setupPillFastTap() {
   const pillSelector = [
     '.ht-pill-btn',
     '.ht-mdc-pill',
@@ -1457,7 +1465,11 @@ function openMdcAreaFromLabel(feature) {
   showMdcAreaSummary(feature);
 }
 
-// \n//   MDC Land Labels & Field Command\n// \nfunction updateMdcLandLabels() {
+
+// ===================================================================
+//   MDC Land Labels & Field Command
+// ===================================================================
+function updateMdcLandLabels() {
   if (mdcLandLabelsSuppressed || !mdcLandEnabled || !map || !mdcLandFeatures.length) {
     clearMdcLandLabels();
     return;
@@ -1511,7 +1523,11 @@ function openMdcAreaFromLabel(feature) {
   }
 }
 
-// \n//   Map Pin Icon Factories\n// \nfunction getBrandedPinIcon(labelText) {
+
+// ===================================================================
+//   Map Pin Icon Factories
+// ===================================================================
+function getBrandedPinIcon(labelText) {
   const safe = String(labelText ?? '').slice(0, 3);
   const logo = getHuntechLogoMarkup('ht-pin-logo');
   return L.divIcon({
@@ -1588,7 +1604,11 @@ function focusMarker(marker) {
   setTimeout(() => el.classList.remove('ht-pin--pulse'), 1200);
 }
 
-// \n//   Hotspot Avoidance System\n// \nasync function isLikelyWaterCandidate(latlng) {
+
+// ===================================================================
+//   Hotspot Avoidance System
+// ===================================================================
+async function isLikelyWaterCandidate(latlng) {
   if (!HOTSPOT_WATER_AVOID_ENABLED) return false;
   const endpoint = String(window.ELEVATION_API_URL || '').trim();
   if (!endpoint) return false;
@@ -1807,7 +1827,11 @@ async function isLikelyRoadOrStructureCandidate(latlng) {
   return false;
 }
 
-// \n//   Regulations & MDC Area Info\n// \nfunction loadRegulationsIndex() {
+
+// ===================================================================
+//   Regulations & MDC Area Info
+// ===================================================================
+function loadRegulationsIndex() {
   if (Array.isArray(window.PUBLIC_LAND_RULES)) {
     regulationsIndex = window.PUBLIC_LAND_RULES;
     return;
@@ -2095,7 +2119,11 @@ function showMdcAreaDetails(feature) {
   `);
 }
 
-// \n//   Area Selection, Hunt Criteria & Live Strategy\n// \nfunction setSelectedArea(layer, type, options = {}) {
+
+// ===================================================================
+//   Area Selection, Hunt Criteria & Live Strategy
+// ===================================================================
+function setSelectedArea(layer, type, options = {}) {
   const { autoLock = true } = options;
   if (selectedAreaLayer) {
     map.removeLayer(selectedAreaLayer);
@@ -2588,7 +2616,11 @@ function buildScoutingLayerFromZones(zones) {
   if (coreAreaEnabled) coreAreaLayer.addTo(map);
 }
 
-// \n//   Terrain Analysis Engine\n// \nfunction getBoundsSizeMeters(bounds) {
+
+// ===================================================================
+//   Terrain Analysis Engine
+// ===================================================================
+function getBoundsSizeMeters(bounds) {
   const sw = bounds.getSouthWest();
   const ne = bounds.getNorthEast();
   const width = sw.distanceTo(L.latLng(sw.lat, ne.lng));
@@ -3232,7 +3264,11 @@ async function analyzeSelectedAreaTerrain(bounds, areaLayer, areaType, windDir, 
   return { features, coreZones, hotspotSeeds: seedFeatures };
 }
 
-// \n//   Saved Areas & Properties\n// \nfunction saveHuntAreas() {
+
+// ===================================================================
+//   Saved Areas & Properties
+// ===================================================================
+function saveHuntAreas() {
   try {
     localStorage.setItem(HUNT_AREAS_STORAGE_KEY, JSON.stringify(savedHuntAreas));
   } catch {
@@ -3573,7 +3609,11 @@ window.startSavePin = function() {
   showNotice('Click the map to drop a saved pin.', 'info', 3200);
 };
 
-// \n//   Drawing Tools & Shapes\n// \nfunction clearSelectedArea() {
+
+// ===================================================================
+//   Drawing Tools & Shapes
+// ===================================================================
+function clearSelectedArea() {
   if (selectedAreaLayer) {
     map.removeLayer(selectedAreaLayer);
     if (drawnItems && drawnItems.hasLayer(selectedAreaLayer)) {
@@ -4072,7 +4112,11 @@ function handleMapClick(e) {
   }
 }
 
-// \n//   Route Pin Selection\n// \nfunction setStartPoint(latlng) {
+
+// ===================================================================
+//   Route Pin Selection
+// ===================================================================
+function setStartPoint(latlng) {
   startPoint = latlng;
   if (startPointMarker) map.removeLayer(startPointMarker);
   startPointMarker = L.marker(latlng, {
@@ -4509,7 +4553,11 @@ function isPointInAreaLayer(latlng, areaLayer, areaType) {
   return false;
 }
 
-// \n//   UI Helpers & MDC Info Panel\n// \nfunction escapeHtml(value) {
+
+// ===================================================================
+//   UI Helpers & MDC Info Panel
+// ===================================================================
+function escapeHtml(value) {
   return String(value ?? '')
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
@@ -4738,7 +4786,11 @@ function renderThermalEducationCard(thermal) {
   `;
 }
 
-// \n//   Education Display & Notices\n// \nfunction showEducationTile(hotspot, reason) {
+
+// ===================================================================
+//   Education Display & Notices
+// ===================================================================
+function showEducationTile(hotspot, reason) {
   if (!UI_POPUPS_ENABLED) return;
   const tile = ensureEducationTile();
   activeEducationHotspot = hotspot || null;
@@ -4887,7 +4939,11 @@ function updateEducationCheckinButton() {
   btn.classList.toggle('is-active', isActive);
 }
 
-// \n//   Text-to-Speech & Audio\n// \nfunction stopAiSpeech(notice = true) {
+
+// ===================================================================
+//   Text-to-Speech & Audio
+// ===================================================================
+function stopAiSpeech(notice = true) {
   if (ttsAbortController) {
     try { ttsAbortController.abort(); } catch {}
     ttsAbortController = null;
@@ -5721,7 +5777,11 @@ window.toggleLayerButton = function(layer) {
   }
 };
 
-// \n//   Modals\n// \nfunction openInputModal({ title, message, placeholder, defaultValue, multiline, confirmLabel, onSubmit }) {
+
+// ===================================================================
+//   Modals
+// ===================================================================
+function openInputModal({ title, message, placeholder, defaultValue, multiline, confirmLabel, onSubmit }) {
   const backdrop = document.createElement('div');
   backdrop.className = 'ht-modal-backdrop';
   backdrop.style.display = 'flex';
@@ -6116,7 +6176,11 @@ function openTurkeyPinModal({ onSubmit }) {
   document.body.appendChild(backdrop);
 }
 
-// \n//   Search System\n// \nfunction parseLatLng(query) {
+
+// ===================================================================
+//   Search System
+// ===================================================================
+function parseLatLng(query) {
   const match = query.match(/(-?\d+\.?\d*)\s*,\s*(-?\d+\.?\d*)/);
   if (!match) return null;
   const lat = parseFloat(match[1]);
@@ -6508,7 +6572,11 @@ function setActiveSearchArea(hotspot) {
   map.fitBounds(searchAreaLayer.getBounds(), { padding: [40, 40] });
 }
 
-// \n//   Coverage & Tracking\n// \nfunction playSoftDing() {
+
+// ===================================================================
+//   Coverage & Tracking
+// ===================================================================
+function playSoftDing() {
   const ctx = window.AudioContext ? new AudioContext() : (window.webkitAudioContext ? new webkitAudioContext() : null);
   if (!ctx) return;
   const now = ctx.currentTime;
@@ -6788,7 +6856,11 @@ function maybeWarnLowAccuracy(accuracy) {
   showNotice(`Low GPS accuracy (~${Math.round(accuracy)}m). Enable Precise Location for a tighter lock.`, 'warning', 5200);
 }
 
-// \n//   GPS, Heading & Location\n// \nfunction startLocationWatch() {
+
+// ===================================================================
+//   GPS, Heading & Location
+// ===================================================================
+function startLocationWatch() {
   if (!navigator.geolocation) return;
   if (locationWatchId) navigator.geolocation.clearWatch(locationWatchId);
 
@@ -7126,7 +7198,11 @@ function lockMapToUserLocation(latlng) {
   map.setView(latlng, nextZoom, { animate: true });
 }
 
-// \n//   Land Layer Management\n// \nfunction saveLastKnownLocation(latlng) {
+
+// ===================================================================
+//   Land Layer Management
+// ===================================================================
+function saveLastKnownLocation(latlng) {
   if (!map || !latlng) return;
   try {
     const zoom = typeof map.getZoom === 'function' ? map.getZoom() : 12;
@@ -7474,7 +7550,11 @@ async function fetchMdcConservationAreas(bounds) {
   return data.features;
 }
 
-// \n//   Shed Allowed Layer\n// \nasync function checkRegAllowsShed(regLink) {
+
+// ===================================================================
+//   Shed Allowed Layer
+// ===================================================================
+async function checkRegAllowsShed(regLink) {
   if (!regLink) return { status: 'unknown', confidence: 'low' };
   if (shedAllowedCache.has(regLink)) {
     const cached = shedAllowedCache.get(regLink);
@@ -7642,7 +7722,11 @@ function disableShedAllowedLayer() {
 }
 
 // Weather update
-// \n//   Weather\n// \nasync function updateWeather() {
+
+// ===================================================================
+//   Weather
+// ===================================================================
+async function updateWeather() {
   const center = map.getCenter();
   try {
     const response = await fetchWithTimeout(
@@ -7677,7 +7761,11 @@ function disableShedAllowedLayer() {
 }
 
 // Search functionality
-// \n//   Toolbar & Navigation Commands\n// \nfunction initializeSearch() {
+
+// ===================================================================
+//   Toolbar & Navigation Commands
+// ===================================================================
+function initializeSearch() {
   const searchBtn = document.querySelector('.ht-search-btn');
   const searchInput = document.querySelector('.ht-search-input');
   const resultsEl = document.getElementById('searchResults');
@@ -7926,7 +8014,7 @@ window.toggleAdvancedControls = function() {
 
 window.startOver = function() {
   try {
-// \n//   Hunt Plan Builder (startShedHunt)\n// \n    if (typeof window.clearAllDrawings === 'function') {
+    if (typeof window.clearAllDrawings === 'function') {
       window.clearAllDrawings();
     }
   } catch (err) {
@@ -8455,7 +8543,11 @@ function logVoiceWaypoint(kind, options = {}) {
   }, getPreciseGeolocationOptions({ timeout: 8000 }));
 }
 
-// \n//   Voice Commands\n// \nfunction handleVoiceTranscript(text) {
+
+// ===================================================================
+//   Voice Commands
+// ===================================================================
+function handleVoiceTranscript(text) {
   const phrase = String(text || '').toLowerCase();
   const wantsLog = phrase.includes('log');
   const wantsPin = phrase.includes('drop a pin')
@@ -9199,7 +9291,11 @@ function windDirToDegrees(dir) {
   return mapDeg[d] ?? null;
 }
 
-// \n//   Compass & Map Rotation\n// \nfunction ensureCompassControl() {
+
+// ===================================================================
+//   Compass & Map Rotation
+// ===================================================================
+function ensureCompassControl() {
   if (compassControl || !map) return compassControl;
   const mapEl = map.getContainer();
   if (!mapEl) return null;
@@ -9626,7 +9722,11 @@ function updateCompassWind(dir) {
   }
 }
 
-// \n//   Wind Overlay\n// \nfunction updateWindSmoke(dir, speedMph) {
+
+// ===================================================================
+//   Wind Overlay
+// ===================================================================
+function updateWindSmoke(dir, speedMph) {
   if (!map) return;
   const mapEl = map.getContainer();
   if (!mapEl) return;
@@ -9831,7 +9931,11 @@ window.updateWindOverlay = function(dir, speedMph) {
   if (windOverlayRoot) windOverlayRoot.style.display = 'block';
 };
 
-// \n//   Weather Panel & Thermal System\n// \nfunction buildWeatherForecastFromOpenMeteo(data) {
+
+// ===================================================================
+//   Weather Panel & Thermal System
+// ===================================================================
+function buildWeatherForecastFromOpenMeteo(data) {
   const hourly = data && data.hourly ? data.hourly : null;
   if (!hourly || !Array.isArray(hourly.time)) return null;
   const temps = Array.isArray(hourly.temperature_2m) ? hourly.temperature_2m : [];
@@ -10542,7 +10646,11 @@ function vecFromTo(a, b) {
   return [dx / mag, dy / mag];
 }
 
-// \n//   Strategy Panel & Plan Display\n// \nfunction updatePlanLoadingStatus(title, subtitle) {
+
+// ===================================================================
+//   Strategy Panel & Plan Display
+// ===================================================================
+function updatePlanLoadingStatus(title, subtitle) {
   const panel = document.getElementById('strategy-panel');
   if (!panel) return;
   const titleEl = panel.querySelector('.ht-plan-loading-title');
@@ -11538,7 +11646,11 @@ function dropMicroFeaturesForActiveSearchArea() {
   }
 }
 
-// \n//   Route Geometry & Elevation\n// \nfunction densifyLatLngs(latlngs, spacingMeters) {
+
+// ===================================================================
+//   Route Geometry & Elevation
+// ===================================================================
+function densifyLatLngs(latlngs, spacingMeters) {
   if (!Array.isArray(latlngs) || latlngs.length < 2) return Array.isArray(latlngs) ? latlngs.slice() : [];
   const spacing = Math.max(25, Number(spacingMeters) || DEFAULT_TERRAIN_SCAN_SAMPLE_SPACING_M);
 
@@ -12125,7 +12237,11 @@ async function analyzeTerrainAlongRoute(latlngs) {
   showNotice(`Terrain scan complete: ${features.length} feature pins added.`, 'success', 4200);
 }
 
-// \n//   Route Building & OSRM\n// \nasync function fetchOsrmWalkingRoute(points) {
+
+// ===================================================================
+//   Route Building & OSRM
+// ===================================================================
+async function fetchOsrmWalkingRoute(points) {
   const base = String(window.WALK_ROUTER_URL || '').trim();
   if (!base) return null;
   if (!Array.isArray(points) || points.length < 2) return null;
@@ -12741,7 +12857,7 @@ window.letsGoFollowRoute = function() {
 };
 
 
-//  Fly-fishing module extracted to ht-fly-fishing.js 
+// === Fly-fishing module extracted to ht-fly-fishing.js ===
 
 
 // Close strategy panel

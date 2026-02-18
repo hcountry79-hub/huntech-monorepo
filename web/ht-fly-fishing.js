@@ -1,10 +1,6 @@
-// 
-// HUNTECH  Fly Fishing Module (extracted from main.js)
-// 
-// Functions: isFlyModule, isTurkeyModule, getFlyWaters, fly water markers,
-// fly coach panel, fly inventory, fly sessions, fly regulations,
-// fly live session, fly command tray, and all window.fly* commands.
-// 
+// ===================================================================
+// HUNTECH - Fly Fishing Module (extracted from main.js)
+// ===================================================================
 
 function isFlyModule() {
   return Boolean(document.body && document.body.classList.contains('module-fly'));
