@@ -248,10 +248,10 @@ const USER_LOCATION_FOCUS_ZOOM = Number(window.HUNTECH_USER_LOCATION_FOCUS_ZOOM 
 const MAP_FOLLOW_THROTTLE_MS = Number(window.HUNTECH_MAP_FOLLOW_THROTTLE_MS || 450);
 const MAP_FOLLOW_MIN_MOVE_METERS = Number(window.HUNTECH_MAP_FOLLOW_MIN_MOVE_METERS || 7);
 const MAP_FOLLOW_SAFE_BOUNDS_PAD = Number(window.HUNTECH_MAP_FOLLOW_SAFE_BOUNDS_PAD || 0.18);
-const MAP_ROTATION_SMOOTHING = Number(window.HUNTECH_MAP_ROTATION_SMOOTHING || 0.14);
-const MAP_ROTATION_MIN_DELTA_DEG = Number(window.HUNTECH_MAP_ROTATION_MIN_DELTA_DEG || 3.5);
-const MAP_ROTATION_SUSPEND_MS = Number(window.HUNTECH_MAP_ROTATION_SUSPEND_MS || 1200);
-const MAP_ROTATION_MAX_HZ = Number(window.HUNTECH_MAP_ROTATION_MAX_HZ || 12);
+const MAP_ROTATION_SMOOTHING = Number(window.HUNTECH_MAP_ROTATION_SMOOTHING || 0.18);
+const MAP_ROTATION_MIN_DELTA_DEG = Number(window.HUNTECH_MAP_ROTATION_MIN_DELTA_DEG || 1.5);
+const MAP_ROTATION_SUSPEND_MS = Number(window.HUNTECH_MAP_ROTATION_SUSPEND_MS || 2500);
+const MAP_ROTATION_MAX_HZ = Number(window.HUNTECH_MAP_ROTATION_MAX_HZ || 30);
 const HOTSPOT_ROAD_AVOID_STRICT = window.HUNTECH_ROAD_AVOID_STRICT !== undefined
   ? Boolean(window.HUNTECH_ROAD_AVOID_STRICT)
   : true;
@@ -6922,6 +6922,7 @@ function maybeApplyBearingFromHeading(headingDeg, now = Date.now()) {
 
   const elapsed = now - (lastBearingUpdateAt || 0);
   const minInterval = MAP_ROTATION_MAX_HZ > 0 ? (1000 / MAP_ROTATION_MAX_HZ) : 0;
+  // Suspend auto-rotation while user is actively gesturing on the map
   const suspend = (now - (lastMapInteractionAt || 0)) < MAP_ROTATION_SUSPEND_MS;
   if (suspend || elapsed < minInterval) return;
 
@@ -6929,7 +6930,8 @@ function maybeApplyBearingFromHeading(headingDeg, now = Date.now()) {
   const delta = Math.abs(shortestAngleDeltaDeg(mapBearingDeg, targetBearing));
   if (delta < MAP_ROTATION_MIN_DELTA_DEG) return;
 
-  mapBearingDeg = smoothAngleDeg(mapBearingDeg, targetBearing, 0.22);
+  // Gentle smoothing — don't fight the user's gestures
+  mapBearingDeg = smoothAngleDeg(mapBearingDeg, targetBearing, 0.12);
   lastBearingUpdateAt = now;
   applyMapRotation();
 }
@@ -9270,12 +9272,11 @@ function bindMapRotationHandlers() {
   const mapEl = map.getContainer();
   if (!mapEl) return;
 
-  // Disable two-finger map rotation on mobile by default (it conflicts with pinch zoom / pan).
-  // Rotation remains available via the on-screen compass.
+  // Enable two-finger rotation on all devices (OnX-style gesture rotation).
   const gestureRotationSetting = window.HUNTECH_ENABLE_GESTURE_ROTATION;
   const gestureRotationEnabled = gestureRotationSetting !== undefined
     ? Boolean(gestureRotationSetting)
-    : !isCoarsePointerDevice();
+    : true;
 
   const setMapDraggingEnabled = (enabled) => {
     if (!map || !map.dragging) return;
@@ -9325,10 +9326,20 @@ function bindMapRotationHandlers() {
     mapEl.addEventListener('pointermove', (event) => {
       if (!mapRotatePointers.has(event.pointerId)) return;
       mapRotatePointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
-      if (!mapRotateActive) return;
+      if (!mapRotateActive) {
+        // Auto-start rotation if we have 2 pointers and compass is unlocked
+        if (mapRotatePointers.size >= 2 && !compassLocked) startPointerRotation();
+        return;
+      }
       const angle = getPointerAngle();
       if (!Number.isFinite(angle)) return;
-      mapBearingDeg = mapRotateStartBearing + (angle - mapRotateStartAngle) * 0.22;
+      // Direct 1:1 rotation — no dampening, matches finger angle exactly (OnX-style)
+      const rawDelta = angle - mapRotateStartAngle;
+      const targetBearing = normalizeDegrees(mapRotateStartBearing + rawDelta);
+      // Light smoothing to kill jitter, preserves responsiveness
+      const smoothDelta = shortestAngleDeltaDeg(mapBearingDeg, targetBearing);
+      mapBearingDeg = normalizeDegrees(mapBearingDeg + smoothDelta * 0.7);
+      lastMapInteractionAt = Date.now();
       applyMapRotation();
       event.preventDefault();
     }, { passive: false });
@@ -9368,17 +9379,184 @@ function bindMapRotationHandlers() {
         setMapDraggingEnabled(true);
       }
     });
+
+    // ── Touch-based rotation for mobile (iOS Safari, Android Chrome) ──
+    // Pointer events can miss two-finger gestures on some mobile browsers,
+    // so we also listen to raw touch events as a fallback/primary handler.
+    let _touchRotStartAngle = null;
+    let _touchRotStartBearing = 0;
+    let _touchRotStartDist = null;
+    let _touchRotGesture = null; // 'pending' | 'rotate' | 'zoom'
+    let _touchRotDraggingOff = false;
+    let _touchRotZoomOff = false;
+
+    const _getTouchAngle = (touches) => {
+      if (!touches || touches.length < 2) return null;
+      return Math.atan2(
+        touches[1].clientY - touches[0].clientY,
+        touches[1].clientX - touches[0].clientX
+      ) * (180 / Math.PI);
+    };
+
+    const _getTouchDist = (touches) => {
+      if (!touches || touches.length < 2) return null;
+      return Math.hypot(
+        touches[1].clientX - touches[0].clientX,
+        touches[1].clientY - touches[0].clientY
+      );
+    };
+
+    mapEl.addEventListener('touchstart', (e) => {
+      if (compassLocked || e.touches.length !== 2) return;
+      _touchRotStartAngle = _getTouchAngle(e.touches);
+      _touchRotStartBearing = mapBearingDeg;
+      _touchRotStartDist = _getTouchDist(e.touches);
+      _touchRotGesture = 'pending';
+    }, { passive: true });
+
+    mapEl.addEventListener('touchmove', (e) => {
+      if (compassLocked || e.touches.length !== 2 || _touchRotStartAngle === null) return;
+
+      const currAngle = _getTouchAngle(e.touches);
+      const currDist = _getTouchDist(e.touches);
+      if (!Number.isFinite(currAngle)) return;
+
+      let deltaAngle = currAngle - _touchRotStartAngle;
+      if (deltaAngle > 180) deltaAngle -= 360;
+      if (deltaAngle < -180) deltaAngle += 360;
+      const absAngle = Math.abs(deltaAngle);
+      const absDist = Math.abs((currDist || 0) - (_touchRotStartDist || 0));
+
+      // Gesture discrimination: decide rotate vs zoom
+      if (_touchRotGesture === 'pending') {
+        if (absAngle > 6 && absAngle > absDist * 0.4) {
+          _touchRotGesture = 'rotate';
+          _touchRotDraggingOff = map.dragging && map.dragging.enabled();
+          if (_touchRotDraggingOff) map.dragging.disable();
+          _touchRotZoomOff = map.touchZoom && map.touchZoom.enabled();
+          if (_touchRotZoomOff) map.touchZoom.disable();
+        } else if (absDist > 20) {
+          _touchRotGesture = 'zoom';
+        } else {
+          return; // Not enough movement yet
+        }
+      }
+
+      if (_touchRotGesture !== 'rotate') return;
+
+      // Direct 1:1 mapping with smooth easing
+      const target = normalizeDegrees(_touchRotStartBearing + deltaAngle);
+      const smooth = shortestAngleDeltaDeg(mapBearingDeg, target);
+      mapBearingDeg = normalizeDegrees(mapBearingDeg + smooth * 0.65);
+      lastMapInteractionAt = Date.now();
+      applyMapRotation();
+      e.preventDefault();
+    }, { passive: false });
+
+    const _touchRotEnd = () => {
+      _touchRotStartAngle = null;
+      _touchRotStartDist = null;
+      _touchRotGesture = null;
+      if (_touchRotDraggingOff && map.dragging) { map.dragging.enable(); _touchRotDraggingOff = false; }
+      if (_touchRotZoomOff && map.touchZoom) { map.touchZoom.enable(); _touchRotZoomOff = false; }
+      // Full tile refresh after gesture ends
+      if (map) {
+        try { map.invalidateSize({ pan: false }); } catch {}
+        try {
+          map.eachLayer((layer) => {
+            if (layer && typeof layer.redraw === 'function') {
+              try { layer.redraw(); } catch {}
+            }
+          });
+        } catch {}
+      }
+    };
+
+    mapEl.addEventListener('touchend', _touchRotEnd, { passive: true });
+    mapEl.addEventListener('touchcancel', _touchRotEnd, { passive: true });
   }
+}
+
+let _rotationRAF = null;
+let _lastRotateTileRefresh = 0;
+let _bearingAnimFrame = null;
+
+// Smooth animated transition of mapBearingDeg to a target value
+function _animateBearingTo(targetDeg, durationMs, onComplete) {
+  if (_bearingAnimFrame) cancelAnimationFrame(_bearingAnimFrame);
+  const startBearing = mapBearingDeg;
+  const delta = shortestAngleDeltaDeg(startBearing, targetDeg);
+  const startTime = performance.now();
+  const step = (now) => {
+    const elapsed = now - startTime;
+    const t = Math.min(1, elapsed / Math.max(1, durationMs));
+    // Ease-out cubic for natural deceleration
+    const ease = 1 - Math.pow(1 - t, 3);
+    mapBearingDeg = normalizeDegrees(startBearing + delta * ease);
+    applyMapRotation();
+    if (t < 1) {
+      _bearingAnimFrame = requestAnimationFrame(step);
+    } else {
+      _bearingAnimFrame = null;
+      if (onComplete) onComplete();
+    }
+  };
+  _bearingAnimFrame = requestAnimationFrame(step);
 }
 
 function applyMapRotation() {
   if (!map) return;
-  const pane = map.getPane('mapPane');
-  if (!pane) return;
-  const base = pane.style.transform || '';
-  const cleaned = base.replace(/rotate\([^)]*\)/g, '').trim();
-  const rotate = mapBearingDeg ? ` rotate(${mapBearingDeg}deg)` : '';
-  pane.style.transform = `${cleaned}${rotate}`.trim();
+  if (_rotationRAF) return; // coalesce into one rAF
+  _rotationRAF = requestAnimationFrame(() => {
+    _rotationRAF = null;
+    if (!map) return;
+    const pane = map.getPane('mapPane');
+    if (!pane) return;
+    const container = map.getContainer();
+
+    const base = pane.style.transform || '';
+    const cleaned = base.replace(/rotate\([^)]*\)/g, '').replace(/scale\([^)]*\)/g, '').trim();
+    const bearing = Number.isFinite(mapBearingDeg) ? mapBearingDeg : 0;
+    const absBearing = Math.abs(bearing % 360);
+
+    // Scale the mapPane up to cover the corners exposed by rotation.
+    // For a rectangular viewport rotated θ°, we need:
+    //   scale = sin(|θ mod 90°|) + cos(|θ mod 90°|)
+    // This equals 1.0 at 0° and √2 ≈ 1.414 at 45°.
+    const theta = (absBearing % 90) * (Math.PI / 180);
+    const scaleBoost = Math.abs(bearing) > 0.5
+      ? (Math.sin(theta) + Math.cos(theta))
+      : 1;
+
+    const rotate = Math.abs(bearing) > 0.01 ? ` rotate(${bearing}deg)` : '';
+    const scale = scaleBoost > 1.001 ? ` scale(${scaleBoost.toFixed(4)})` : '';
+    pane.style.transform = `${cleaned}${rotate}${scale}`.trim();
+    pane.style.transformOrigin = '50% 50%';
+    pane.style.willChange = 'transform';
+
+    // Ensure container clips any remaining overflow
+    if (container) {
+      container.style.overflow = 'hidden';
+    }
+
+    // Update compass needle if present
+    if (compassNeedle) {
+      compassNeedle.style.transform = `rotate(${bearing}deg)`;
+    }
+
+    // Throttled tile refresh to fill rotated edges
+    const now = Date.now();
+    if (now - _lastRotateTileRefresh > 200) {
+      _lastRotateTileRefresh = now;
+      try {
+        map.eachLayer((layer) => {
+          if (layer && typeof layer.redraw === 'function') {
+            try { layer.redraw(); } catch {}
+          }
+        });
+      } catch {}
+    }
+  });
 }
 
 function setCompassLock(nextState, notify = true) {
@@ -9399,18 +9577,16 @@ function setCompassLock(nextState, notify = true) {
   }
   if (compassLocked) {
     stopDeviceCompassHeading();
-    mapBearingDeg = 0;
-    applyMapRotation();
-  } else {
-    // When unlocked: keep the map locked to compass direction so the user doesn't have to spin it.
-    // Prefer device compass heading when available; fallback to GPS-derived heading.
-    startDeviceCompassHeading().catch(() => {});
-    const now = Date.now();
-    const heading = getPreferredHeadingDeg(now);
-    if (Number.isFinite(heading)) {
-      mapBearingDeg = normalizeDegrees(-heading);
+    // Animate smoothly back to north instead of snapping
+    _animateBearingTo(0, 400, () => {
+      mapBearingDeg = 0;
       applyMapRotation();
-    }
+    });
+  } else {
+    // When unlocked: start listening to compass heading.
+    // Do NOT instantly snap to heading — let maybeApplyBearingFromHeading
+    // ease into it smoothly over the next few frames.
+    startDeviceCompassHeading().catch(() => {});
   }
   if (notify) {
     showNotice(compassLocked ? 'North lock enabled.' : 'North lock disabled.', 'info', 2400);
