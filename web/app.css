@@ -2562,9 +2562,9 @@ body.module-fly #map {
   background-position: center 15%;
   background-size: cover;
 }
-/* OIP(1): Underwater trout — dark/murky, needs punch, fish up top */
+/* OIP(1): Underwater trout — fish is in lower part of image, pull up */
 .ht-slide-trout-alt {
-  background-position: center 10%;
+  background-position: center 70%;
   background-size: cover;
   filter: brightness(1.15) saturate(1.55) contrast(1.25);
 }
@@ -2995,7 +2995,7 @@ body.module-mushroom .ht-map-hero-meta {
     background-position: 55% 5%;
   }
   .ht-slide-trout-alt {
-    background-position: 50% 0%;
+    background-position: 50% 65%;
   }
   .ht-slide-stream {
     background-position: 50% 10%;
