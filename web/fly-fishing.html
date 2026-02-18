@@ -14,11 +14,11 @@
   <title>HUNTECH - Fly Fishing Module</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css" />
-  <link rel="stylesheet" href="app.css?v=20260210">
+  <link rel="stylesheet" href="app.css?v=20260218b">
 
   <!-- AWS Backend Configuration -->
-  <script src="config.js?v=20260210a"></script>
-  <script src="api.js?v=20260210a"></script>
+  <script src="config.js?v=20260218b"></script>
+  <script src="api.js?v=20260218b"></script>
 </head>
 <body class="module-fly">
   <header class="ht-topbar">
@@ -168,6 +168,18 @@
 
       <!-- ═══════ FISH NOW PANEL — Multi-Step Workflow ═══════ -->
       <div class="ht-stream-panel" id="fishNowPanel">
+
+        <!-- ──── Loading State (shown before GPS resolves) ──── -->
+        <div class="ht-fish-step" id="fishStep0_loading">
+          <div class="ht-accordion-header ht-accordion-header-center">
+            <span class="ht-define-title">📍 Finding your water…</span>
+          </div>
+          <div class="ht-form-grid">
+            <div class="ht-form-row">
+              <div class="ht-fly-note" style="text-align:center">Centering on your GPS location and identifying the nearest trout water…</div>
+            </div>
+          </div>
+        </div>
 
         <!-- ──── Step 1: Area Discovery (shown after FISH NOW fades to map) ──── -->
         <div class="ht-fish-step" id="fishStep1_areaAction" style="display:none">
@@ -506,8 +518,8 @@
     }
   </script>
 
-  <script src="regulations.js?v=20260210a"></script>
-  <script src="fly-fishing-data.js?v=20260210a"></script>
-  <script src="main.js?v=20260210a"></script>
+  <script src="regulations.js?v=20260218b"></script>
+  <script src="fly-fishing-data.js?v=20260218b"></script>
+  <script src="main.js?v=20260218b"></script>
 </body>
 </html>

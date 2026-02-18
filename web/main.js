@@ -14580,6 +14580,9 @@ document.addEventListener('DOMContentLoaded', () => {
   /* ── Step visibility helper ── */
   function fishShowStep(stepNum) {
     fishFlow.step = stepNum;
+    // Hide loading state whenever any real step (or reset) is shown
+    const loadingEl = document.getElementById('fishStep0_loading');
+    if (loadingEl) loadingEl.style.display = (stepNum === 0) ? '' : 'none';
     const steps = ['fishStep1_areaAction','fishStep2_strategy','fishStep3_route','fishStep4_briefing','fishStep5_live'];
     steps.forEach((id, i) => {
       const el = document.getElementById(id);
@@ -14647,7 +14650,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   /* ── Fish Now Init: GPS center + find area + show area pin ── */
   function fishNowInit() {
-    fishShowStep(0); // hide all steps initially
+    fishShowStep(0); // show loading state
     // GPS center at ~1000ft out (zoom 16 ≈ 1000ft)
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(function(pos) {
@@ -14675,6 +14678,8 @@ document.addEventListener('DOMContentLoaded', () => {
         centerOnMyLocationInternal();
         showNotice('Enable GPS to find your nearest trout water.', 'error', 3500);
       }, { enableHighAccuracy: true, maximumAge: 10000, timeout: 15000 });
+    } else {
+      showNotice('GPS not available on this device.', 'error', 3500);
     }
   }
 
