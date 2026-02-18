@@ -2557,43 +2557,49 @@ body.module-fly #map {
 }
 
 /* Per-slide centering — subjects focused ABOVE the Stream Command tray */
-/* OIP(3): Brown trout underwater — fish in upper zone */
-.ht-slide-trout {
-  background-position: center 15%;
-  background-size: cover;
+/* All fly-module slides use constrained height, NOT cover */
+body.module-fly .ht-hero-slide {
+  background-size: auto 60vh;
+  background-position: center top;
 }
-/* OIP(1): Underwater trout — dark/murky, needs punch, fish centered above tray */
+/* OIP(3): Brown trout underwater */
+.ht-slide-trout {
+  background-position: 45% top;
+}
+/* OIP(1): Underwater trout — dark/murky, needs punch */
 .ht-slide-trout-alt {
-  background-position: center 85%;
-  background-size: cover;
+  background-position: 60% top;
   filter: brightness(1.15) saturate(1.55) contrast(1.25);
 }
-/* OIP(2): Green stream with light rays — fisherman in upper half */
+/* OIP(2): Green stream with light rays */
 .ht-slide-stream {
-  background-position: center 20%;
-  background-size: cover;
+  background-position: 50% top;
   filter: brightness(1.45) saturate(1.35) contrast(1.05);
 }
-/* OIP(4): Golden mist fisherman silhouette — figure up top */
+/* OIP(4): Golden mist fisherman silhouette */
 .ht-slide-golden {
-  background-position: center 15%;
-  background-size: cover;
+  background-position: 50% top;
   filter: brightness(1.3) saturate(1.4) contrast(1.1);
 }
-/* OIP(5): Stream with light rays through trees — canopy + light up top */
+/* OIP(5): Stream with light rays through trees */
 .ht-slide-rays {
-  background-position: center 18%;
-  background-size: cover;
+  background-position: 50% top;
   filter: brightness(1.45) saturate(1.35) contrast(1.05);
 }
 
-/* Vignette + colour overlay on top of slides */
+/* Vignette: strong fade from image bottom into dark tray zone */
 .ht-hero-vignette {
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(ellipse at 50% 35%, rgba(255, 255, 255, 0.04), transparent 60%),
-    linear-gradient(180deg, rgba(4, 12, 18, 0.02) 0%, rgba(4, 12, 18, 0.12) 30%, rgba(4, 12, 18, 0.45) 70%, rgba(4, 12, 18, 0.82) 100%);
+    radial-gradient(ellipse at 50% 25%, rgba(255, 255, 255, 0.04), transparent 50%),
+    linear-gradient(180deg,
+      rgba(4, 12, 18, 0.0) 0%,
+      rgba(4, 12, 18, 0.0) 30%,
+      rgba(4, 12, 18, 0.25) 45%,
+      rgba(4, 12, 18, 0.7) 55%,
+      rgba(4, 12, 18, 0.95) 65%,
+      rgba(4, 12, 18, 1.0) 72%);
   pointer-events: none;
   z-index: 1;
 }
@@ -2987,24 +2993,24 @@ body.module-mushroom .ht-map-hero-meta {
   }
   /* Mobile: proportional sizing for fly module thumbnails */
   body.module-fly .ht-hero-slide {
-    background-size: auto 55vh;
+    background-size: auto 50vh;
     background-position: center top;
   }
   /* Per-slide position: fish/subject in top band above tray */
   .ht-slide-trout {
-    background-position: 55% 5%;
+    background-position: 45% top;
   }
   .ht-slide-trout-alt {
-    background-position: 50% 0%;
+    background-position: 60% top;
   }
   .ht-slide-stream {
-    background-position: 50% 10%;
+    background-position: 50% top;
   }
   .ht-slide-golden {
-    background-position: 50% 5%;
+    background-position: 50% top;
   }
   .ht-slide-rays {
-    background-position: 50% 8%;
+    background-position: 50% top;
   }
   /* Stronger vignette for smooth blend at image boundary */
   .ht-hero-vignette {
