@@ -9266,8 +9266,8 @@ function ensureCompassControl() {
 function bindMapRotationHandlers() {
   if (!map || mapRotationBound) return;
   mapRotationBound = true;
-  map.on('move', () => applyMapRotation());
-  map.on('zoom', () => applyMapRotation());
+  // No need to hook move/zoom — we rotate the container element,
+  // which persists independently of Leaflet's internal pane transforms.
 
   const mapEl = map.getContainer();
   if (!mapEl) return;
@@ -9459,17 +9459,6 @@ function bindMapRotationHandlers() {
       _touchRotGesture = null;
       if (_touchRotDraggingOff && map.dragging) { map.dragging.enable(); _touchRotDraggingOff = false; }
       if (_touchRotZoomOff && map.touchZoom) { map.touchZoom.enable(); _touchRotZoomOff = false; }
-      // Full tile refresh after gesture ends
-      if (map) {
-        try { map.invalidateSize({ pan: false }); } catch {}
-        try {
-          map.eachLayer((layer) => {
-            if (layer && typeof layer.redraw === 'function') {
-              try { layer.redraw(); } catch {}
-            }
-          });
-        } catch {}
-      }
     };
 
     mapEl.addEventListener('touchend', _touchRotEnd, { passive: true });
@@ -9510,51 +9499,30 @@ function applyMapRotation() {
   _rotationRAF = requestAnimationFrame(() => {
     _rotationRAF = null;
     if (!map) return;
-    const pane = map.getPane('mapPane');
-    if (!pane) return;
     const container = map.getContainer();
+    if (!container) return;
 
-    const base = pane.style.transform || '';
-    const cleaned = base.replace(/rotate\([^)]*\)/g, '').replace(/scale\([^)]*\)/g, '').trim();
     const bearing = Number.isFinite(mapBearingDeg) ? mapBearingDeg : 0;
-    const absBearing = Math.abs(bearing % 360);
 
-    // Scale the mapPane up to cover the corners exposed by rotation.
-    // For a rectangular viewport rotated θ°, we need:
-    //   scale = sin(|θ mod 90°|) + cos(|θ mod 90°|)
-    // This equals 1.0 at 0° and √2 ≈ 1.414 at 45°.
+    // Rotate the entire map CONTAINER (not the internal mapPane).
+    // This avoids fighting with Leaflet's own transform management on mapPane,
+    // which causes tile flashing and wrong-zoom tiles.
+    // The container overflow is hidden, so we scale up to cover exposed corners.
+    const absBearing = Math.abs(bearing % 360);
     const theta = (absBearing % 90) * (Math.PI / 180);
-    const scaleBoost = Math.abs(bearing) > 0.5
+    const scaleNeeded = Math.abs(bearing) > 0.5
       ? (Math.sin(theta) + Math.cos(theta))
       : 1;
 
-    const rotate = Math.abs(bearing) > 0.01 ? ` rotate(${bearing}deg)` : '';
-    const scale = scaleBoost > 1.001 ? ` scale(${scaleBoost.toFixed(4)})` : '';
-    pane.style.transform = `${cleaned}${rotate}${scale}`.trim();
-    pane.style.transformOrigin = '50% 50%';
-    pane.style.willChange = 'transform';
-
-    // Ensure container clips any remaining overflow
-    if (container) {
-      container.style.overflow = 'hidden';
-    }
+    container.style.transform = Math.abs(bearing) > 0.01
+      ? `rotate(${bearing}deg) scale(${scaleNeeded.toFixed(4)})`
+      : '';
+    container.style.transformOrigin = '50% 50%';
+    container.style.overflow = 'hidden';
 
     // Update compass needle if present
     if (compassNeedle) {
       compassNeedle.style.transform = `rotate(${bearing}deg)`;
-    }
-
-    // Throttled tile refresh to fill rotated edges
-    const now = Date.now();
-    if (now - _lastRotateTileRefresh > 200) {
-      _lastRotateTileRefresh = now;
-      try {
-        map.eachLayer((layer) => {
-          if (layer && typeof layer.redraw === 'function') {
-            try { layer.redraw(); } catch {}
-          }
-        });
-      } catch {}
     }
   });
 }
