@@ -8019,14 +8019,25 @@ window.exitHunt = function() {
 function updateLocateMeOffset() {
   const toolbar = document.getElementById('toolbar');
   if (!toolbar) return;
-  // Always position relative to the tab row (the always-visible pill strip),
-  // NOT the full expanded toolbar — so the locate button never gets hidden.
-  const tabRow = toolbar.querySelector('.ht-toolbar-tab-row') || toolbar.querySelector('.ht-toolbar-tab') || toolbar;
-  const rect = tabRow.getBoundingClientRect();
-  const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
-  const distFromBottom = viewportHeight - rect.top;
-  const offset = Math.max(72, Math.round(distFromBottom + 10));
-  document.documentElement.style.setProperty('--toolbar-offset', `${offset}px`);
+  const isCollapsed = toolbar.classList.contains('collapsed');
+  if (isCollapsed) {
+    // Tab row is visible when collapsed — measure it for accurate positioning
+    const tabRow = toolbar.querySelector('.ht-toolbar-tab-row');
+    if (tabRow) {
+      const rect = tabRow.getBoundingClientRect();
+      if (rect.height > 0) {
+        const vh = window.innerHeight || document.documentElement.clientHeight;
+        const distFromBottom = vh - rect.top;
+        // Clamp: never push button beyond 120px from bottom (sanity guard)
+        const offset = Math.max(68, Math.min(120, Math.round(distFromBottom + 10)));
+        document.documentElement.style.setProperty('--toolbar-offset', `${offset}px`);
+        return;
+      }
+    }
+  }
+  // Expanded tray or fallback: hard-clamp above collapsed-strip height
+  // Collapsed strip ≈ 56px + 2px bottom gap = 58px; +10px breathing room = 68px
+  document.documentElement.style.setProperty('--toolbar-offset', '68px');
 }
 
 window.toggleToolbar = function() {
@@ -9636,14 +9647,15 @@ function bindMapRotationHandlers() {
       const absDist = Math.abs((currDist || 0) - (_touchRotStartDist || 0));
 
       // Gesture discrimination: decide rotate vs zoom
+      // Thresholds tuned for mobile — avoid stealing normal pinch/pan gestures
       if (_touchRotGesture === 'pending') {
-        if (absAngle > 6 && absAngle > absDist * 0.4) {
+        if (absAngle > 12 && absAngle > absDist * 0.8) {
           _touchRotGesture = 'rotate';
           _touchRotDraggingOff = map.dragging && map.dragging.enabled();
           if (_touchRotDraggingOff) map.dragging.disable();
           _touchRotZoomOff = map.touchZoom && map.touchZoom.enabled();
           if (_touchRotZoomOff) map.touchZoom.disable();
-        } else if (absDist > 20) {
+        } else if (absDist > 12) {
           _touchRotGesture = 'zoom';
         } else {
           return; // Not enough movement yet
@@ -9655,7 +9667,7 @@ function bindMapRotationHandlers() {
       // Direct 1:1 mapping with smooth easing
       const target = normalizeDegrees(_touchRotStartBearing + deltaAngle);
       const smooth = shortestAngleDeltaDeg(mapBearingDeg, target);
-      mapBearingDeg = normalizeDegrees(mapBearingDeg + smooth * 0.65);
+      mapBearingDeg = normalizeDegrees(mapBearingDeg + smooth * 0.75);
       lastMapInteractionAt = Date.now();
       applyMapRotation();
       e.preventDefault();
