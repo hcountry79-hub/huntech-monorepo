@@ -114,7 +114,7 @@
   </main>
 
   <button class="ht-map-locate-btn" type="button" onclick="centerOnMyLocation()" title="Center on my location" aria-label="Center on my location">
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
       <path d="M12 2a1 1 0 0 1 1 1v1.06a8.01 8.01 0 0 1 6.94 6.94H21a1 1 0 1 1 0 2h-1.06a8.01 8.01 0 0 1-6.94 6.94V21a1 1 0 1 1-2 0v-1.06a8.01 8.01 0 0 1-6.94-6.94H3a1 1 0 1 1 0-2h1.06A8.01 8.01 0 0 1 11 4.06V3a1 1 0 0 1 1-1zm0 4a6 6 0 1 0 0 12a6 6 0 0 0 0-12zm0 3a3 3 0 1 1 0 6a3 3 0 0 1 0-6z"/>
     </svg>
   </button>
@@ -239,8 +239,6 @@
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        const isLocal = ['localhost', '127.0.0.1'].includes(location.hostname);
-        if (!isLocal) return;
         navigator.serviceWorker.register('/sw.js?v=20260216-153035')
           .then(() => console.log('HUNTECH: Service Worker registered'))
           .catch(err => console.log('Service Worker registration failed:', err));

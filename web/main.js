@@ -1058,12 +1058,14 @@ function initializeMap() {
     : null;
 
   if (layersControlEl) {
-    const mapContainer = map.getContainer();
-    let stack = mapContainer.querySelector('.ht-map-layer-stack');
+    // Place pill stack on .ht-map-container (the static parent),
+    // NOT inside #map (which rotates via CSS transform).
+    const staticHost = document.querySelector('.ht-map-container') || map.getContainer().parentElement || map.getContainer();
+    let stack = staticHost.querySelector('.ht-map-layer-stack');
     if (!stack) {
       stack = document.createElement('div');
       stack.className = 'ht-map-layer-stack';
-      mapContainer.appendChild(stack);
+      staticHost.appendChild(stack);
     }
     let windPill = stack.querySelector('.ht-map-wind-pill');
     if (!windPill) {
@@ -1246,6 +1248,7 @@ function initializeMap() {
     lastMapInteractionAt = Date.now();
     if (mapAutoCentering) return;
     followUserLocation = false;
+    updateLocateBtnState();
   });
   map.on('moveend zoomend', () => {
     if (mapAutoCentering) {
@@ -7029,8 +7032,8 @@ function getUserHeadingIcon(headingDeg) {
         <div class="ht-user-heading-core"></div>
       </div>
     `,
-    iconSize: [32, 32],
-    iconAnchor: [16, 16]
+    iconSize: [48, 48],
+    iconAnchor: [24, 24]
   });
 }
 
@@ -7162,6 +7165,13 @@ function stopLocationWatch() {
   }
 }
 
+/** Update the locate-me button to show active/following visual state. */
+function updateLocateBtnState() {
+  const btn = document.querySelector('.ht-map-locate-btn');
+  if (!btn) return;
+  btn.classList.toggle('is-following', !!followUserLocation);
+}
+
 function centerOnMyLocationInternal() {
   if (!navigator.geolocation) {
     restoreLastKnownLocation();
@@ -7170,6 +7180,7 @@ function centerOnMyLocationInternal() {
   }
 
   followUserLocation = true;
+  updateLocateBtnState();
   showNotice('Centering on your location…', 'info', 2200);
   navigator.geolocation.getCurrentPosition(
     (pos) => {
@@ -9209,13 +9220,17 @@ function ensureCompassControl() {
         <div class="ht-compass-north">N</div>
       </div>
     </div>
-    <button class="ht-compass-lock" type="button" aria-pressed="true">
-      <span class="ht-compass-lock-icon" aria-hidden="true">✦</span>
-      <span class="ht-compass-lock-ring" aria-hidden="true">
-        <span class="ht-compass-lock-arrow"></span>
-        <span class="ht-compass-lock-north">N</span>
-      </span>
-      <span class="ht-compass-lock-text">North Locked</span>
+    <button class="ht-compass-lock" type="button" aria-pressed="true"
+      aria-label="North locked. Tap to unlock.">
+      <svg class="ht-compass-lock-svg" viewBox="0 0 24 24" width="22" height="22" fill="none" aria-hidden="true">
+        <path d="M12 2L14.5 9H12V2Z" fill="#ffd400"/>
+        <path d="M12 2L9.5 9H12V2Z" fill="#b38600"/>
+        <path d="M12 22L14.5 15H12V22Z" fill="#444"/>
+        <path d="M12 22L9.5 15H12V22Z" fill="#333"/>
+        <circle cx="12" cy="12" r="3.5" fill="none" stroke="#ffd400" stroke-width="1.5"/>
+        <circle cx="12" cy="12" r="1.2" fill="#ffd400"/>
+      </svg>
+      <span class="ht-compass-lock-text">NORTH<br>UP</span>
     </button>
   `;
 
@@ -9271,12 +9286,10 @@ function ensureCompassControl() {
     compassFace.addEventListener('pointercancel', stopRotate);
   }
 
-  const controlHost = mapEl.querySelector('.leaflet-top.leaflet-left');
-  if (controlHost) {
-    controlHost.appendChild(compass);
-  } else {
-    mapEl.appendChild(compass);
-  }
+  // Place compass on .ht-map-container (the static parent),
+  // NOT inside #map which rotates via CSS transform.
+  const staticHost = document.querySelector('.ht-map-container') || mapEl.parentElement || mapEl;
+  staticHost.appendChild(compass);
   compassControl = compass;
   setCompassLock(true, false);
   updateCompassWind(activeWindDir);
@@ -9531,7 +9544,9 @@ function applyMapRotation() {
     // so Leaflet pre-loads enough tiles to cover all rotation angles.
     container.style.transform = isRotated ? `rotate(${bearing}deg)` : '';
 
-    // Counter-rotate Leaflet control containers so buttons stay upright
+    // Counter-rotate Leaflet's built-in control corners (zoom, attribution)
+    // so they stay upright while #map rotates.
+    // Our custom UI (pills, compass) lives on .ht-map-container and never rotates.
     const counterRotate = isRotated ? `rotate(${-bearing}deg)` : '';
     const controlCorners = container.querySelectorAll('.leaflet-top, .leaflet-bottom');
     for (const corner of controlCorners) {
@@ -9543,6 +9558,11 @@ function applyMapRotation() {
     if (compassNeedle) {
       compassNeedle.style.transform = `rotate(${bearing}deg)`;
     }
+    // Keep the toggle button's SVG compass needle in sync
+    if (compassLockBtn) {
+      const svg = compassLockBtn.querySelector('.ht-compass-lock-svg');
+      if (svg) svg.style.transform = isRotated ? `rotate(${bearing}deg)` : '';
+    }
   });
 }
 
@@ -9550,15 +9570,19 @@ function setCompassLock(nextState, notify = true) {
   compassLocked = Boolean(nextState);
   if (compassLockBtn) {
     const lockText = compassLockBtn.querySelector('.ht-compass-lock-text');
+    const lockSvg = compassLockBtn.querySelector('.ht-compass-lock-svg');
     if (lockText) {
-      lockText.textContent = compassLocked ? 'North Up' : 'Follow Heading';
-    } else {
-      compassLockBtn.textContent = compassLocked ? 'North Locked' : 'North Unlocked';
+      lockText.innerHTML = compassLocked ? 'NORTH<br>UP' : 'FOLLOW<br>HDG';
+    }
+    // Rotate the compass SVG needle to show current bearing
+    if (lockSvg) {
+      lockSvg.style.transition = 'transform 0.4s ease';
+      lockSvg.style.transform = compassLocked ? '' : `rotate(${mapBearingDeg}deg)`;
     }
     compassLockBtn.setAttribute('aria-pressed', compassLocked ? 'true' : 'false');
     compassLockBtn.setAttribute(
       'aria-label',
-      compassLocked ? 'North locked. Tap to unlock.' : 'North unlocked. Tap to lock north.'
+      compassLocked ? 'North locked. Tap to unlock.' : 'Following heading. Tap to lock north.'
     );
     compassLockBtn.classList.toggle('is-locked', compassLocked);
   }
