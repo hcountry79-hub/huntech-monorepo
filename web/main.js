@@ -14508,27 +14508,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Update weather every 2 minutes
   setInterval(updateWeather, 120000);
 
-  // ════════════ STREAM PANEL NAV ════════════
-  window.showStreamPanel = function showStreamPanel(panelId) {
-    const panelIds = ['fishNowPanel', 'mySpotsPanel', 'tripPlannerPanel', 'flyBoxPanel'];
-    // Toggle panels
-    panelIds.forEach(id => {
-      const el = document.getElementById(id);
-      if (!el) return;
-      el.style.display = id === panelId ? '' : 'none';
-    });
-    // Toggle pill active states
-    document.querySelectorAll('.ht-stream-pill').forEach(pill => {
-      pill.classList.toggle('ht-stream-pill--active', pill.getAttribute('data-panel') === panelId);
-    });
-    // Activate map + fade hero away + center on GPS
-    if (!document.body.classList.contains('ht-map-active')) {
-      activateFlyMap();
-    } else {
-      // Map already active — just re-center
-      centerOnMyLocationInternal();
-    }
-  };
+  // NOTE: showStreamPanel is defined later in the Fish Now workflow engine section
 
   window.fishNowCheckIn = function fishNowCheckIn() {
     const waterSelect = document.getElementById('flyWaterSelect');
