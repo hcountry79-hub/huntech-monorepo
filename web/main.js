@@ -4,6 +4,7 @@
 let map;
 let mapInitialized = false;
 let flyMapPending = false;
+let turkeyMapPending = false;
 let toolbarToggleBound = false;
 let drawnItems;
 let drawControl;
@@ -336,6 +337,116 @@ const MICRO_FEATURE_TEMPLATES = [
   }
 ];
 const OSRM_MAX_WAYPOINTS = 25;
+
+const MUSHROOM_FEATURE_TEMPLATES = [
+  {
+    type: 'moisture_pocket',
+    label: 'Moisture Pocket',
+    icon: 'MP',
+    detail: 'Shaded low area where soil stays moist longer after rain.',
+    tips: 'Check leaf litter edges and the base of nearby hardwoods.',
+    lookFor: 'Dark, crumbly soil with intact leaf cover and decaying wood.',
+    why: ['Retains moisture needed for fruiting', 'Organic matter supports mycelium'],
+    approach: ['Walk slow lanes at ankle height', 'Scan 10-20 feet around the first find'],
+    treeFocus: ['Elm (dying)', 'Sycamore'],
+    treeId: {
+      elm: { name: 'American Elm', bark: 'Deep interlacing diamond ridges; dying trees show loose peeling strips.', leaves: 'Alternate, doubly serrate, asymmetric base, 3-6".', shape: 'Vase shape when healthy; dead elms show bare skeleton branches.', tip: 'Dying elms within a moisture pocket concentrate fruiting — scan 30 ft radius around the trunk.' },
+      sycamore: { name: 'American Sycamore', bark: 'Mottled patchwork of white, tan and olive-green; flakes in large plates.', leaves: 'Broad, 3-5 lobed, maple-like but larger (6-10"), fuzzy undersides.', shape: 'Massive spreading crown, often near water; lower trunk can be hollow.', tip: 'Sycamore leaf litter holds moisture well — scan the damp zone beneath the canopy edge.' }
+    }
+  },
+  {
+    type: 'dead_elm',
+    label: 'Dead Elm Stand',
+    icon: 'DE',
+    detail: 'Dying or dead elm trees — prime morel hosts.',
+    tips: 'Circle each tree, scanning 10-30 feet from the trunk.',
+    lookFor: 'Bark sloughing off the trunk and disturbed leaf litter.',
+    why: ['Elm bark beetle damage triggers morel fruiting', 'Roots feed mycelium networks'],
+    approach: ['Grid in tight circles around each candidate tree'],
+    treeFocus: ['Elm (dying/dead)'],
+    treeId: {
+      elm: { name: 'American Elm (Ulmus americana)', bark: 'Deep diamond ridges, gray-brown. Dying trees show loose bark strips peeling away.', leaves: 'Alternate, doubly serrate, asymmetric base, 3-6". Look for last year\'s leaves on ground.', shape: 'Classic vase shape; dead elms have bare upper branches like skeleton fingers.', tip: '#1 morel tree in Missouri. Dead/dying elms 1-3 years are morel magnets. Circle every one at 10, 20, and 30 feet.' }
+    }
+  },
+  {
+    type: 'creek_bottom',
+    label: 'Creek Bottom',
+    icon: 'CB',
+    detail: 'Low drainage area with consistent moisture and shade.',
+    tips: 'Check both banks and any downed wood spanning the channel.',
+    lookFor: 'Rich soil, moss patches, and decaying leaf litter.',
+    why: ['Water keeps soil moist at fruiting temperature', 'Shade prevents drying'],
+    approach: ['Walk the bank edges, scanning both sides of the drainage'],
+    treeFocus: ['Cottonwood', 'Silver Maple', 'Box Elder'],
+    treeId: {
+      cottonwood: { name: 'Eastern Cottonwood', bark: 'Deeply furrowed thick ridges on mature trees; young bark smooth and yellowish.', leaves: 'Triangular (deltoid), coarsely toothed, 3-5" wide, flutter on flattened petioles.', shape: 'Large spreading crown in bottomlands near water.', tip: 'Big cottonwoods in floodplains are prime late-season spots. Check root flare zone and litter against trunk base.' },
+      silverMaple: { name: 'Silver Maple', bark: 'Shaggy, peeling in long thin strips on older trees. Silvery-gray.', leaves: 'Deeply cut 5 lobes with silvery-white undersides, 4-7" wide.', shape: 'Fast-growing, often multi-trunked; brittle branches show storm damage.', tip: 'Silver maples in floodplains create damp, shaded micro-sites for mid-season morels.' },
+      boxElder: { name: 'Box Elder', bark: 'Thin, pale gray-brown with shallow ridges; often has green patches.', leaves: 'Compound (unusual for a maple), opposite, 3-5 leaflets.', shape: 'Scrubby, irregular, often leaning with multiple trunks.', tip: 'Indicates rich, moist bottomland soil. Where box elders grow thick, soil chemistry favors morels.' }
+    }
+  },
+  {
+    type: 'north_slope',
+    label: 'North-Facing Slope',
+    icon: 'NS',
+    detail: 'Shaded slope that stays cool and moist during warm spells.',
+    tips: 'Focus on the middle third of the slope where moisture collects.',
+    lookFor: 'Consistent canopy cover with mixed hardwoods and soft duff.',
+    why: ['Less sun keeps soil at ideal 50-60\u00b0F range', 'Slower drying extends fruiting window'],
+    approach: ['Traverse the slope in horizontal sweeps'],
+    treeFocus: ['White Oak', 'Hickory'],
+    treeId: {
+      whiteOak: { name: 'White Oak', bark: 'Light gray, scaly, peeling in loose vertical strips and plates.', leaves: 'Alternate, 7-9 rounded lobes (no sharp points), deep sinuses, 5-9".', shape: 'Broad spreading crown with massive lateral branches.', tip: 'White oak leaf litter decomposes slowly, providing steady nutrients. Check within 25 ft of mature white oaks.' },
+      hickory: { name: 'Shagbark Hickory', bark: 'Long shaggy strips peeling away from trunk — unmistakable "shredded" look.', leaves: 'Compound, alternate, 5 leaflets (occasionally 7); end leaflet largest.', shape: 'Tall with narrow open crown; bark becomes shaggy at 20-25 years.', tip: 'Hickory-oak zones are prime morel territory. Mixed leaf litter creates ideal soil chemistry.' }
+    }
+  },
+  {
+    type: 'old_orchard',
+    label: 'Old Orchard',
+    icon: 'OO',
+    detail: 'Abandoned apple or fruit trees with decaying root systems.',
+    tips: 'Check around the drip line and under fallen limbs.',
+    lookFor: 'Old apple trees with exposed roots and leaf litter.',
+    why: ['Fruit tree roots are prime morel partners', 'Calcium-rich soil from decomposing wood'],
+    approach: ['Circle each tree at the drip line and work outward'],
+    treeFocus: ['Apple (old orchard)', 'Wild Cherry'],
+    treeId: {
+      apple: { name: 'Old Apple Tree', bark: 'Rough, scaly, dark gray-brown; deeply furrowed on older trees.', leaves: 'Simple, oval, finely serrate with soft fuzz underneath.', shape: 'Open, twisted crown, often leaning. Old orchards have regular spacing.', tip: 'The most famous morel spot. Check a full 30-foot radius around every old apple tree — the root system and mycelial network extends far.' },
+      wildCherry: { name: 'Wild Black Cherry', bark: 'Young: smooth, reddish-brown with horizontal lenticels (dash marks). Mature: dark, scaly, flaking.', leaves: 'Alternate, simple, finely serrate with inward-curving teeth. Shiny dark green.', shape: 'Tall narrow crown in forests; open-grown trees spread wider.', tip: 'Wild cherry in transition edges and disturbed areas can produce late morels where leaf litter mixes with decaying cherry wood.' }
+    }
+  },
+  {
+    type: 'burn_area',
+    label: 'Burn Area',
+    icon: 'BA',
+    detail: 'Recently burned patch where fire morels often fruit first.',
+    tips: 'Check 3-12 months after a burn in mixed-conifer or hardwood areas.',
+    lookFor: 'Charred wood, ash rings, and fresh morel caps.',
+    why: ['Fire triggers massive morel flushes', 'Reduced competition from other fungi'],
+    approach: ['Grid in wide lanes through the burned area'],
+    treeFocus: ['Any charred hardwood stumps'],
+    treeId: {
+      burnIndicator: { name: 'Fire-Scarred Hardwood', bark: 'Charred, blackened bark with deep cracks; may show live wood underneath.', leaves: 'Look for last year\'s fallen leaves on the burn margin — identifies the tree species.', shape: 'Standing dead snags or stumps; some trees resprout from the base.', tip: 'Focus on the burn edge where charred ground meets green timber. Burn morels (M. tomentosa) are dark, grow in dense clusters, and appear 3-12 months post-fire.' }
+    }
+  },
+  {
+    type: 'tulip_poplar',
+    label: 'Tulip Poplar Stand',
+    icon: 'TP',
+    detail: 'Tulip poplars in moist coves — another top morel host tree.',
+    tips: 'Check the downhill side where moisture pools.',
+    lookFor: 'Tall straight trunks with distinctive leaf litter.',
+    why: ['Poplars share mycorrhizal networks with morels', 'Cove positions hold moisture'],
+    approach: ['Scan from trunk outward in 10-foot rings'],
+    treeFocus: ['Tulip Poplar'],
+    treeId: {
+      tulipPoplar: { name: 'Tulip Poplar (Liriodendron tulipifera)', bark: 'Deep furrows in tight diamond pattern; gray-brown. Younger trees have smooth greenish bark.', leaves: 'Unique 4-lobed tulip shape — flat across the top. Bright green, turning yellow in fall.', shape: 'Tall, straight trunk that self-prunes lower branches; narrow, high crown.', tip: 'Morels appear in duff zone within 15 ft of mature tulip poplars, especially on south-facing slopes. Less famous than elm but very reliable in Missouri.' }
+    }
+  }
+];
+
+function getMicroFeatureTemplates() {
+  return isMushroomModule() ? MUSHROOM_FEATURE_TEMPLATES : MICRO_FEATURE_TEMPLATES;
+}
 const UI_POPUPS_ENABLED = window.HUNTECH_MAP_POPUPS_ENABLED !== undefined
   ? Boolean(window.HUNTECH_MAP_POPUPS_ENABLED)
   : true;
@@ -462,7 +573,7 @@ const onboardingSteps = [
   {
     targetId: 'defineAreaPanel',
     title: 'Define Your Area',
-    body: 'Pick a hunt area first, then open Plan + Route to run the AI plan.'
+    body: isMushroomModule() ? 'Pick a forage area first, then open Plan + Route to run the AI plan.' : 'Pick a hunt area first, then open Plan + Route to run the AI plan.'
   },
   {
     targetId: 'searchInput',
@@ -1045,22 +1156,29 @@ const MUSHROOM_SEASON_STAGES = {
 // ===================================================================
 
 function getActiveEducationSet() {
+  if (isTurkeyModule() && window.TURKEY_EDUCATION) return window.TURKEY_EDUCATION;
   return isMushroomModule() ? MUSHROOM_EDUCATION : SHED_EDUCATION;
 }
 
 function getActiveFlavorSet() {
+  if (isTurkeyModule() && window.TURKEY_HOTSPOT_FLAVOR) return window.TURKEY_HOTSPOT_FLAVOR;
   return isMushroomModule() ? MUSHROOM_FLAVOR : HOTSPOT_FLAVOR;
 }
 
 function getActiveHabitatOverview() {
+  if (isTurkeyModule() && window.TURKEY_HABITAT_OVERVIEW) return window.TURKEY_HABITAT_OVERVIEW;
   return isMushroomModule() ? MUSHROOM_HABITAT_OVERVIEW : HABITAT_OVERVIEW;
 }
 
 function getActiveHabitatLookFor() {
+  if (isTurkeyModule() && window.TURKEY_HABITAT_LOOK_FOR) return window.TURKEY_HABITAT_LOOK_FOR;
   return isMushroomModule() ? MUSHROOM_HABITAT_LOOK_FOR : HABITAT_LOOK_FOR;
 }
 
 function getModuleEducationLabels() {
+  if (isTurkeyModule() && window.TURKEY_EDUCATION_LABELS) {
+    return window.TURKEY_EDUCATION_LABELS;
+  }
   if (isMushroomModule()) {
     return {
       pinBrief: 'Forage Pin Brief',
@@ -1078,7 +1196,7 @@ function getModuleEducationLabels() {
     reason: 'Education briefing',
     microReason: 'Micro pin brief',
     whyTitle: 'Why this pin',
-    approachTitle: 'How to hunt it',
+    approachTitle: isMushroomModule() ? 'How to forage it' : 'How to hunt it',
     lookForTitle: 'What to look for',
     checkInLabel: 'Check In',
     checkOutLabel: 'Check Out'
@@ -1086,10 +1204,12 @@ function getModuleEducationLabels() {
 }
 
 function getModulePinLabel() {
+  if (isTurkeyModule()) return 'setup';
   return isMushroomModule() ? 'forage pin' : 'pin';
 }
 
 function getModuleSweepVerb() {
+  if (isTurkeyModule()) return 'hunt';
   return isMushroomModule() ? 'work' : 'sweep';
 }
 
@@ -1199,8 +1319,8 @@ function describeRelativePosition(bounds, latlng) {
 }
 
 function buildCustomHotspotEducation({ habitat, base, latlng, bounds, windDir, criteria }) {
-  const flavorSet = isMushroomModule() ? MUSHROOM_FLAVOR : HOTSPOT_FLAVOR;
-  const flavor = flavorSet[habitat] || flavorSet.transition;
+  const flavorSet = getActiveFlavorSet();
+  const flavor = flavorSet[habitat] || flavorSet.transition || flavorSet.travelCorridor || Object.values(flavorSet)[0];
   const safeLatLng = latlng ? L.latLng(latlng) : (bounds ? bounds.getCenter() : L.latLng(0, 0));
   const seed = seedFromLatLng(safeLatLng, habitat);
   const title = pickBySeed(flavor.titles, seed);
@@ -1208,19 +1328,31 @@ function buildCustomHotspotEducation({ habitat, base, latlng, bounds, windDir, c
   const search = pickBySeed(flavor.search, seed + 0.27);
   const approach = pickBySeed(flavor.approach, seed + 0.39);
   const region = describeRelativePosition(bounds, safeLatLng);
-  const overviewMap = isMushroomModule() ? MUSHROOM_HABITAT_OVERVIEW : HABITAT_OVERVIEW;
-  const lookForMap = isMushroomModule() ? MUSHROOM_HABITAT_LOOK_FOR : HABITAT_LOOK_FOR;
-  const wind = isMushroomModule()
-    ? (windDir ? `Wind: ${windDir} — check sheltered pockets on the lee side.` : 'Calm conditions favor even moisture and steady fruiting.')
-    : (windDir ? `Best with ${windDir} wind.` : 'Wind-neutral setup.');
-  const overview = overviewMap[habitat] || (isMushroomModule() ? 'Foraging zone' : 'Travel corridor');
-  const lookFor = lookForMap[habitat] || (isMushroomModule() ? 'Moist leaf litter, host trees, and damp soil near woody debris.' : 'Fresh tracks, rubs, and subtle sign along the quietest line.');
+  const overviewMap = getActiveHabitatOverview();
+  const lookForMap = getActiveHabitatLookFor();
+  const isTurk = isTurkeyModule();
+  const isMush = isMushroomModule();
+  let wind;
+  if (isTurk) {
+    wind = windDir ? `Wind ${windDir} — turkeys hunt by sight, not scent. Use wind to cover your movement noise.` : 'Calm morning — ideal for hearing gobbles at distance.';
+  } else if (isMush) {
+    wind = windDir ? `Wind: ${windDir} — check sheltered pockets on the lee side.` : 'Calm conditions favor even moisture and steady fruiting.';
+  } else {
+    wind = windDir ? `Best with ${windDir} wind.` : 'Wind-neutral setup.';
+  }
+  const overview = overviewMap[habitat] || (isTurk ? 'Travel corridor between roost and strut zone' : (isMush ? 'Foraging zone' : 'Travel corridor'));
+  const lookFor = lookForMap[habitat] || (isTurk ? 'Scratchings, J-droppings, strut marks, and tracks 4.5\"+ toe-to-heel.' : (isMush ? 'Moist leaf litter, host trees, and damp soil near woody debris.' : 'Fresh tracks, rubs, and subtle sign along the quietest line.'));
   const profile = buildHotspotSearchSpec({ habitat, coords: [safeLatLng.lat, safeLatLng.lng] }, windDir);
   const searchLabel = profile?.label ? `Search shape: ${profile.label}.` : '';
   const seasonal = getSeasonalFocus();
   const approachSteps = [search, approach];
   if (searchLabel) approachSteps.push(`Cover the ${profile.label} starting on the ${region} side.`);
-  if (isMushroomModule()) {
+  if (isTurk) {
+    const weapon = window._turkeyWeapon || 'shotgun';
+    const setupDist = weapon === 'bow' ? '15-20' : weapon === 'crossbow' ? '20-30' : '30-40';
+    approachSteps.push(`Set up ${setupDist} yards from sign with your back against a tree wider than your shoulders.`);
+    approachSteps.push('Sit still for 15-20 min before calling. Start soft — tree yelps, then clucks and purrs. Wait 15-20 min between series.');
+  } else if (isMush) {
     approachSteps.push('Grid in tight 15-yard lanes and pause often to scan low in the leaf litter.');
     approachSteps.push('Recheck hot trees after each rain window — morels can appear overnight.');
   } else {
@@ -1340,6 +1472,60 @@ function activateFlyMap() {
   // Always center on user GPS when activating
   setTimeout(() => centerOnMyLocationInternal(), 500);
 }
+
+let mushroomMapPending = false;
+function activateMushroomMap() {
+  if (!isMushroomModule()) return;
+  if (!mapInitialized) {
+    mushroomMapPending = false;
+    document.body.classList.remove('ht-map-pending');
+    document.body.classList.add('ht-map-active');
+    initializeMap();
+    restoreLastKnownLocation();
+    setDefaultAreaFromLocation();
+    updateFilterChips();
+    updateWorkflowUI();
+    updateLocateMeOffset();
+    setTimeout(() => {
+      if (map && typeof map.invalidateSize === 'function') map.invalidateSize();
+    }, 320);
+  } else {
+    document.body.classList.remove('ht-map-pending');
+    document.body.classList.add('ht-map-active');
+    setTimeout(() => {
+      if (map && typeof map.invalidateSize === 'function') map.invalidateSize();
+    }, 320);
+  }
+  setTimeout(() => centerOnMyLocationInternal(), 500);
+}
+window.activateMushroomMap = activateMushroomMap;
+
+let _turkeyMapPendingRef; // forward ref — actual var at top
+function activateTurkeyMap() {
+  if (!isTurkeyModule()) return;
+  if (!mapInitialized) {
+    turkeyMapPending = false;
+    document.body.classList.remove('ht-map-pending');
+    document.body.classList.add('ht-map-active');
+    initializeMap();
+    restoreLastKnownLocation();
+    setDefaultAreaFromLocation();
+    updateFilterChips();
+    updateWorkflowUI();
+    updateLocateMeOffset();
+    setTimeout(() => {
+      if (map && typeof map.invalidateSize === 'function') map.invalidateSize();
+    }, 320);
+  } else {
+    document.body.classList.remove('ht-map-pending');
+    document.body.classList.add('ht-map-active');
+    setTimeout(() => {
+      if (map && typeof map.invalidateSize === 'function') map.invalidateSize();
+    }, 320);
+  }
+  setTimeout(() => centerOnMyLocationInternal(), 500);
+}
+window.activateTurkeyMap = activateTurkeyMap;
 
 // Initialize map
 function initializeMap() {
@@ -2088,14 +2274,119 @@ function getBrandedPinIcon(labelText) {
   });
 }
 
-function getHotspotPinIcon(labelText) {
+function getHotspotPinIcon(labelText, hotspot) {
   const safe = String(labelText ?? '').slice(0, 3);
+  // Turkey module: use custom habitat-themed SVG pin icons
+  if (isTurkeyModule() && hotspot) {
+    return getTurkeyHotspotPinIcon(safe, hotspot);
+  }
+  // Mushroom module: use morel-shaped SVG pin icons
+  if (isMushroomModule() && hotspot) {
+    return getMushroomHotspotPinIcon(safe, hotspot);
+  }
   const logo = getHuntechLogoMarkup('ht-pin-logo');
   return L.divIcon({
     className: 'ht-pin-wrapper',
     html: `<div class="ht-pin"><div class="ht-pin-inner">${logo}</div>${safe ? `<div class=\"ht-pin-rank\">${safe}</div>` : ''}</div>`,
     iconSize: [34, 42],
     iconAnchor: [17, 38]
+  });
+}
+
+// Turkey-specific hotspot pin icons — each habitat type gets a unique SVG
+const TURKEY_HOTSPOT_ICONS = {
+  roostZone:       { svg: '<svg viewBox="0 0 24 24"><path d="M12 3c-1 0-4 2.5-4 6.5 0 2.5 1 4 2.5 5V20h3v-5.5c1.5-1 2.5-2.5 2.5-5C16 5.5 13 3 12 3z" fill="{c}" opacity=".85"/><circle cx="14" cy="7" r="2" fill="{c}"/><line x1="12" y1="20" x2="12" y2="23" stroke="{c}" stroke-width="1.5"/></svg>', color: '#b8860b', label: 'RT' },
+  strutZone:       { svg: '<svg viewBox="0 0 24 24"><path d="M12 20c0 0-1.5-2-1.5-4s.8-2.5 1.5-2.5 1.5.5 1.5 2.5-1.5 4-1.5 4z" fill="{c}"/><path d="M12 14 L5 4 L8 7.5 L6.5 3 L10 7.5 L10 2 L12 7.5 L14 2 L14 7.5 L17.5 3 L16 7.5 L19 4 Z" fill="{c}" opacity=".85"/></svg>', color: '#d4a017', label: 'SZ' },
+  travelCorridor:  { svg: '<svg viewBox="0 0 24 24"><path d="M4 20L8 16L12 18L16 14L20 16" stroke="{c}" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 12l0-5M8 12l-2-4M8 12l2-4" stroke="{c}" stroke-width="1.2" stroke-linecap="round" opacity=".6"/><path d="M18 10l0-5M18 10l-2-4M18 10l2-4" stroke="{c}" stroke-width="1.2" stroke-linecap="round" opacity=".6"/></svg>', color: '#c89b3c', label: 'TC' },
+  feedingArea:     { svg: '<svg viewBox="0 0 24 24"><path d="M6 16l4-2 2 1.5 3-1.5 3 2" stroke="{c}" stroke-width="1.5" fill="none" stroke-linecap="round"/><circle cx="9" cy="12" r="1" fill="{c}"/><circle cx="14" cy="11" r="1" fill="{c}" opacity=".7"/><circle cx="16" cy="13" r="1" fill="{c}"/><path d="M4 19h16" stroke="{c}" stroke-width="1" opacity=".4"/></svg>', color: '#8b7355', label: 'FD' },
+  loafingArea:     { svg: '<svg viewBox="0 0 24 24"><ellipse cx="12" cy="15" rx="8" ry="4" fill="none" stroke="{c}" stroke-width="1.5"/><path d="M6 15c0-2.5 2.5-5 6-5s6 2.5 6 5" fill="{c}" opacity=".15"/><circle cx="10" cy="14" r=".7" fill="{c}" opacity=".4"/><circle cx="14" cy="14.5" r=".7" fill="{c}" opacity=".4"/></svg>', color: '#7a6e5a', label: 'LA' },
+  waterSource:     { svg: '<svg viewBox="0 0 24 24"><path d="M4 14c2-2 4-2 6 0s4 2 6 0 4-2 6 0" stroke="{c}" stroke-width="1.8" fill="none" stroke-linecap="round"/><path d="M4 18c2-2 4-2 6 0s4 2 6 0 4-2 6 0" stroke="{c}" stroke-width="1.2" fill="none" opacity=".5" stroke-linecap="round"/><path d="M12 4l-2 6h4l-2-6z" fill="{c}" opacity=".7"/></svg>', color: '#5a8a7a', label: 'WS' }
+};
+
+function getTurkeyHotspotPinIcon(rankText, hotspot) {
+  const habitatType = hotspot?.habitat || hotspot?.education?.habitatType || hotspot?.type || '';
+  const config = TURKEY_HOTSPOT_ICONS[habitatType] || { svg: '', color: '#c8a96e', label: '' };
+  const svgHtml = config.svg.replace(/\{c\}/g, config.color);
+  return L.divIcon({
+    className: 'ht-turkey-hotspot-pin-wrapper',
+    html: `<div class="ht-turkey-hotspot-pin" style="border-color:${config.color};box-shadow:0 2px 8px rgba(0,0,0,0.6),0 0 14px ${config.color}50;">` +
+          `<div class="ht-turkey-hotspot-svg">${svgHtml}</div>` +
+          `</div>` +
+          `<div class="ht-turkey-hotspot-rank" style="background:${config.color};">${rankText}</div>`,
+    iconSize: [40, 50],
+    iconAnchor: [20, 46],
+    popupAnchor: [0, -42]
+  });
+}
+
+// ===================================================================
+//   Mushroom Module — Morel-Shaped Hotspot Pin Icons
+// ===================================================================
+// Morel SVG: a honeycomb-textured conical cap on a pale stem
+const MOREL_PIN_SVG = `<svg viewBox="0 0 32 48" xmlns="http://www.w3.org/2000/svg">
+  <!-- stem -->
+  <path d="M13 28 Q12.5 36 13.5 42 L18.5 42 Q19.5 36 19 28 Z" fill="#f5e6c8" stroke="#1a1a1a" stroke-width=".8" opacity=".95"/>
+  <!-- cap -->
+  <path d="M16 3 Q6 10 7 22 Q8 28 16 29 Q24 28 25 22 Q26 10 16 3Z" fill="{cap}" stroke="{rim}" stroke-width="1.1"/>
+  <!-- honeycomb ridges -->
+  <ellipse cx="12" cy="13" rx="2.8" ry="2" fill="none" stroke="{ridge}" stroke-width=".7" opacity=".75"/>
+  <ellipse cx="18" cy="11" rx="2.5" ry="1.8" fill="none" stroke="{ridge}" stroke-width=".7" opacity=".75"/>
+  <ellipse cx="15" cy="17" rx="2.8" ry="2.2" fill="none" stroke="{ridge}" stroke-width=".7" opacity=".7"/>
+  <ellipse cx="20" cy="16" rx="2.2" ry="1.6" fill="none" stroke="{ridge}" stroke-width=".7" opacity=".65"/>
+  <ellipse cx="11" cy="20" rx="2.4" ry="1.8" fill="none" stroke="{ridge}" stroke-width=".7" opacity=".6"/>
+  <ellipse cx="17" cy="22" rx="2.6" ry="1.8" fill="none" stroke="{ridge}" stroke-width=".7" opacity=".55"/>
+  <ellipse cx="14" cy="8" rx="2" ry="1.5" fill="none" stroke="{ridge}" stroke-width=".65" opacity=".65"/>
+  <ellipse cx="21" cy="21" rx="1.8" ry="1.4" fill="none" stroke="{ridge}" stroke-width=".65" opacity=".5"/>
+</svg>`;
+
+const MUSHROOM_HOTSPOT_ICONS = {
+  bedding:    { cap: '#FFD700', rim: '#1a1a1a', ridge: '#222', label: 'SL', tooltip: 'South Slope' },
+  transition: { cap: '#FFD700', rim: '#1a1a1a', ridge: '#333', label: 'EL', tooltip: 'Edge Line' },
+  feeding:    { cap: '#FFC107', rim: '#111',    ridge: '#222', label: 'CB', tooltip: 'Creek Bottom' },
+  water:      { cap: '#FFCA28', rim: '#1a1a1a', ridge: '#2a2a2a', label: 'SP', tooltip: 'Seep/Spring' },
+  open:       { cap: '#FFD700', rim: '#0d0d0d', ridge: '#1a1a1a', label: 'OR', tooltip: 'Old Orchard' }
+};
+
+function getMushroomHotspotPinIcon(rankText, hotspot) {
+  const habitatType = hotspot?.habitat || hotspot?.education?.habitatType || hotspot?.type || '';
+  const config = MUSHROOM_HOTSPOT_ICONS[habitatType] || { cap: '#FFD700', rim: '#1a1a1a', ridge: '#222', label: '', tooltip: 'Morel Zone' };
+  const svgHtml = MOREL_PIN_SVG
+    .replace(/\{cap\}/g, config.cap)
+    .replace(/\{rim\}/g, config.rim)
+    .replace(/\{ridge\}/g, config.ridge);
+  return L.divIcon({
+    className: 'ht-morel-pin-wrapper',
+    html: `<div class="ht-morel-pin" title="${config.tooltip}">` +
+          `<div class="ht-morel-pin-svg">${svgHtml}</div>` +
+          `</div>` +
+          `<div class="ht-morel-pin-rank">${rankText}</div>`,
+    iconSize: [40, 56],
+    iconAnchor: [20, 52],
+    popupAnchor: [0, -48]
+  });
+}
+
+// Mushroom micro-pin icons — small mushroom-themed markers for micro features
+const MUSHROOM_MICRO_ICONS = {
+  moisture_pocket: { emoji: '💧', color: '#5aadcd' },
+  dead_elm:        { emoji: '🪵', color: '#9e7a44' },
+  creek_bottom:    { emoji: '🌊', color: '#4a8fa0' },
+  north_slope:     { emoji: '🏔', color: '#6a8e6a' },
+  old_orchard:     { emoji: '🍎', color: '#c45a5a' },
+  burn_area:       { emoji: '🔥', color: '#d4642a' },
+  tulip_poplar:    { emoji: '🌳', color: '#5a9e5a' }
+};
+
+function getMushroomMicroPinIcon(feature) {
+  const safeType = String(feature?.type || 'micro').toLowerCase();
+  const config = MUSHROOM_MICRO_ICONS[safeType] || { emoji: '🍄', color: '#c8942a' };
+  return L.divIcon({
+    html: `<div class="ht-mushroom-micro-pin" style="border-color:${config.color};box-shadow:0 0 8px ${config.color}40;">` +
+          `<span class="ht-mushroom-micro-emoji">${config.emoji}</span>` +
+          `</div>`,
+    className: '',
+    iconSize: [30, 30],
+    iconAnchor: [15, 15]
   });
 }
 
@@ -2134,7 +2425,7 @@ function getDeerSignPinIcon(signType) {
 function createBrandedHotspotMarker(hotspot) {
   const rank = hotspot?.rank ?? hotspot?.priority ?? 1;
   const marker = L.marker(hotspot.coords, {
-    icon: getHotspotPinIcon(String(rank))
+    icon: getHotspotPinIcon(String(rank), hotspot)
   }).addTo(map);
 
   marker.__hotspotData = hotspot;
@@ -2556,7 +2847,7 @@ async function showMdcAreaSummary(feature) {
     ${admin ? `<div class="ht-mdc-meta">${admin}</div>` : ''}
     <div class="ht-mdc-cta">
       <button class="ht-mdc-pill primary" onclick="lockInMdcArea()">Lock In</button>
-      <button class="ht-mdc-pill" onclick="saveMdcAreaToHuntAreas()">Save to Hunt Areas</button>
+      <button class="ht-mdc-pill" onclick="saveMdcAreaToHuntAreas()">${isMushroomModule() ? 'Save to Forage Areas' : 'Save to Hunt Areas'}</button>
     </div>
     <div class="ht-mdc-actions">
       ${regsLink ? `<a class="ht-mdc-btn ht-mdc-btn-primary" href="${regsLink}" target="_blank" rel="noopener">${regsIcon}<span>Local Regulations</span></a>` : `<span class="ht-mdc-btn ht-mdc-btn-disabled">${regsIcon}<span>Local Regulations</span></span>`}
@@ -2585,7 +2876,7 @@ window.addMdcAreaToHuntArea = function() {
   setSelectedAreaFromFeature(mdcActiveAreaFeature);
   const bounds = getBoundsFromArcgisGeometry(mdcActiveAreaFeature.geometry);
   if (bounds) map.fitBounds(bounds, { padding: [50, 50] });
-  showNotice('Public land added as your hunt area. Tap BUILD HUNT to continue.', 'success', 4200);
+  showNotice(isMushroomModule() ? 'Public land added as your forage area.' : 'Public land added as your hunt area. Tap BUILD HUNT to continue.', 'success', 4200);
 };
 
 window.lockInMdcArea = function() {
@@ -2631,7 +2922,7 @@ window.saveMdcAreaToHuntAreas = function() {
   savedHuntAreas.unshift(payload);
   saveHuntAreas();
   renderSavedHuntAreas();
-  showNotice('Hunt area saved.', 'success', 3200);
+  showNotice(isMushroomModule() ? 'Forage area saved.' : 'Hunt area saved.', 'success', 3200);
 };
 
 function showMdcAreaDetails(feature) {
@@ -2654,7 +2945,7 @@ function showMdcAreaDetails(feature) {
     <div class="ht-mdc-meta">Use the MDC links below for allowed activities by type.</div>
     <div class="ht-mdc-cta">
       <button class="ht-mdc-pill primary" onclick="lockInMdcArea()">Lock In</button>
-      <button class="ht-mdc-pill" onclick="saveMdcAreaToHuntAreas()">Save to Hunt Areas</button>
+      <button class="ht-mdc-pill" onclick="saveMdcAreaToHuntAreas()">${isMushroomModule() ? 'Save to Forage Areas' : 'Save to Hunt Areas'}</button>
     </div>
     <div class="ht-mdc-actions">
       ${regsLink ? `<a class="ht-mdc-btn ht-mdc-btn-primary" href="${regsLink}" target="_blank" rel="noopener">${regsIcon}<span>Regulations</span></a>` : `<span class="ht-mdc-btn ht-mdc-btn-disabled">${regsIcon}<span>Regulations</span></span>`}
@@ -2828,6 +3119,9 @@ function getHotspotCountFromCriteria(criteria) {
 }
 
 function buildHabitatPool(criteria) {
+  if (isTurkeyModule()) {
+    return ['roostZone', 'strutZone', 'travelCorridor', 'roostZone', 'feedingArea', 'travelCorridor', 'loafingArea', 'waterSource'];
+  }
   if (BUCK_FOCUS_MODE) {
     return ['bedding', 'transition', 'transition', 'bedding', 'transition', 'water'];
   }
@@ -2893,6 +3187,19 @@ function getLiveSignalEntries() {
 
 function getLiveSignalWeight(entry) {
   const sign = String(entry?.signType || entry?.type || '').toLowerCase();
+  // Turkey-specific signal weights
+  if (isTurkeyModule()) {
+    if (window.TURKEY_SIGNAL_WEIGHTS) {
+      for (const [key, weight] of Object.entries(window.TURKEY_SIGNAL_WEIGHTS)) {
+        if (sign.includes(key.toLowerCase())) return weight;
+      }
+    }
+    if (sign.includes('roost') || sign.includes('gobble')) return 5.0;
+    if (sign.includes('strut')) return 4.5;
+    if (sign.includes('scratch')) return 3.5;
+    if (sign.includes('track')) return 2.5;
+    return 2.0;
+  }
   if (sign.includes('bedding') || sign.includes('bed')) return 4.2;
   if (sign.includes('buck_sign') || sign.includes('buck')) return 3.5;
   if (sign.includes('scrape')) return 3.2;
@@ -2947,7 +3254,7 @@ function applyLiveStrategyRanks(rankedHotspots) {
     const next = byKey.get(key);
     if (!next) return;
     marker.__hotspotData.rank = next.rank;
-    marker.setIcon(getHotspotPinIcon(String(next.rank)));
+    marker.setIcon(getHotspotPinIcon(String(next.rank), marker.__hotspotData));
   });
 
   buildRoutePinOptions(ranked);
@@ -3025,7 +3332,7 @@ function toggleScoutingLayer(forceState) {
   }
 
   const btn = document.getElementById('scoutingToggleBtn');
-  if (btn) btn.textContent = `${coreAreaEnabled ? 'Hide' : 'Show'} Core Buck Zones`;
+  if (btn) btn.textContent = `${coreAreaEnabled ? 'Hide' : 'Show'} ${isMushroomModule() ? 'Core Morel Zones' : 'Core Buck Zones'}`;
 }
 
 function createScoutingLayer(bounds, criteria, windDir, seedZones) {
@@ -3531,33 +3838,33 @@ function detectAreaTerrainFeatures(gridInfo, elevations, windDir, options = {}) 
       const isMicroLow = minN - center >= promMicro;
 
       if (isRidge) {
-        addFeature(r, c, 'ridge_point', 'Ridge Point', 'High point on a ridge. Mature bucks use these for wind advantage and sight lines.', 94);
+        addFeature(r, c, 'ridge_point', 'Ridge Point', isMushroomModule() ? 'High point with canopy gaps. Moisture drains away quickly but nearby slopes stay damp.' : 'High point on a ridge. Mature bucks use these for wind advantage and sight lines.', 94);
       } else if (isMicroHigh) {
-        addFeature(r, c, 'micro_nob', 'Micro Nob', 'Subtle rise off the main line. Mature bucks stage just downwind in brush and use micro exits.', 86, { downwindMeters: 14 });
+        addFeature(r, c, 'micro_nob', isMushroomModule() ? 'Micro Rise' : 'Micro Nob', isMushroomModule() ? 'Subtle rise with drainage on all sides. Check the shaded base for moisture pockets.' : 'Subtle rise off the main line. Mature bucks stage just downwind in brush and use micro exits.', 86, { downwindMeters: 14 });
       }
 
       if (isLow) {
-        addFeature(r, c, 'saddle', 'Saddle / Low Pass', 'Low pass between higher ground. Natural funnel for quiet, efficient travel.', 92);
+        addFeature(r, c, 'saddle', isMushroomModule() ? 'Low Pass / Draw' : 'Saddle / Low Pass', isMushroomModule() ? 'Low area between ridges that collects moisture and organic debris. Prime morel habitat.' : 'Low pass between higher ground. Natural funnel for quiet, efficient travel.', 92);
       } else if (isMicroLow && slope != null && slope <= 0.05) {
-        addFeature(r, c, 'thermal_drain', 'Thermal Drain', 'Cool-air sink with micro cover breaks. Mature bucks slip the downwind edge.', 84);
+        addFeature(r, c, 'thermal_drain', isMushroomModule() ? 'Cool Drainage' : 'Thermal Drain', isMushroomModule() ? 'Cool, shaded drain where soil stays moist. Check downed wood and leaf edges.' : 'Cool-air sink with micro cover breaks. Mature bucks slip the downwind edge.', 84);
       }
 
       if (slope != null && slope <= slopeBench && (maxN - minN) >= 2) {
-        addFeature(r, c, 'bench', 'Travel Bench', 'Micro bench used for downwind brush travel and hidden exits off the main trail.', 90);
+        addFeature(r, c, 'bench', isMushroomModule() ? 'Shelf / Bench' : 'Travel Bench', isMushroomModule() ? 'Flat shelf on a slope. Moisture collects here. Look for elm, ash, and old fruit trees.' : 'Micro bench used for downwind brush travel and hidden exits off the main trail.', 90);
       }
 
       if (elevN != null && elevS != null && elevE != null && elevW != null) {
         const slopeNS = Math.abs(elevN - elevS) / (2 * spacing);
         const slopeEW = Math.abs(elevE - elevW) / (2 * spacing);
         if (isLow && slopeNS >= slopePinch && slopeEW >= slopePinch) {
-          addFeature(r, c, 'pinch', 'Terrain Pinch', 'Tight squeeze that mature bucks skirt via brushy, downwind micro exits.', 92);
+          addFeature(r, c, 'pinch', isMushroomModule() ? 'Narrow Draw' : 'Terrain Pinch', isMushroomModule() ? 'Tight drainage that funnels moisture and debris. Scan leaf litter at the narrowest point.' : 'Tight squeeze that mature bucks skirt via brushy, downwind micro exits.', 92);
         }
       }
 
       if (downwindVec && downhillVec && slope != null && slope >= slopeLeeMin && slope <= slopeLeeMax) {
         const dot = downhillVec[0] * downwindVec[0] + downhillVec[1] * downwindVec[1];
         if (dot >= 0.6) {
-          addFeature(r, c, 'leeward_pocket', 'Leeward Pocket', 'Sheltered leeward slope with brushy downwind exits. Prime mature buck bedding.', 98, { downwindMeters: 18 });
+          addFeature(r, c, 'leeward_pocket', isMushroomModule() ? 'Sheltered Slope' : 'Leeward Pocket', isMushroomModule() ? 'Protected, shaded slope that holds moisture. North-facing aspects are prime morel spots.' : 'Sheltered leeward slope with brushy downwind exits. Prime mature buck bedding.', 98, { downwindMeters: 18 });
         }
       }
     }
@@ -3654,9 +3961,57 @@ function buildFeatureHotspotEducation(feature, criteria, windDir, bounds) {
   if (windDir) {
     approachSteps.push(`Keep a ${windDir} wind on your face; stay on the downwind edge.`);
   }
-  approachSteps.push('Track the downwind side of the primary doe trail to mirror mature buck travel.');
+  approachSteps.push(isMushroomModule() ? 'Walk slow sweeping lanes; morels hide at ground level in leaf litter.' : 'Track the downwind side of the primary doe trail to mirror mature buck travel.');
 
-  const templates = {
+  const mushTemplates = {
+    leeward_pocket: {
+      title: 'Sheltered Slope',
+      tips: 'Check the shaded face and downed wood on this moisture-holding slope.',
+      why: ['Protected from wind and sun', 'Soil stays moist here longer after rain']
+    },
+    ridge_point: {
+      title: 'Ridge Point',
+      tips: 'Drier up top, but check the transition to shaded slopes just below.',
+      why: ['Canopy gaps let more light in', 'Run-off feeds mushroom habitat downslope']
+    },
+    saddle: {
+      title: 'Low Pass / Draw',
+      tips: 'Walk the lowest line where debris and moisture collect.',
+      why: ['Moisture funnels through the low point', 'Organic matter accumulates here']
+    },
+    bench: {
+      title: 'Shelf / Bench',
+      tips: 'Follow the contour and check host trees and downed logs.',
+      why: ['Flat terrain holds soil moisture', 'Great habitat for elm and ash root systems']
+    },
+    pinch: {
+      title: 'Narrow Draw',
+      tips: 'Check the narrowest point where leaf litter accumulates.',
+      why: ['Concentrated moisture and debris', 'Natural collection point for organic matter']
+    },
+    thermal_drain: {
+      title: 'Cool Drainage',
+      tips: 'Check downed wood and the leaf litter edge along this cool drain.',
+      why: ['Consistent moisture from drainage', 'Shade keeps soil at ideal temperature']
+    },
+    micro_nob: {
+      title: 'Micro Rise',
+      tips: 'Scan the shaded base and nearby downed hardwoods.',
+      why: ['Drainage on all sides holds moisture below', 'Host tree roots often nearby']
+    },
+    creek_line: {
+      title: 'Creek Line',
+      tips: 'Check both banks and any downed wood spanning the channel.',
+      why: ['Consistent moisture year-round', 'Rich organic soil along drainage edges']
+    },
+    water_edge: {
+      title: 'Water Edge',
+      tips: 'Check the moist bank edge and shaded patches near the water.',
+      why: ['Consistent moisture year-round', 'Rich organic soil along water edges']
+    }
+  };
+
+  const shedTemplates = {
     leeward_pocket: {
       title: 'Leeward Pocket',
       tips: 'Check the downwind shoulder and the first cover break below the crest.',
@@ -3703,6 +4058,8 @@ function buildFeatureHotspotEducation(feature, criteria, windDir, bounds) {
       why: ['Consistent travel between cover blocks', 'Sheds often drop on low-effort crossings']
     }
   };
+
+  const templates = isMushroomModule() ? mushTemplates : shedTemplates;
 
   const template = templates[type] || {
     title: feature?.label || 'Terrain Feature',
@@ -3943,7 +4300,7 @@ function previewSavedHuntArea(item, meta) {
     map.fitBounds(layer.getBounds(), { padding: [40, 40] });
   }
   savedHuntPreview = meta || null;
-  showSavedHuntBar('Saved hunt loaded. Choose next step.');
+  showSavedHuntBar(isMushroomModule() ? 'Saved forage loaded. Choose next step.' : 'Saved hunt loaded. Choose next step.');
 }
 
 function renderSavedPropertiesSelect() {
@@ -3957,20 +4314,20 @@ function renderSavedPropertiesSelect() {
   });
   const plans = savedHuntPlans.filter((plan) => plan && plan.id);
   if (!areas.length && !plans.length) {
-    select.innerHTML = '<option value="">No saved hunts or areas yet</option>';
+    select.innerHTML = `<option value="">${isMushroomModule() ? 'No saved forages or areas yet' : 'No saved hunts or areas yet'}</option>`;
     select.disabled = true;
     return;
   }
 
   select.disabled = false;
-  const options = ['<option value="">Select hunt or area</option>'];
+  const options = [`<option value="">${isMushroomModule() ? 'Select forage or area' : 'Select hunt or area'}</option>`];
   if (areas.length) {
     options.push('<optgroup label="Saved Areas">');
     options.push(...areas.map((item) => `<option value="area:${item.id}">${item.name}</option>`));
     options.push('</optgroup>');
   }
   if (plans.length) {
-    options.push('<optgroup label="Saved Hunts">');
+    options.push(`<optgroup label="${isMushroomModule() ? 'Saved Forages' : 'Saved Hunts'}">`);
     options.push(...plans.map((plan) => {
       const when = plan.timestamp ? new Date(plan.timestamp).toLocaleDateString() : '';
       const label = when ? `${plan.name} • ${when}` : plan.name;
@@ -4020,11 +4377,12 @@ function handleSavedSelection(choice, selectEl) {
     || lastPlanSnapshot;
 
   if (huntActive) {
+    const isMush = isMushroomModule();
     openChoiceModal({
-      title: 'Start a new hunt?',
-      message: 'You already have an active hunt. Starting a new hunt clears the current plan and pins.',
-      primaryLabel: 'Start New Hunt',
-      secondaryLabel: 'Continue Hunt',
+      title: isMush ? 'Start a new forage?' : 'Start a new hunt?',
+      message: isMush ? 'You already have an active forage. Starting a new one clears the current plan and pins.' : 'You already have an active hunt. Starting a new hunt clears the current plan and pins.',
+      primaryLabel: isMush ? 'Start New Forage' : 'Start New Hunt',
+      secondaryLabel: isMush ? 'Continue Foraging' : 'Continue Hunt',
       onPrimary: () => {
         resetActiveHuntState();
         applySelection();
@@ -4044,7 +4402,7 @@ window.loadSavedSelectionFromTray = function() {
   if (!select) return;
   const choice = parseSavedSelectValue(select.value);
   if (!choice) {
-    showNotice('Select a saved hunt first.', 'warning', 3200);
+    showNotice(isMushroomModule() ? 'Select a saved area first.' : 'Select a saved hunt first.', 'warning', 3200);
     return;
   }
   handleSavedSelection(choice, select);
@@ -4055,15 +4413,15 @@ window.deleteSelectedSavedHunt = function() {
   if (!select) return;
   const choice = parseSavedSelectValue(select.value);
   if (!choice || choice.kind !== 'plan') {
-    showNotice('Select a saved hunt to delete.', 'warning', 3200);
+    showNotice(isMushroomModule() ? 'Select a saved area to delete.' : 'Select a saved hunt to delete.', 'warning', 3200);
     return;
   }
   const plan = savedHuntPlans.find((entry) => entry.id === choice.id);
-  const planName = plan?.name || 'this hunt';
+  const planName = plan?.name || (isMushroomModule() ? 'this forage' : 'this hunt');
   openChoiceModal({
-    title: 'Delete saved hunt?',
+    title: isMushroomModule() ? 'Delete saved forage?' : 'Delete saved hunt?',
     message: `This will permanently remove ${planName}.`,
-    primaryLabel: 'Delete Hunt',
+    primaryLabel: isMushroomModule() ? 'Delete Forage' : 'Delete Hunt',
     secondaryLabel: 'Cancel',
     onPrimary: () => {
       removeSavedHuntPlan(choice.id);
@@ -4074,8 +4432,8 @@ window.deleteSelectedSavedHunt = function() {
 
 window.clearAllSavedHuntsAndAreas = function() {
   openChoiceModal({
-    title: 'Clear all saved hunts + areas?',
-    message: 'This will permanently delete every saved hunt and saved area on this device.',
+    title: isMushroomModule() ? 'Clear all saved forages + areas?' : 'Clear all saved hunts + areas?',
+    message: isMushroomModule() ? 'This will permanently delete every saved forage and saved area on this device.' : 'This will permanently delete every saved hunt and saved area on this device.',
     primaryLabel: 'Clear All',
     secondaryLabel: 'Cancel',
     onPrimary: () => {
@@ -4088,7 +4446,7 @@ window.clearAllSavedHuntsAndAreas = function() {
       renderSavedPropertiesSelect();
       const select = document.getElementById('savedPropertySelect');
       if (select) select.value = '';
-      showNotice('All saved hunts and areas cleared.', 'success', 3200);
+      showNotice(isMushroomModule() ? 'All saved forages and areas cleared.' : 'All saved hunts and areas cleared.', 'success', 3200);
     }
   });
 };
@@ -4122,7 +4480,7 @@ window.saveSelectedArea = function() {
   }
 
   openInputModal({
-    title: 'Save Hunt Area',
+    title: isMushroomModule() ? 'Save Forage Area' : 'Save Hunt Area',
     message: 'Name this area for quick access later.',
     placeholder: 'Example: South Creek Ridge',
     confirmLabel: 'Save Area',
@@ -4149,7 +4507,7 @@ window.saveSelectedArea = function() {
       savedHuntAreas.unshift(payload);
       saveHuntAreas();
       renderSavedHuntAreas();
-      showNotice('Hunt area saved.', 'success', 3200);
+      showNotice(isMushroomModule() ? 'Forage area saved.' : 'Hunt area saved.', 'success', 3200);
     }
   });
 };
@@ -4532,7 +4890,7 @@ function handleMapClick(e) {
       map.setView(e.latlng, Math.max(map.getZoom(), 12));
     }
     setFieldCommandStep(1);
-    showNotice('Location set. Define your hunt area.', 'success', 3200);
+    showNotice(isMushroomModule() ? 'Location set. Define your forage area.' : 'Location set. Define your hunt area.', 'success', 3200);
     return;
   }
 
@@ -4655,7 +5013,7 @@ function handleMapClick(e) {
         huntJournalEntries.unshift(entry);
         saveHuntJournal();
         registerDeerPinMarker(entry);
-        showNotice('Deer pin logged.', 'success', 3200);
+        showNotice(isMushroomModule() ? 'Forage pin logged.' : 'Deer pin logged.', 'success', 3200);
         queueLiveStrategyUpdate('deer-pin');
       }
     });
@@ -4910,7 +5268,7 @@ window.beginRoutePinSelection = function() {
 
 window.beginRouteMapSelection = function() {
   if (!hotspotMarkers.length && !isFlyModule()) {
-    showNotice('No pins yet. Build a hunt plan first.', 'warning', 3600);
+    showNotice(isMushroomModule() ? 'No pins yet. Build a forage plan first.' : 'No pins yet. Build a hunt plan first.', 'warning', 3600);
     return;
   }
 
@@ -5156,6 +5514,7 @@ function getMdcLogoUrl() {
 function getHuntechLogoUrl() {
   const override = String(window.HUNTECH_LOGO_URL || '').trim();
   if (override) return override;
+  if (isTurkeyModule()) return 'assets/turkey-logo.png';
   if (isMushroomModule()) return 'assets/mushroom-logo.png';
   return 'assets/huntech-logo.png';
 }
@@ -5343,6 +5702,337 @@ function buildEducationList(items, usedSet) {
   return out;
 }
 
+// ===================================================================
+//   Tree Visual Identification SVG Icons
+// ===================================================================
+function getTreeIdSvg(treeName) {
+  const name = String(treeName || '').toLowerCase();
+  // Simplified silhouette SVGs for tree identification cards
+  if (name.includes('elm')) return '<svg viewBox="0 0 40 40" class="ht-tree-svg"><path d="M20 38V22" stroke="#8B7355" stroke-width="2.5"/><path d="M20 22Q10 20 8 12Q7 6 14 4Q17 3 20 5Q23 3 26 4Q33 6 32 12Q30 20 20 22Z" fill="#6B8E23" opacity=".85"/><path d="M15 18Q12 16 14 10" stroke="#556B2F" stroke-width=".5" fill="none" opacity=".5"/></svg>';
+  if (name.includes('ash')) return '<svg viewBox="0 0 40 40" class="ht-tree-svg"><path d="M20 38V20" stroke="#8B7355" stroke-width="2.5"/><path d="M20 20Q12 18 10 12Q9 6 16 5Q18 4 20 6Q22 4 24 5Q31 6 30 12Q28 18 20 20Z" fill="#6B8E23" opacity=".85"/><path d="M16 8L14 5M20 7L20 3M24 8L26 5" stroke="#556B2F" stroke-width=".6" fill="none" opacity=".4"/></svg>';
+  if (name.includes('tulip') || name.includes('poplar')) return '<svg viewBox="0 0 40 40" class="ht-tree-svg"><path d="M20 38V18" stroke="#8B7355" stroke-width="2.5"/><path d="M20 18Q14 16 13 10Q12 4 17 3Q19 2 20 4Q21 2 23 3Q28 4 27 10Q26 16 20 18Z" fill="#228B22" opacity=".85"/><path d="M18 10Q20 8 22 10" stroke="#006400" stroke-width=".5" fill="none"/></svg>';
+  if (name.includes('sycamore')) return '<svg viewBox="0 0 40 40" class="ht-tree-svg"><path d="M20 38V20" stroke="#D2B48C" stroke-width="3"/><path d="M20 20Q8 18 6 10Q5 2 20 4Q35 2 34 10Q32 18 20 20Z" fill="#8FBC8F" opacity=".85"/><rect x="18" y="28" width="4" height="5" rx="1" fill="#F5F5DC" opacity=".5"/></svg>';
+  if (name.includes('cottonwood')) return '<svg viewBox="0 0 40 40" class="ht-tree-svg"><path d="M20 38V20" stroke="#8B7355" stroke-width="3"/><path d="M20 20Q6 16 8 8Q10 2 20 4Q30 2 32 8Q34 16 20 20Z" fill="#9ACD32" opacity=".85"/><circle cx="16" cy="10" r="1" fill="#fff" opacity=".3"/><circle cx="24" cy="11" r="1" fill="#fff" opacity=".3"/></svg>';
+  if (name.includes('white oak') || name.includes('oak')) return '<svg viewBox="0 0 40 40" class="ht-tree-svg"><path d="M20 38V22" stroke="#8B4513" stroke-width="3"/><path d="M20 22Q6 20 5 10Q4 2 20 4Q36 2 35 10Q34 20 20 22Z" fill="#556B2F" opacity=".85"/><path d="M12 12Q14 8 16 12M24 11Q26 7 28 11" stroke="#2F4F2F" stroke-width=".6" fill="none" opacity=".5"/></svg>';
+  if (name.includes('hickory')) return '<svg viewBox="0 0 40 40" class="ht-tree-svg"><path d="M20 38V20" stroke="#8B7355" stroke-width="2.5"/><path d="M18 22L14 30M22 22L26 30" stroke="#8B7355" stroke-width="1" opacity=".5"/><path d="M20 20Q12 18 11 10Q10 4 20 4Q30 4 29 10Q28 18 20 20Z" fill="#6B8E23" opacity=".85"/><path d="M17 26V20M23 26V20" stroke="#6B4513" stroke-width=".5" opacity=".4"/></svg>';
+  if (name.includes('hackberry')) return '<svg viewBox="0 0 40 40" class="ht-tree-svg"><path d="M20 38V22" stroke="#808080" stroke-width="2.5"/><path d="M20 22Q10 20 9 12Q8 6 20 5Q32 6 31 12Q30 20 20 22Z" fill="#7BA05B" opacity=".85"/><circle cx="17" cy="30" r=".8" fill="#808080" opacity=".6"/><circle cx="20" cy="32" r=".8" fill="#808080" opacity=".6"/><circle cx="23" cy="30" r=".8" fill="#808080" opacity=".6"/></svg>';
+  if (name.includes('silver maple') || name.includes('maple')) return '<svg viewBox="0 0 40 40" class="ht-tree-svg"><path d="M20 38V20" stroke="#A0522D" stroke-width="2.5"/><path d="M20 4L24 10L28 8L26 14L32 14L26 18L20 20L14 18L8 14L14 14L12 8L16 10Z" fill="#228B22" opacity=".85"/></svg>';
+  if (name.includes('box elder')) return '<svg viewBox="0 0 40 40" class="ht-tree-svg"><path d="M20 38V22" stroke="#8B8B55" stroke-width="2"/><path d="M16 22L12 30M24 22L28 30" stroke="#8B8B55" stroke-width=".8" opacity=".4"/><path d="M20 22Q10 20 10 12Q10 4 20 4Q30 4 30 12Q30 20 20 22Z" fill="#7CFC00" opacity=".7"/></svg>';
+  if (name.includes('pawpaw')) return '<svg viewBox="0 0 40 40" class="ht-tree-svg"><path d="M20 38V24" stroke="#8B7355" stroke-width="2"/><ellipse cx="14" cy="16" rx="6" ry="10" fill="#228B22" opacity=".75" transform="rotate(-15 14 16)"/><ellipse cx="26" cy="16" rx="6" ry="10" fill="#228B22" opacity=".75" transform="rotate(15 26 16)"/><ellipse cx="20" cy="14" rx="5" ry="10" fill="#2E8B57" opacity=".8"/></svg>';
+  if (name.includes('willow')) return '<svg viewBox="0 0 40 40" class="ht-tree-svg"><path d="M20 38V18" stroke="#8B7355" stroke-width="2.5"/><path d="M20 18Q12 6 8 14Q4 22 10 28" stroke="#556B2F" stroke-width="1.5" fill="none" opacity=".7"/><path d="M20 18Q28 6 32 14Q36 22 30 28" stroke="#556B2F" stroke-width="1.5" fill="none" opacity=".7"/><path d="M20 18Q16 10 12 18Q8 26 14 30" stroke="#6B8E23" stroke-width="1" fill="none" opacity=".5"/><path d="M20 18Q24 10 28 18Q32 26 26 30" stroke="#6B8E23" stroke-width="1" fill="none" opacity=".5"/></svg>';
+  if (name.includes('apple')) return '<svg viewBox="0 0 40 40" class="ht-tree-svg"><path d="M20 38V22" stroke="#5C4033" stroke-width="3"/><path d="M20 22Q8 20 6 12Q5 4 20 5Q35 4 34 12Q32 20 20 22Z" fill="#556B2F" opacity=".85"/><circle cx="15" cy="14" r="2" fill="#C41E3A" opacity=".7"/><circle cx="25" cy="12" r="2" fill="#C41E3A" opacity=".7"/></svg>';
+  if (name.includes('cherry')) return '<svg viewBox="0 0 40 40" class="ht-tree-svg"><path d="M20 38V20" stroke="#5C3317" stroke-width="2.5"/><path d="M20 20Q10 18 9 10Q8 4 20 4Q32 4 31 10Q30 18 20 20Z" fill="#355E3B" opacity=".85"/><circle cx="16" cy="12" r="1.5" fill="#8B0000" opacity=".7"/><circle cx="24" cy="13" r="1.5" fill="#8B0000" opacity=".7"/></svg>';
+  if (name.includes('fire') || name.includes('burn') || name.includes('char')) return '<svg viewBox="0 0 40 40" class="ht-tree-svg"><path d="M20 38V18" stroke="#333" stroke-width="3"/><path d="M16 18L14 8M20 18V6M24 18L26 8" stroke="#555" stroke-width="1.5" stroke-linecap="round"/><path d="M20 38Q14 34 16 30Q18 26 20 28Q22 26 24 30Q26 34 20 38Z" fill="#D4642A" opacity=".7"/></svg>';
+  // Generic tree fallback
+  return '<svg viewBox="0 0 40 40" class="ht-tree-svg"><path d="M20 38V20" stroke="#8B7355" stroke-width="2.5"/><path d="M20 20Q10 18 9 10Q8 4 20 4Q32 4 31 10Q30 18 20 20Z" fill="#6B8E23" opacity=".85"/></svg>';
+}
+
+// ===================================================================
+//   Camera-Based Tree / Leaf Identification
+// ===================================================================
+window.openTreeIdCamera = function() {
+  // Create camera overlay
+  let overlay = document.getElementById('htTreeIdOverlay');
+  if (overlay) { overlay.remove(); }
+
+  overlay = document.createElement('div');
+  overlay.id = 'htTreeIdOverlay';
+  overlay.className = 'ht-tree-camera-overlay';
+  overlay.innerHTML = `
+    <div class="ht-tree-camera-panel">
+      <div class="ht-tree-camera-header">
+        <span>\uD83D\uDCF7 Tree / Leaf Identifier</span>
+        <button class="ht-tree-camera-close" onclick="window.closeTreeIdCamera()">\u2715</button>
+      </div>
+      <div class="ht-tree-camera-body">
+        <div class="ht-tree-camera-preview" id="htTreeCameraPreview">
+          <video id="htTreeCameraVideo" autoplay playsinline muted></video>
+          <canvas id="htTreeCameraCanvas" style="display:none;"></canvas>
+        </div>
+        <div class="ht-tree-camera-instructions">
+          <p>Point your camera at a <strong>tree trunk</strong>, <strong>bark</strong>, or <strong>leaves</strong> and tap <em>Capture</em>.</p>
+          <p class="ht-tree-camera-hint">For best results, fill the frame with bark texture or a single leaf.</p>
+        </div>
+        <div class="ht-tree-camera-actions">
+          <button class="ht-tree-camera-btn ht-tree-camera-btn--capture" id="htTreeCaptureBtn" onclick="window.captureTreeImage()">\uD83D\uDCF7 Capture</button>
+          <button class="ht-tree-camera-btn ht-tree-camera-btn--upload" onclick="window.uploadTreeImage()">\uD83D\uDCC1 Upload Photo</button>
+        </div>
+        <input type="file" id="htTreeFileInput" accept="image/*" capture="environment" style="display:none;" onchange="window.handleTreeFileSelect(event)">
+        <div class="ht-tree-camera-result" id="htTreeResult" style="display:none;"></div>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  // Start camera stream
+  startTreeCameraStream();
+};
+
+async function startTreeCameraStream() {
+  const video = document.getElementById('htTreeCameraVideo');
+  if (!video) return;
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 960 } }
+    });
+    video.srcObject = stream;
+    video.play();
+  } catch (err) {
+    console.warn('[TreeID] Camera not available:', err.message);
+    const preview = document.getElementById('htTreeCameraPreview');
+    if (preview) {
+      preview.innerHTML = '<div class="ht-tree-camera-fallback">Camera unavailable. Use <strong>Upload Photo</strong> instead.</div>';
+    }
+  }
+}
+
+function stopTreeCameraStream() {
+  const video = document.getElementById('htTreeCameraVideo');
+  if (video?.srcObject) {
+    video.srcObject.getTracks().forEach(t => t.stop());
+    video.srcObject = null;
+  }
+}
+
+window.closeTreeIdCamera = function() {
+  stopTreeCameraStream();
+  const overlay = document.getElementById('htTreeIdOverlay');
+  if (overlay) overlay.remove();
+};
+
+window.captureTreeImage = function() {
+  const video = document.getElementById('htTreeCameraVideo');
+  const canvas = document.getElementById('htTreeCameraCanvas');
+  if (!video || !canvas) return;
+
+  canvas.width = video.videoWidth || 640;
+  canvas.height = video.videoHeight || 480;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+  canvas.toBlob(blob => {
+    if (blob) identifyTreeFromImage(blob);
+  }, 'image/jpeg', 0.85);
+};
+
+window.uploadTreeImage = function() {
+  const input = document.getElementById('htTreeFileInput');
+  if (input) input.click();
+};
+
+window.handleTreeFileSelect = function(event) {
+  const file = event?.target?.files?.[0];
+  if (!file) return;
+  identifyTreeFromImage(file);
+};
+
+async function identifyTreeFromImage(imageBlob) {
+  const resultDiv = document.getElementById('htTreeResult');
+  if (!resultDiv) return;
+  resultDiv.style.display = 'block';
+  resultDiv.innerHTML = '<div class="ht-tree-camera-loading"><div class="ht-tree-camera-spinner"></div>Analyzing image\u2026</div>';
+
+  try {
+    // Convert image to base64 for local analysis
+    const base64 = await blobToBase64(imageBlob);
+
+    // Attempt cloud-based identification first
+    const result = await identifyTreeCloud(base64);
+    if (result) {
+      renderTreeIdResult(result, resultDiv);
+      return;
+    }
+
+    // Fallback: local heuristic-based guide
+    renderTreeIdFallback(resultDiv);
+  } catch (err) {
+    console.error('[TreeID] Error:', err);
+    renderTreeIdFallback(resultDiv);
+  }
+}
+
+function blobToBase64(blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+}
+
+async function identifyTreeCloud(base64Image) {
+  // Check if a tree ID API endpoint is configured
+  const endpoint = window.TREE_ID_API_URL || '';
+  const apiKey = window.TREE_ID_API_KEY || '';
+
+  if (!endpoint) {
+    // Try PlantNet API (free tier)
+    return identifyTreePlantNet(base64Image);
+  }
+
+  try {
+    const body = JSON.stringify({ image: base64Image, api_key: apiKey });
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body
+    });
+    if (!response.ok) return null;
+    const data = await response.json();
+    return parseTreeIdResponse(data);
+  } catch {
+    return null;
+  }
+}
+
+async function identifyTreePlantNet(base64Image) {
+  const apiKey = window.PLANTNET_API_KEY || '';
+  if (!apiKey) return null;
+
+  try {
+    // Convert base64 to blob for multipart upload
+    const fetchResp = await fetch(base64Image);
+    const blob = await fetchResp.blob();
+    const formData = new FormData();
+    formData.append('images', blob, 'tree.jpg');
+    formData.append('organs', 'auto');
+
+    const response = await fetch(`https://my-api.plantnet.org/v2/identify/all?api-key=${apiKey}&include-related-images=true`, {
+      method: 'POST',
+      body: formData
+    });
+    if (!response.ok) return null;
+    const data = await response.json();
+    if (!data?.results?.length) return null;
+
+    const top = data.results[0];
+    const species = top.species || {};
+    return {
+      commonName: species.commonNames?.[0] || 'Unknown',
+      scientificName: species.scientificNameWithoutAuthor || '',
+      confidence: Math.round((top.score || 0) * 100),
+      family: species.family?.scientificNameWithoutAuthor || '',
+      morelRelevance: getMorelRelevanceForSpecies(species.scientificNameWithoutAuthor || ''),
+      imageUrl: top.images?.[0]?.url?.m || ''
+    };
+  } catch {
+    return null;
+  }
+}
+
+function parseTreeIdResponse(data) {
+  if (!data) return null;
+  return {
+    commonName: data.common_name || data.commonName || 'Unknown',
+    scientificName: data.scientific_name || data.scientificName || '',
+    confidence: data.confidence || data.score || 0,
+    family: data.family || '',
+    morelRelevance: data.morelRelevance || getMorelRelevanceForSpecies(data.scientific_name || data.scientificName || ''),
+    imageUrl: data.image_url || ''
+  };
+}
+
+function getMorelRelevanceForSpecies(scientificName) {
+  const name = String(scientificName).toLowerCase();
+  const highRelevance = ['ulmus', 'fraxinus', 'liriodendron', 'platanus', 'populus', 'malus'];
+  const medRelevance = ['quercus', 'carya', 'celtis', 'acer', 'asimina', 'salix', 'prunus'];
+
+  if (highRelevance.some(g => name.includes(g))) return { level: 'high', message: 'This is a primary morel host tree! Scan 10-30 ft around the trunk base.' };
+  if (medRelevance.some(g => name.includes(g))) return { level: 'medium', message: 'Good indicator species for morel habitat. Check nearby leaf litter and moisture pockets.' };
+  return { level: 'low', message: 'Not a primary morel host, but check nearby for host trees that may share the habitat.' };
+}
+
+function renderTreeIdResult(result, container) {
+  const relevanceClass = `ht-tree-relevance--${result.morelRelevance?.level || 'low'}`;
+  const relevanceEmoji = result.morelRelevance?.level === 'high' ? '\uD83C\uDF44' : (result.morelRelevance?.level === 'medium' ? '\uD83C\uDF3F' : '\u2796');
+  container.innerHTML = `
+    <div class="ht-tree-id-result">
+      <div class="ht-tree-id-result-header">
+        <div class="ht-tree-id-result-name">${escapeHtml(result.commonName)}</div>
+        ${result.scientificName ? `<div class="ht-tree-id-result-sci"><em>${escapeHtml(result.scientificName)}</em></div>` : ''}
+        ${result.confidence ? `<div class="ht-tree-id-result-confidence">${result.confidence}% match</div>` : ''}
+      </div>
+      ${result.imageUrl ? `<img class="ht-tree-id-result-img" src="${escapeHtml(result.imageUrl)}" alt="${escapeHtml(result.commonName)}">` : ''}
+      <div class="ht-tree-id-result-relevance ${relevanceClass}">
+        ${relevanceEmoji} <strong>Morel Relevance:</strong> ${escapeHtml(result.morelRelevance?.message || 'Unknown relevance.')}
+      </div>
+      ${result.family ? `<div class="ht-tree-id-result-family">Family: ${escapeHtml(result.family)}</div>` : ''}
+    </div>
+  `;
+}
+
+window.renderTreeIdFallback = renderTreeIdFallback;
+function renderTreeIdFallback(container) {
+  // Show an interactive visual guide for manual tree identification
+  const trees = [
+    { name: 'American Elm', key: 'elm', clue: 'Vase shape, diamond-ridge bark, peeling strips on dying trees' },
+    { name: 'White/Green Ash', key: 'ash', clue: 'Diamond bark, opposite compound leaves, D-shaped beetle exit holes' },
+    { name: 'Tulip Poplar', key: 'tulipPoplar', clue: 'Tall straight trunk, 4-lobed tulip-shaped leaves, furrow bark' },
+    { name: 'Sycamore', key: 'sycamore', clue: 'Mottled white/tan/green bark, broad maple-like leaves' },
+    { name: 'White Oak', key: 'whiteOak', clue: 'Rounded leaf lobes, light gray scaly bark, massive spreading crown' },
+    { name: 'Shagbark Hickory', key: 'hickory', clue: 'Shaggy peeling bark strips, compound leaves with 5 leaflets' },
+    { name: 'Cottonwood', key: 'cottonwood', clue: 'Deeply furrowed bark, triangular leaves that flutter in wind' },
+    { name: 'Old Apple', key: 'apple', clue: 'Rough scaly bark, twisted open crown, orchard spacing' },
+    { name: 'Pawpaw', key: 'pawpaw', clue: 'Large tropical leaves (8-12"), smooth bark, understory clusters' },
+    { name: 'Wild Cherry', key: 'cherry', clue: 'Horizontal dash-mark lenticels, shiny serrate leaves' }
+  ];
+
+  container.innerHTML = `
+    <div class="ht-tree-id-fallback">
+      <div class="ht-tree-id-fallback-title">\uD83C\uDF33 Visual Tree ID Guide</div>
+      <div class="ht-tree-id-fallback-subtitle">Camera ID unavailable \u2014 match your tree to these key species:</div>
+      <div class="ht-tree-id-fallback-grid">
+        ${trees.map(t => `
+          <button class="ht-tree-id-guide-card" onclick="window.showTreeIdDetail('${t.key}')">
+            <div class="ht-tree-id-guide-svg">${getTreeIdSvg(t.name)}</div>
+            <div class="ht-tree-id-guide-name">${escapeHtml(t.name)}</div>
+            <div class="ht-tree-id-guide-clue">${escapeHtml(t.clue)}</div>
+          </button>
+        `).join('')}
+      </div>
+    </div>
+  `;
+}
+
+window.showTreeIdDetail = function(treeKey) {
+  // Find the tree in MUSHROOM_EDUCATION data
+  let treeData = null;
+  Object.values(typeof MUSHROOM_EDUCATION !== 'undefined' ? MUSHROOM_EDUCATION : {}).forEach(habitat => {
+    if (habitat.treeId && habitat.treeId[treeKey]) {
+      treeData = habitat.treeId[treeKey];
+    }
+  });
+
+  if (!treeData) {
+    showNotice('Tree details not found.', 'info', 2000);
+    return;
+  }
+
+  const resultDiv = document.getElementById('htTreeResult');
+  if (!resultDiv) return;
+  resultDiv.style.display = 'block';
+  const relevance = getMorelRelevanceForSpecies(treeData.name);
+
+  resultDiv.innerHTML = `
+    <div class="ht-tree-id-result">
+      <div class="ht-tree-id-result-header">
+        <div class="ht-tree-id-guide-svg-lg">${getTreeIdSvg(treeData.name)}</div>
+        <div class="ht-tree-id-result-name">${escapeHtml(treeData.name)}</div>
+      </div>
+      <div class="ht-tree-id-grid">
+        <div class="ht-tree-id-cell"><div class="ht-tree-id-cell-label">\uD83C\uDF32 Bark</div><div class="ht-tree-id-detail">${escapeHtml(treeData.bark)}</div></div>
+        <div class="ht-tree-id-cell"><div class="ht-tree-id-cell-label">\uD83C\uDF43 Leaves</div><div class="ht-tree-id-detail">${escapeHtml(treeData.leaves)}</div></div>
+        <div class="ht-tree-id-cell"><div class="ht-tree-id-cell-label">\uD83C\uDF33 Shape</div><div class="ht-tree-id-detail">${escapeHtml(treeData.shape)}</div></div>
+      </div>
+      <div class="ht-tree-id-tip">\uD83D\uDCA1 ${escapeHtml(treeData.tip)}</div>
+      <div class="ht-tree-id-result-relevance ht-tree-relevance--${relevance.level}">
+        \uD83C\uDF44 <strong>Morel Relevance:</strong> ${escapeHtml(relevance.message)}
+      </div>
+      <button class="ht-tree-camera-btn ht-tree-camera-btn--back" onclick="window.renderTreeIdFallback(document.getElementById('htTreeResult'))">\u2190 Back to Guide</button>
+    </div>
+  `;
+};
+
 function renderThermalEducationCard(thermal) {
   if (!thermal) return '';
   const input = getThermalInputSnapshot();
@@ -5372,6 +6062,7 @@ function renderThermalEducationCard(thermal) {
 function showEducationTile(hotspot, reason) {
   if (!UI_POPUPS_ENABLED) return;
   const tile = ensureEducationTile();
+  const labels = getModuleEducationLabels();
   activeEducationHotspot = hotspot || null;
   const isMicroFeature = Boolean(hotspot?.isMicroFeature);
   const checkinKey = hotspot ? getHotspotKey(hotspot) : '';
@@ -5416,6 +6107,7 @@ function showEducationTile(hotspot, reason) {
     <div class="ht-edu-actions">
       ${checkinBtn}
       <button class="ht-edu-pill ht-edu-pill--ghost" id="htEduAudioBtn" type="button" onclick="window.toggleEducationAudio()" aria-pressed="${speechActive ? 'true' : 'false'}">${speechActive ? 'Stop Audio' : 'Read to Me'}</button>
+      ${isMushroomModule() ? `<button class="ht-edu-pill ht-edu-pill--camera" type="button" onclick="window.openTreeIdCamera()">\uD83D\uDCF7 ID This Tree</button>` : ''}
     </div>
     <div class="ht-edu-meta">${reason || (isMicroFeature ? 'Micro pin brief' : 'Education briefing')}</div>
     <div class="ht-edu-desc">${escapeHtml(descriptionText)}</div>
@@ -5443,10 +6135,24 @@ function showEducationTile(hotspot, reason) {
       ${hotspot.education.treeNotes ? `<div class="ht-edu-desc ht-edu-desc--muted">${escapeHtml(hotspot.education.treeNotes)}</div>` : ''}
       ${hotspot.education.treeId ? Object.values(hotspot.education.treeId).map(t => `
         <div class="ht-tree-id-card">
-          <div class="ht-tree-id-name">${escapeHtml(t.name)}</div>
-          <div class="ht-tree-id-detail"><strong>Bark:</strong> ${escapeHtml(t.bark)}</div>
-          <div class="ht-tree-id-detail"><strong>Leaves:</strong> ${escapeHtml(t.leaves)}</div>
-          <div class="ht-tree-id-detail"><strong>Shape:</strong> ${escapeHtml(t.shape)}</div>
+          <div class="ht-tree-id-header">
+            <div class="ht-tree-id-icon">${getTreeIdSvg(t.name)}</div>
+            <div class="ht-tree-id-name">${escapeHtml(t.name)}</div>
+          </div>
+          <div class="ht-tree-id-grid">
+            <div class="ht-tree-id-cell">
+              <div class="ht-tree-id-cell-label">\uD83C\uDF32 Bark</div>
+              <div class="ht-tree-id-detail">${escapeHtml(t.bark)}</div>
+            </div>
+            <div class="ht-tree-id-cell">
+              <div class="ht-tree-id-cell-label">\uD83C\uDF43 Leaves</div>
+              <div class="ht-tree-id-detail">${escapeHtml(t.leaves)}</div>
+            </div>
+            <div class="ht-tree-id-cell">
+              <div class="ht-tree-id-cell-label">\uD83C\uDF33 Shape</div>
+              <div class="ht-tree-id-detail">${escapeHtml(t.shape)}</div>
+            </div>
+          </div>
           <div class="ht-tree-id-tip">\uD83D\uDCA1 ${escapeHtml(t.tip)}</div>
         </div>
       `).join('') : ''}
@@ -5786,7 +6492,7 @@ function showShedFindTile(shedFind, reason) {
   const when = shedFind?.timestamp ? new Date(shedFind.timestamp).toLocaleString() : '';
   tile.innerHTML = `
     <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
-      <div style="font-weight:bold;color:#FFD700;">Shed Find</div>
+      <div style="font-weight:bold;color:#FFD700;">${isMushroomModule() ? 'Mushroom Find' : 'Shed Find'}</div>
       <button onclick="closeEducationTile()" style="background:transparent;color:#FFD700;border:none;font-weight:bold;cursor:pointer;">X</button>
     </div>
     <div style="font-size:12px;color:#CCC;margin:6px 0;">${reason || ''}</div>
@@ -5835,7 +6541,7 @@ function showHuntOverviewTile(reason) {
 
   tile.innerHTML = `
     <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
-      <div style="font-weight:bold;color:#FFD700;">Hunt Overview</div>
+      <div style="font-weight:bold;color:#FFD700;">${isMushroomModule() ? 'Forage Overview' : 'Hunt Overview'}</div>
       <button onclick="closeEducationTile()" style="background:transparent;color:#FFD700;border:none;font-weight:bold;cursor:pointer;">X</button>
     </div>
     <div style="font-size:12px;color:#CCC;margin:6px 0;">${reason || 'Plan ready. Start walking to trigger hotspot alerts.'}</div>
@@ -5868,7 +6574,7 @@ function ensureLegend() {
 function updateLegend(allowedCount, unknownCount) {
   const legend = ensureLegend();
   legend.innerHTML = `
-    <div class="ht-legend-title">Shed-Hunting Filter</div>
+    <div class="ht-legend-title">${isMushroomModule() ? 'Foraging Filter' : 'Shed-Hunting Filter'}</div>
     <div class="ht-legend-row">
       <span class="ht-legend-dot" style="background:#00FF88;"></span>
       <span>Allowed (${allowedCount})</span>
@@ -5963,7 +6669,7 @@ function ensureSavedHuntBar() {
     <div class="ht-draw-helper-text" id="htSavedHuntText"></div>
     <div class="ht-draw-helper-actions">
       <button class="ht-draw-helper-btn primary" id="htSavedHuntGo" type="button" onclick="window.savedHuntGo()">Go</button>
-      <button class="ht-draw-helper-btn" id="htSavedHuntBuild" type="button" onclick="window.savedHuntBuildNew()">Build New Hunt</button>
+      <button class="ht-draw-helper-btn" id="htSavedHuntBuild" type="button" onclick="window.savedHuntBuildNew()">${isMushroomModule() ? 'Build New Forage' : 'Build New Hunt'}</button>
       <button class="ht-draw-helper-btn primary" id="htSavedHuntCancel" type="button" onclick="window.savedHuntCancel()">Cancel</button>
     </div>
   `;
@@ -6543,6 +7249,7 @@ function openWaypointModal({ onSubmit }) {
 }
 
 function openDeerPinModal({ onSubmit, defaults = {}, title, confirmLabel }) {
+  const isMush = isMushroomModule();
   const backdrop = document.createElement('div');
   backdrop.className = 'ht-modal-backdrop';
   backdrop.style.display = 'flex';
@@ -6550,10 +7257,22 @@ function openDeerPinModal({ onSubmit, defaults = {}, title, confirmLabel }) {
   const modal = document.createElement('div');
   modal.className = 'ht-modal';
   modal.innerHTML = `
-    <h3>${title || 'Log Deer Pin'}</h3>
+    <h3>${title || (isMush ? 'Log Forage Pin' : 'Log Deer Pin')}</h3>
     <div style="display:grid;gap:8px;">
-      <label style="font-size:12px;color:#bbb;">Deer Sign</label>
+      <label style="font-size:12px;color:#bbb;">${isMush ? 'Find Type' : 'Deer Sign'}</label>
       <select id="deerPinType" class="ht-select">
+        ${isMush ? `
+        <option value="morel" selected>Morel</option>
+        <option value="chanterelle">Chanterelle</option>
+        <option value="oyster">Oyster</option>
+        <option value="hen_of_woods">Hen of the Woods</option>
+        <option value="chicken_of_woods">Chicken of the Woods</option>
+        <option value="lions_mane">Lion's Mane</option>
+        <option value="host_tree">Host Tree</option>
+        <option value="dead_elm">Dead Elm</option>
+        <option value="moisture">Moisture Zone</option>
+        <option value="other_mushroom">Other Mushroom</option>
+        ` : `
         <option value="rubs">Rubs</option>
         <option value="scrapes">Scrapes</option>
         <option value="tracks">Tracks</option>
@@ -6566,6 +7285,7 @@ function openDeerPinModal({ onSubmit, defaults = {}, title, confirmLabel }) {
         <option value="camera">Camera</option>
         <option value="stand">Stand Site</option>
         <option value="sighting">Sighting</option>
+        `}
       </select>
       <label style="font-size:12px;color:#bbb;">Confidence</label>
       <select id="deerPinConfidence" class="ht-select">
@@ -6578,7 +7298,7 @@ function openDeerPinModal({ onSubmit, defaults = {}, title, confirmLabel }) {
     </div>
     <div class="ht-modal-actions">
       <button class="ht-modal-btn ghost" id="deerPinCancel">Cancel</button>
-      <button class="ht-modal-btn primary" id="deerPinSave">${confirmLabel || 'Save Deer Pin'}</button>
+      <button class="ht-modal-btn primary" id="deerPinSave">${confirmLabel || (isMushroomModule() ? 'Save Forage Pin' : 'Save Deer Pin')}</button>
     </div>
   `;
 
@@ -6627,7 +7347,7 @@ function buildDeerPinPopup(entry) {
   const confidence = escapeHtml(entry.confidence || 'medium');
   return `
     <div class="ht-pin-popup">
-      <div class="ht-pin-popup-title">Deer Pin</div>
+      <div class="ht-pin-popup-title">${isMushroomModule() ? 'Forage Pin' : 'Deer Pin'}</div>
       <div class="ht-pin-popup-meta">${sign} • ${confidence} confidence</div>
       <div class="ht-pin-popup-coords">${coordsText}</div>
       <div class="ht-pin-popup-actions">
@@ -6689,7 +7409,7 @@ window.editDeerPin = function(id) {
   const entry = findDeerPinEntry(id);
   if (!entry) return;
   openDeerPinModal({
-    title: 'Edit Deer Pin',
+    title: isMushroomModule() ? 'Edit Forage Pin' : 'Edit Deer Pin',
     confirmLabel: 'Update Pin',
     defaults: {
       type: entry.signType,
@@ -6702,7 +7422,7 @@ window.editDeerPin = function(id) {
       entry.notes = notes;
       saveHuntJournal();
       updateDeerPinMarker(entry);
-      showNotice('Deer pin updated.', 'success', 2400);
+      showNotice(isMushroomModule() ? 'Forage pin updated.' : 'Deer pin updated.', 'success', 2400);
     }
   });
 };
@@ -6717,7 +7437,7 @@ window.deleteDeerPin = function(id) {
     try { map.removeLayer(marker); } catch {}
   }
   deerPinMarkers.delete(id);
-  showNotice('Deer pin deleted.', 'info', 2400);
+  showNotice(isMushroomModule() ? 'Forage pin deleted.' : 'Deer pin deleted.', 'info', 2400);
 };
 
 function openTurkeyPinModal({ onSubmit }) {
@@ -7446,14 +8166,19 @@ function updateCoachFromPosition(latlng) {
   if (now - coachLastTipAt < 120000) return;
   coachLastTipAt = now;
 
-  const tips = [
+  const tips = isMushroomModule() ? [
+    'Focus on moisture pockets: north-facing slopes, creek bottoms, and shaded draws hold morels longer.',
+    'Check fallen elm, ash, tulip poplar, and old apple trees — prime morel hosts.',
+    'Scan at ankle-height in slow sweeping lanes. Morels blend into leaf litter easily.',
+    'If you find one morel, stop and grid a tight 20-foot circle — they rarely grow alone.'
+  ] : [
     'Stay just downwind of the main line; mature bucks favor subtle exits with cover.',
     'Check micro pinches and quiet cut-throughs; older bucks avoid the obvious trails.',
     'Sweep small nobs and benches for sheds. They act like wind-safe observation points.',
     'If you are not finding fresh sign, drift to the next terrain break and restart the grid.'
   ];
   const tip = tips[Math.floor(Math.random() * tips.length)];
-  showNotice(`HuntCoach: ${tip}`, 'info', 5200);
+  showNotice(`${isMushroomModule() ? 'ForageCoach' : 'HuntCoach'}: ${tip}`, 'info', 5200);
 }
 
 function getPreciseGeolocationOptions(overrides) {
@@ -7935,7 +8660,7 @@ function setDefaultAreaFromLocation() {
 
 function showNearestHotspotEducationInternal() {
   if (!navigator.geolocation || hotspotMarkers.length === 0) {
-    showNotice('No hotspots available yet. Start a hunt first.', 'warning');
+    showNotice(isMushroomModule() ? 'No hotspots available yet. Start a forage first.' : 'No hotspots available yet. Start a hunt first.', 'warning');
     return;
   }
 
@@ -8026,7 +8751,7 @@ function showPublicLandActivityGuidance() {
       <button onclick="closeEducationTile()" style="background:transparent;color:#FFD700;border:none;font-weight:bold;cursor:pointer;">X</button>
     </div>
     <p style="margin:8px 0;font-size:13px;line-height:1.4;">
-      Public land overlays are now visible. Always confirm the local shed-hunting regulations
+      Public land overlays are now visible. Always confirm the local ${isMushroomModule() ? 'foraging' : 'shed-hunting'} regulations
       and seasonal restrictions for each unit before entering.
     </p>
     <div style="margin:8px 0;padding:10px;background:#111;border-left:3px solid #FFD700;font-size:12px;">
@@ -8053,7 +8778,7 @@ function enablePublicLandLayer() {
   }
   map.addLayer(publicLandLayer);
 
-  showSelectionNoticeOnce('Public land overlay enabled. Verify local regulations for shed hunting access.', 'info', 4200);
+  showSelectionNoticeOnce(isMushroomModule() ? 'Public land overlay enabled. Verify local regulations for foraging access.' : 'Public land overlay enabled. Verify local regulations for shed hunting access.', 'info', 4200);
 }
 
 function disablePublicLandLayer() {
@@ -8222,9 +8947,10 @@ async function enableShedAllowedLayer() {
 
   const tile = UI_POPUPS_ENABLED ? ensureEducationTile() : null;
   if (tile) {
+    const _shedTitle = isMushroomModule() ? 'Foraging Allowed' : 'Shed Hunting Allowed';
     tile.innerHTML = `
       <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
-        <div style="font-weight:bold;color:#FFD700;">Shed Hunting Allowed</div>
+        <div style="font-weight:bold;color:#FFD700;">${_shedTitle}</div>
         <button onclick="closeEducationTile()" style="background:transparent;color:#FFD700;border:none;font-weight:bold;cursor:pointer;">X</button>
       </div>
       <p style="margin:8px 0;font-size:13px;line-height:1.4;"><span class="ht-loading-pulse"></span>Scanning MDC regulations for the current map area...</p>
@@ -8320,9 +9046,10 @@ async function enableShedAllowedLayer() {
   }).addTo(map);
 
   if (tile) {
+    const _shedTitle2 = isMushroomModule() ? 'Foraging Allowed' : 'Shed Hunting Allowed';
     tile.innerHTML = `
       <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
-        <div style="font-weight:bold;color:#FFD700;">Shed Hunting Allowed</div>
+        <div style="font-weight:bold;color:#FFD700;">${_shedTitle2}</div>
         <button onclick="closeEducationTile()" style="background:transparent;color:#FFD700;border:none;font-weight:bold;cursor:pointer;">X</button>
       </div>
       <p style="margin:8px 0;font-size:13px;line-height:1.4;">
@@ -8548,7 +9275,7 @@ window.showProperties = function() {
 };
 
 window.showHunts = function() {
-  showNotice('Hunts history coming soon.', 'info');
+  showNotice(isMushroomModule() ? 'Forage history coming soon.' : 'Hunts history coming soon.', 'info');
 };
 
 window.showWeather = function() {
@@ -8558,7 +9285,7 @@ window.showWeather = function() {
 window.exitHunt = function() {
   resetActiveHuntState();
   openFieldCommandTray();
-  showNotice('Hunt ended. Restarting...', 'info', 1200);
+  showNotice(isMushroomModule() ? 'Forage ended. Restarting...' : 'Hunt ended. Restarting...', 'info', 1200);
   setTimeout(() => {
     window.location.reload();
   }, 300);
@@ -8663,7 +9390,7 @@ window.startOver = function() {
   setLockInAreaStatus('', null);
   setFieldCommandStep(1);
   openFieldCommandTray();
-  showNotice('Start over ready. Define a new hunt area.', 'info', 2600);
+  showNotice(isMushroomModule() ? 'Start over ready. Define a new forage area.' : 'Start over ready. Define a new hunt area.', 'info', 2600);
 };
 
 function updateLockInAreaState(isReady) {
@@ -8730,8 +9457,9 @@ function buildCoreZonesFromSeeds(seedFeatures, windDir, depth) {
 
 window.lockInArea = function() {
   if (!selectedAreaLayer && !currentPolygon) {
-    setLockInAreaStatus('Define a hunt area first.', 'error');
-    showNotice('Define a hunt area first.', 'warning', 3200);
+    const areaMsg = isMushroomModule() ? 'Define a forage area first.' : 'Define a hunt area first.';
+    setLockInAreaStatus(areaMsg, 'error');
+    showNotice(areaMsg, 'warning', 3200);
     return;
   }
   fieldCommandFlowActive = true;
@@ -8796,7 +9524,7 @@ window.startLocationFromGPS = function() {
       updateUserLocationMarker(latlng);
       map.setView(latlng, zoom, { animate: true });
       setFieldCommandStep(1);
-      showNotice('Location set. Define your hunt area.', 'success', 3200);
+      showNotice(isMushroomModule() ? 'Location set. Define your forage area.' : 'Location set. Define your hunt area.', 'success', 3200);
     },
     (err) => {
       const msg = err && err.message ? err.message : 'Unable to read GPS location.';
@@ -8817,7 +9545,7 @@ window.startLocationPickOnMap = function() {
 
 window.startRouteFromMyLocation = function() {
   if (!hotspotMarkers.length && !isFlyModule()) {
-    showNotice('No pins yet. Build a hunt plan first.', 'warning', 3600);
+    showNotice(isMushroomModule() ? 'No pins yet. Build a forage plan first.' : 'No pins yet. Build a hunt plan first.', 'warning', 3600);
     return;
   }
   if (!navigator.geolocation) {
@@ -8925,7 +9653,7 @@ window.openPlanPanel = function() {
     }
   }
   if (!selectedAreaLayer && !currentPolygon) {
-    showNotice('Select a hunt area first: parcel, draw, or radius.', 'warning', 3600);
+    showNotice(isMushroomModule() ? 'Select a forage area first: parcel, draw, or radius.' : 'Select a hunt area first: parcel, draw, or radius.', 'warning', 3600);
     return;
   }
   const areaLayer = selectedAreaLayer || currentPolygon;
@@ -8967,7 +9695,7 @@ window.logHuntWaypoint = function() {
         huntJournalEntries.unshift(entry);
         saveHuntJournal();
         L.marker([lat, lng], { icon: getBrandedPinIcon('W') }).addTo(map);
-        showNotice('Waypoint logged to hunt journal.', 'success', 3200);
+        showNotice(isMushroomModule() ? 'Waypoint logged to forage journal.' : 'Waypoint logged to hunt journal.', 'success', 3200);
       }
     });
   }, null, getPreciseGeolocationOptions({ timeout: 12000 }));
@@ -8989,16 +9717,17 @@ window.toggleUserMenu = function() {
 
 // Log Shed Find
 function logShedFind() {
+  const isMush = isMushroomModule();
   if (navigator.geolocation) {
     navigator.geolocation.getCurrentPosition(function(position) {
       const lat = position.coords.latitude;
       const lng = position.coords.longitude;
       openInputModal({
-        title: 'Log Shed Find',
-        message: 'Describe the shed (points, side, condition, habitat).',
-        placeholder: 'Example: Right side, 5 points, fresh drop near bedding cover.',
+        title: isMush ? 'Log Mushroom Find' : 'Log Shed Find',
+        message: isMush ? 'Describe the find (species, size, nearby trees, habitat).' : 'Describe the shed (points, side, condition, habitat).',
+        placeholder: isMush ? 'Example: Yellow morel, 4 inches, near dead elm in creek bottom.' : 'Example: Right side, 5 points, fresh drop near bedding cover.',
         multiline: true,
-        confirmLabel: 'Log Shed',
+        confirmLabel: isMush ? 'Log Find' : 'Log Shed',
         onSubmit: (notes) => {
           if (!notes) return;
 
@@ -9022,10 +9751,10 @@ function logShedFind() {
             icon: getBrandedPinIcon('F')
           }).addTo(map);
           marker.__shedFindData = shedFind;
-          marker.on('click', () => showShedFindTile(shedFind, 'Logged shed find.'));
-          showShedFindTile(shedFind, 'Logged shed find.');
+          marker.on('click', () => showShedFindTile(shedFind, isMush ? 'Logged mushroom find.' : 'Logged shed find.'));
+          showShedFindTile(shedFind, isMush ? 'Logged mushroom find.' : 'Logged shed find.');
 
-          showNotice('Shed logged successfully. Check nearby for the matching side!', 'success', 4200);
+          showNotice(isMush ? 'Mushroom logged! Check nearby for more — they cluster.' : 'Shed logged successfully. Check nearby for the matching side!', 'success', 4200);
         }
       });
     }, null, getPreciseGeolocationOptions({ timeout: 12000 }));
@@ -9051,6 +9780,15 @@ function showVoicePopup(message, duration = 3800) {
 
 function getVoiceKindLabel(kind) {
   const normalized = String(kind || '').toLowerCase();
+  if (isMushroomModule()) {
+    if (normalized === 'buck_sign') return 'tree marker';
+    if (normalized === 'scrape') return 'soil disturbance';
+    if (normalized === 'rub') return 'bark note';
+    if (normalized === 'trail') return 'game trail';
+    if (normalized === 'bedding') return 'duff bed';
+    if (normalized === 'shed') return 'mushroom find';
+    return 'forage note';
+  }
   if (normalized === 'buck_sign') return 'buck sign';
   if (normalized === 'scrape') return 'buck scrape';
   if (normalized === 'rub') return 'buck rub';
@@ -9118,7 +9856,7 @@ function logVoiceWaypoint(kind, options = {}) {
       const shedFind = {
         type: 'shed_find',
         coords: [lat, lng],
-        notes: 'Voice log: shed found.',
+        notes: isMushroomModule() ? 'Voice log: mushroom found.' : 'Voice log: shed found.',
         timestamp: now
       };
       huntJournalEntries.unshift({
@@ -9126,14 +9864,14 @@ function logVoiceWaypoint(kind, options = {}) {
         ...shedFind
       });
       saveHuntJournal();
-      showNotice('Shed logged at your location.', 'success', 4200);
+      showNotice(isMushroomModule() ? 'Mushroom find logged at your location.' : 'Shed logged at your location.', 'success', 4200);
       queueLiveStrategyUpdate('shed');
 
       const dropPin = () => {
         const marker = L.marker([lat, lng], { icon: getBrandedPinIcon('F') }).addTo(map);
         marker.__shedFindData = shedFind;
-        marker.on('click', () => showShedFindTile(shedFind, 'Logged shed find.'));
-        showShedFindTile(shedFind, 'Logged shed find.');
+        marker.on('click', () => showShedFindTile(shedFind, isMushroomModule() ? 'Logged mushroom find.' : 'Logged shed find.'));
+        showShedFindTile(shedFind, isMushroomModule() ? 'Logged mushroom find.' : 'Logged shed find.');
         speakVoiceConfirm('Pin dropped.');
       };
 
@@ -9218,7 +9956,7 @@ function handleVoiceTranscript(text) {
     if (voiceArmTimer) clearTimeout(voiceArmTimer);
     voiceArmTimer = setTimeout(() => { voiceArmed = false; }, 8000);
     speakText('Hun-tek voice command. What would you like to log?');
-    showVoicePopup('Listening: say "log buck sign" or "log shed found"');
+    showVoicePopup(isMushroomModule() ? 'Listening: say "log mushroom" or "log tree marker"' : 'Listening: say "log buck sign" or "log shed found"');
     return;
   }
 
@@ -9274,7 +10012,7 @@ function handleVoiceTranscript(text) {
   }
 
   voiceDirectMode = false;
-  showNotice('Voice command not recognized. Try "log buck sign" or "log shed found".', 'info', 4200);
+  showNotice(isMushroomModule() ? 'Voice command not recognized. Try "log tree marker" or "log mushroom found".' : 'Voice command not recognized. Try "log buck sign" or "log shed found".', 'info', 4200);
 }
 
 function startVoiceCommands() {
@@ -9338,7 +10076,7 @@ function startVoiceCommands() {
   };
 
   voiceRecognizer.onnomatch = () => {
-    showNotice('No voice match. Try "log buck sign" or "log shed found".', 'info', 3600);
+    showNotice(isMushroomModule() ? 'No voice match. Try "log mushroom" or "log tree marker".' : 'No voice match. Try "log buck sign" or "log shed found".', 'info', 3600);
   };
 
   voiceRecognizer.onerror = (event) => {
@@ -9353,7 +10091,7 @@ function startVoiceCommands() {
   };
 
   voiceActive = true;
-  showVoicePopup('Voice Commands on. Say "Hey Huntech" to log.');
+  showVoicePopup(isMushroomModule() ? 'Voice Commands on. Say "Hey Huntech" to log a find.' : 'Voice Commands on. Say "Hey Huntech" to log.');
   try { voiceRecognizer.start(); } catch {}
 }
 
@@ -9377,7 +10115,7 @@ window.logSignVoice = function() {
     voiceDirectMode = false;
   }, 10000);
   speakText('Hun-tek voice command. What would you like to log?');
-  showVoicePopup('Listening: say "log buck sign" or "log shed found"');
+  showVoicePopup(isMushroomModule() ? 'Listening: say "log tree marker" or "log mushroom found"' : 'Listening: say "log buck sign" or "log shed found"');
   setTimeout(() => {
     if (voiceActive && voiceRecognizer) {
       try { voiceRecognizer.stop(); } catch {}
@@ -9434,7 +10172,7 @@ window.toggleVoiceCommands = function() {
 window.logPinOnMap = function() {
   if (!map) return;
   mapClickMode = 'deer-pin';
-  showNotice('Tap the map to drop a deer pin.', 'info', 3200);
+  showNotice(isMushroomModule() ? 'Tap the map to drop a forage pin.' : 'Tap the map to drop a deer pin.', 'info', 3200);
 };
 
 window.logDeerPinOnMap = function() {
@@ -9457,7 +10195,7 @@ window.startHuntFromCriteria = function(options = {}) {
     fieldCommandFlowActive = true;
   }
   if (options.skipStrategyPanel) {
-    showNotice('Building hunt plan…', 'info', 2200);
+    showNotice(isMushroomModule() ? 'Building forage plan…' : 'Building hunt plan…', 'info', 2200);
   }
   huntCriteria = getHuntCriteriaFromUI();
   document.body.classList.add('ht-hunt-active');
@@ -9488,8 +10226,8 @@ window.startShedHunt = async function(options = {}) {
   // Verify hunt area exists
   const huntArea = selectedAreaLayer || currentPolygon;
   if (!huntArea) {
-    handleLockInAreaFailure('Define a hunt area first.');
-    showNotice('Define a hunt area first: radius, draw, or boundary.', 'warning', 4200);
+    handleLockInAreaFailure(isMushroomModule() ? 'Define a forage area first.' : 'Define a hunt area first.');
+    showNotice(isMushroomModule() ? 'Define a forage area first: radius, draw, or boundary.' : 'Define a hunt area first: radius, draw, or boundary.', 'warning', 4200);
     return;
   }
 
@@ -9550,7 +10288,7 @@ window.startShedHunt = async function(options = {}) {
         areaAnalysis = await analyzeSelectedAreaTerrain(bounds, areaLayer, areaType, windDir, analysisDepth);
       } catch (error) {
         areaAnalysis = null;
-        updatePlanLoadingStatus('Terrain scan offline.', 'Unable to build mature-buck pins.');
+        updatePlanLoadingStatus('Terrain scan offline.', isMushroomModule() ? 'Unable to build forage pins.' : 'Unable to build mature-buck pins.');
         showNotice('Terrain scan offline. No terrain pins available.', 'warning', 4200);
         if (strictTerrainOnly) {
           handleLockInAreaFailure('Terrain scan failed. Try again or reduce area size.');
@@ -9617,9 +10355,10 @@ window.startShedHunt = async function(options = {}) {
     }
     if (strictMode && !seeded.length) {
       if (strictTerrainOnly) {
-        updatePlanLoadingStatus('Terrain scan', 'No mature-buck terrain signals found.');
-        showNotice('No mature-buck terrain signals found. Try a new area.', 'warning', 4200);
-        handleLockInAreaFailure('No mature-buck terrain signals found. Try a different area.');
+        const _noSignalMsg = isMushroomModule() ? 'No forage terrain signals found.' : 'No mature-buck terrain signals found.';
+        updatePlanLoadingStatus('Terrain scan', _noSignalMsg);
+        showNotice(_noSignalMsg + ' Try a new area.', 'warning', 4200);
+        handleLockInAreaFailure(_noSignalMsg + ' Try a different area.');
         return;
       }
       strictMode = false;
@@ -9677,7 +10416,7 @@ window.startShedHunt = async function(options = {}) {
     const attemptLimit = criteria?.depth === 'deep' ? 60 : 35;
     for (let i = 0; i < remainingCount; i++) {
       const habitat = habitatPool[i % habitatPool.length];
-      const eduSet = isMushroomModule() ? MUSHROOM_EDUCATION : SHED_EDUCATION;
+      const eduSet = getActiveEducationSet();
       const baseEdu = eduSet[habitat];
       let latlng = null;
       let flatRejects = 0;
@@ -10732,7 +11471,9 @@ function buildThermalSwitchAlerts(rows) {
         timeMs: curr.timeMs,
         hourDiff: curr.hourDiff,
         label: crossedUp ? 'Thermal lift begins' : 'Thermal drop begins',
-        detail: strong ? 'Strong switch likely. Mature bucks often reposition.' : 'Subtle switch. Watch micro moves.',
+        detail: strong
+          ? (isMushroomModule() ? 'Strong switch likely. Soil moisture may shift — check shaded draws.' : 'Strong switch likely. Mature bucks often reposition.')
+          : (isMushroomModule() ? 'Subtle switch. Watch micro-climate changes near water.' : 'Subtle switch. Watch micro moves.'),
         lift: currLift,
         windDir: curr.windDir,
         windSpeed: curr.windSpeed
@@ -10823,10 +11564,15 @@ function renderWeatherPanel() {
     <div class="ht-weather-section">
       <div class="ht-weather-section-title">Thermal Masterclass</div>
       <div class="ht-weather-tips">
-        <strong>Thermal hubs:</strong> bowls where multiple draws meet. Bucks use them to scent-check multiple ridges.
-        <br><strong>Morning lift:</strong> move up from drains to benches and leeward pockets.
-        <br><strong>Evening sink:</strong> drop into thermal drains and low bowls before dark.
-        <br><strong>Switch moment:</strong> expect short elevation moves and micro repositioning along benches.
+        ${isMushroomModule()
+          ? `<strong>Moisture zones:</strong> low draws, north-facing slopes, and shaded creek banks hold soil moisture longest.
+            <br><strong>Morning dew:</strong> check leaf litter edges and downed logs in the early hours.
+            <br><strong>Afternoon warmth:</strong> south-facing hillsides may dry faster — focus on deeper shade.
+            <br><strong>Rain follow-up:</strong> 2-3 days after warm rain is prime morel timing. Watch soil temp near 50°F.`
+          : `<strong>Thermal hubs:</strong> bowls where multiple draws meet. Bucks use them to scent-check multiple ridges.
+            <br><strong>Morning lift:</strong> move up from drains to benches and leeward pockets.
+            <br><strong>Evening sink:</strong> drop into thermal drains and low bowls before dark.
+            <br><strong>Switch moment:</strong> expect short elevation moves and micro repositioning along benches.`}
       </div>
       <button class="ht-thermal-hub-toggle" type="button" onclick="toggleThermalHubOverlay()">${thermalHubEnabled ? 'Hide' : 'Show'} Thermal Hubs</button>
     </div>
@@ -11317,7 +12063,15 @@ function stopPlanLoadingTicker() {
 function startPlanLoadingTicker() {
   stopPlanLoadingTicker();
   planLoadingIndex = 0;
-  const messages = [
+  const messages = isMushroomModule() ? [
+    ['HUNTECH AI core online', 'Forage terrain signals streaming in.'],
+    ['Scanning elevation lattice', 'Slope aspect and drainage mapped.'],
+    ['Analyzing moisture zones', 'Canopy cover and soil conditions modeled.'],
+    ['Mapping tree associations', 'Elm, ash, and poplar zones identified.'],
+    ['Deploying AI forensics', 'Forage-pin confidence converging.'],
+    ['Balancing pin distribution', 'Spacing resolved at micro-variance.'],
+    ['Finalizing route context', 'Route-aware scoring engaged.']
+  ] : [
     ['HUNTECH AI core online', 'Terrain signals streaming into the mesh.'],
     ['Scanning elevation lattice', 'Slope vectors and ridge breaks fused.'],
     ['Decoding habitat layers', 'Cover density and thermal drift modeled.'],
@@ -11349,8 +12103,8 @@ function showStrategyLoadingPanel() {
     <h2 class="ht-panel-title">Plan + Route</h2>
     <div class="ht-plan-loading">
       <div class="ht-plan-spinner" aria-hidden="true"></div>
-      <div class="ht-plan-loading-title">Building hunt plan...</div>
-      <div class="ht-plan-loading-sub">Mapping hotspots, wind, and route options.</div>
+      <div class="ht-plan-loading-title">${isMushroomModule() ? 'Building forage plan...' : 'Building hunt plan...'}</div>
+      <div class="ht-plan-loading-sub">${isMushroomModule() ? 'Mapping forage pins, moisture, and route options.' : 'Mapping hotspots, wind, and route options.'}</div>
     </div>
   `;
   document.body.appendChild(panel);
@@ -11394,12 +12148,22 @@ function showStrategyPanel(hotspots, temp, windSpeed, windDir, options = {}) {
 
   const sitRecommendations = safeHotspots
     .slice(0, 3)
-    .map((h, idx) => `
+    .map((h, idx) => {
+      let sitAdvice;
+      if (isTurkeyModule()) {
+        const weapon = window._turkeyWeapon || 'shotgun';
+        const dist = weapon === 'bow' ? '15-20 yd' : weapon === 'crossbow' ? '20-30 yd' : '30-40 yd';
+        sitAdvice = `Set up ${dist} from sign. Back to a wide tree. Start with soft yelps.`;
+      } else {
+        sitAdvice = `Best with ${windDir || 'variable'} wind. Approach from downwind cover.`;
+      }
+      return `
       <div style="margin:6px 0;padding:6px;border:1px solid rgba(0,255,136,0.25);border-radius:8px;background:rgba(0,255,136,0.05);">
-        <div style="font-weight:700;color:#7cffc7;">Sit ${idx + 1}: ${h?.education?.title || 'Priority Zone'}</div>
-        <div style="font-size:12px;color:#ccc;">Best with ${windDir || 'variable'} wind. Approach from downwind cover.</div>
+        <div style="font-weight:700;color:#7cffc7;">Setup ${idx + 1}: ${h?.education?.title || 'Priority Zone'}</div>
+        <div style="font-size:12px;color:#ccc;">${sitAdvice}</div>
       </div>
-    `)
+    `;
+    })
     .join('');
 
   const mode = options && options.mode ? options.mode : 'route';
@@ -11429,18 +12193,26 @@ function showStrategyPanel(hotspots, temp, windSpeed, windDir, options = {}) {
   const firstWhy = Array.isArray(firstHotspot?.education?.why) ? firstHotspot.education.why : [];
   const firstApproach = Array.isArray(firstHotspot?.education?.approach) ? firstHotspot.education.approach : [];
   const isMush = isMushroomModule();
-  const missionText = isMush
-    ? `Balanced route for your ${missionTime}-minute window: the path favors moisture, canopy cover, and host trees while prioritizing your top forage pins. The route may not follow priority order — start with the highest-priority pins, then flow to the nearest next pin to keep the walk efficient. Check in at each pin to start tracking, then tap Check Out to close the search shape before moving on.`
-    : `Balanced route for your ${missionTime}-minute window: the path favors easy walking while still prioritizing your top hotspots. The route may not follow priority order, so always hit Priority 1-2 pins first, then flow into the nearest next pin to keep the walk efficient. Walk the downwind side of primary doe trails to mirror mature buck travel. Check in on each pin to start tracking, then tap Check Out to close the search shape before moving on.`;
-  const phaseOne = isMush
-    ? `Phase 1: Entry + check-in. Approach quietly, confirm ground moisture level, then tap Check In when you reach ${firstTitle}.`
-    : `Phase 1: Entry + check-in. Approach from the downwind side, confirm wind with milkweed or powder, then tap Check In when you reach ${firstTitle}.`;
-  const phaseTwo = isMush
-    ? 'Phase 2: Forage sweep. Work each search shape in 10-20 yard lanes. Focus on downed logs, leaf litter edges, and the base of host trees. Scan at ankle level and pause often. Track tree species as you go.'
-    : `Phase 2: Sweep. Walk each search shape in 30-60 yard lanes. Work leeward edges, trail crossings, and benches that keep your wind off likely beds. Stay 20-40 yards downwind of doe trails to follow how a mature buck checks them.`;
-  const phaseThree = isMush
-    ? 'Phase 3: Reset + adjust. If you find morels, stop and grid a tight 20-foot circle — they rarely grow alone. If cold, move to the next closest priority pin to keep distance low.'
-    : `Phase 3: Exit + adjust. If sign is hot, tighten to micro-grids around the last find. If cold, move to the next closest priority pin to keep distance low.`;
+  const isTurk = isTurkeyModule();
+  let missionText, phaseOne, phaseTwo, phaseThree;
+  if (isTurk) {
+    const weapon = window._turkeyWeapon || 'shotgun';
+    const setupDist = weapon === 'bow' ? '15-20' : weapon === 'crossbow' ? '20-30' : '30-40';
+    missionText = `Turkey hunt plan for your ${missionTime}-minute window (${weapon}). The route prioritizes roost zones and strut areas first, then flows through travel corridors and feeding areas. Priority 1 is always the roost — be set up ${setupDist} yards away before first light. Check in at each setup to start tracking, then tap Check Out before moving to the next position.`;
+    phaseOne = `Phase 1: Pre-dawn setup. Be in position at ${firstTitle} 30 minutes before shooting light. Back against a tree wider than your shoulders. ${weapon === 'shotgun' ? 'Pattern your gun at 40 yards before the hunt.' : weapon === 'bow' ? 'Range key landmarks out to 25 yards.' : 'Range landmarks out to 35 yards.'} Tap Check In when set.`;
+    phaseTwo = 'Phase 2: Calling sequence. Start with soft tree yelps before flydown. After flydown, switch to clucks and purrs. Wait 15-20 minutes between calling series — patience kills more turkeys than world-class calling. If a gobbler responds, DO NOT call again until he gobbles twice more.';
+    phaseThree = 'Phase 3: Mid-morning relocate. If no response by 9 AM, move to the next strut zone or travel corridor. Turkeys shift to feeding areas mid-morning. Soft yelps and scratching in the leaves can pull in a quiet gobbler. Stay mobile but set up fully at each new position.';
+  } else if (isMush) {
+    missionText = `Balanced route for your ${missionTime}-minute window: the path favors moisture, canopy cover, and host trees while prioritizing your top forage pins. The route may not follow priority order — start with the highest-priority pins, then flow to the nearest next pin to keep the walk efficient. Check in at each pin to start tracking, then tap Check Out to close the search shape before moving on.`;
+    phaseOne = `Phase 1: Entry + check-in. Approach quietly, confirm ground moisture level, then tap Check In when you reach ${firstTitle}.`;
+    phaseTwo = 'Phase 2: Forage sweep. Work each search shape in 10-20 yard lanes. Focus on downed logs, leaf litter edges, and the base of host trees. Scan at ankle level and pause often. Track tree species as you go.';
+    phaseThree = 'Phase 3: Reset + adjust. If you find morels, stop and grid a tight 20-foot circle — they rarely grow alone. If cold, move to the next closest priority pin to keep distance low.';
+  } else {
+    missionText = `Balanced route for your ${missionTime}-minute window: the path favors easy walking while still prioritizing your top hotspots. The route may not follow priority order, so always hit Priority 1-2 pins first, then flow into the nearest next pin to keep the walk efficient. Walk the downwind side of primary doe trails to mirror mature buck travel. Check in on each pin to start tracking, then tap Check Out to close the search shape before moving on.`;
+    phaseOne = `Phase 1: Entry + check-in. Approach from the downwind side, confirm wind with milkweed or powder, then tap Check In when you reach ${firstTitle}.`;
+    phaseTwo = `Phase 2: Sweep. Walk each search shape in 30-60 yard lanes. Work leeward edges, trail crossings, and benches that keep your wind off likely beds. Stay 20-40 yards downwind of doe trails to follow how a mature buck checks them.`;
+    phaseThree = `Phase 3: Exit + adjust. If sign is hot, tighten to micro-grids around the last find. If cold, move to the next closest priority pin to keep distance low.`;
+  }
   const logo = getHuntechLogoMarkup('ht-huntech-logo ht-huntech-logo--sm');
   const missionLogo = getHuntechLogoMarkup('ht-huntech-logo ht-mission-brief-logo');
   const cardLogo = getHuntechLogoMarkup('ht-card-logo');
@@ -11470,17 +12242,17 @@ function showStrategyPanel(hotspots, temp, windSpeed, windDir, options = {}) {
   const missionBriefHtml = showMissionBrief ? `
     <div class="ht-mission-brief">
       <div class="ht-mission-brief-header">
-        <div class="ht-mission-brief-title">${missionLogo}<span>${isMush ? 'Huntech AI Mushroom Foraging Brief' : 'Huntech AI Shed Strategy'}</span></div>
+        <div class="ht-mission-brief-title">${missionLogo}<span>${isTurk ? 'Huntech AI Turkey Strategy' : (isMush ? 'Huntech AI Mushroom Foraging Brief' : 'Huntech AI Shed Strategy')}</span></div>
         <button class="ht-mission-brief-close" type="button" onclick="closeStrategyPanel(); stopSpeech();" aria-label="Close mission brief">Close</button>
         <div class="ht-mission-brief-actions">
           <button class="ht-mission-brief-pill" id="missionBriefAudioBtn" type="button" onclick="toggleMissionBriefAudio()" aria-pressed="${speechActive ? 'true' : 'false'}">${speechActive ? 'Stop Audio' : 'Read to Me'}</button>
-          <button class="ht-mission-brief-pill" type="button" onclick="saveCurrentHuntPlan()">Save Hunt Offline</button>
+          <button class="ht-mission-brief-pill" type="button" onclick="saveCurrentHuntPlan()">${isMush ? 'Save Forage Offline' : 'Save Hunt Offline'}</button>
         </div>
       </div>
       <div class="ht-mission-brief-statement">
         ${logo}
         <div class="ht-mission-brief-statement-body">
-          <div class="ht-mission-brief-statement-title">${isMush ? 'Huntech Mushroom Strategy' : 'Huntech Shed Strategy'}</div>
+          <div class="ht-mission-brief-statement-title">${isTurk ? 'Huntech Turkey Strategy' : (isMush ? 'Huntech Mushroom Strategy' : 'Huntech Shed Strategy')}</div>
           <span>${missionText}</span>
         </div>
       </div>
@@ -11547,8 +12319,8 @@ function showStrategyPanel(hotspots, temp, windSpeed, windDir, options = {}) {
       <details>
         <summary>Scouting Layer</summary>
         <div style="margin-top:10px;display:grid;gap:8px;">
-          <button class="ht-panel-btn ghost" id="scoutingToggleBtn" onclick="toggleScoutingLayer()">${coreAreaEnabled ? 'Hide' : 'Show'} Core Buck Zones</button>
-          <div style="font-size:12px;color:#aaa;">In-depth mode surfaces core mature buck areas for scouting and future sit calculations.</div>
+          <button class="ht-panel-btn ghost" id="scoutingToggleBtn" onclick="toggleScoutingLayer()">${coreAreaEnabled ? 'Hide' : 'Show'} ${isMush ? 'Core Morel Zones' : 'Core Buck Zones'}</button>
+          <div style="font-size:12px;color:#aaa;">${isMush ? 'In-depth mode surfaces core morel habitat zones for scouting and focused foraging.' : 'In-depth mode surfaces core mature buck areas for scouting and future sit calculations.'}</div>
         </div>
       </details>
 
@@ -11578,14 +12350,14 @@ function showStrategyPanel(hotspots, temp, windSpeed, windDir, options = {}) {
         <div style="margin-top:10px;display:grid;gap:8px;">
           <button class="ht-panel-btn ghost" onclick="logHuntWaypoint()">Log Waypoint</button>
           <button class="ht-panel-btn ghost" onclick="logJournalEntry()">Add Journal Entry</button>
-          <button class="ht-panel-btn ghost" onclick="openHuntJournalPanel()">Open Hunt Journal</button>
+          <button class="ht-panel-btn ghost" onclick="openHuntJournalPanel()">${isMush ? 'Open Forage Journal' : 'Open Hunt Journal'}</button>
         </div>
       </details>
 
       <details>
         <summary>Saved Plans</summary>
         <div style="margin-top:10px;display:grid;gap:8px;">
-          <button class="ht-panel-btn primary" onclick="saveCurrentHuntPlan()">Save Hunt Offline</button>
+          <button class="ht-panel-btn primary" onclick="saveCurrentHuntPlan()">${isMush ? 'Save Forage Offline' : 'Save Hunt Offline'}</button>
           <div id="savedPlansList" style="font-size:12px;color:#ddd;"></div>
         </div>
       </details>
@@ -11593,7 +12365,7 @@ function showStrategyPanel(hotspots, temp, windSpeed, windDir, options = {}) {
       <details>
         <summary>Audio Briefing</summary>
         <div style="margin-top:10px;">
-          <button class="ht-panel-btn ghost" onclick="speakHuntPlan()" ${hasHotspots ? '' : 'disabled'}>Listen to Hunt Strategy</button>
+          <button class="ht-panel-btn ghost" onclick="speakHuntPlan()" ${hasHotspots ? '' : 'disabled'}>${isMush ? 'Listen to Forage Strategy' : 'Listen to Hunt Strategy'}</button>
           <button class="ht-panel-btn ghost" onclick="stopSpeech()" style="margin-top:8px;">Stop Audio</button>
         </div>
       </details>
@@ -11645,7 +12417,7 @@ function ensureAdvancedToolsTray() {
     <div class="ht-tool-grid">
       <button class="ht-tool-btn" id="toolTrackerBtn" onclick="toggleTracking()" disabled aria-disabled="true">Live Tracker</button>
       <button class="ht-tool-btn" id="toolVoiceBtn" onclick="toggleVoiceCommands()" disabled aria-disabled="true">Voice Commands</button>
-      <button class="ht-tool-btn" id="toolLogPinBtn" onclick="logPinOnMap()">Log Deer Pin</button>
+      <button class="ht-tool-btn" id="toolLogPinBtn" onclick="logPinOnMap()">${isMushroomModule() ? 'Log Forage Pin' : 'Log Deer Pin'}</button>
       <button class="ht-tool-btn" id="toolTurkeyPinBtn" onclick="logTurkeyPinOnMap()">Drop Turkey Pin</button>
       <button class="ht-tool-btn ht-tool-btn-coach" id="toolCoachBtn" onclick="startCoach()">
         <svg viewBox="0 0 64 64" aria-hidden="true">
@@ -11776,8 +12548,8 @@ window.saveCurrentHuntPlan = function() {
   }
 
   openInputModal({
-    title: 'Save Hunt Offline',
-    message: 'Saved hunts are stored offline on this device for quick access.',
+    title: isMushroomModule() ? 'Save Forage Plan Offline' : 'Save Hunt Offline',
+    message: isMushroomModule() ? 'Saved foraging plans are stored offline on this device for quick access.' : 'Saved hunts are stored offline on this device for quick access.',
     placeholder: 'Example: Late Feb Ridge Loop',
     confirmLabel: 'Save Offline',
     onSubmit: (name) => {
@@ -11792,7 +12564,7 @@ window.saveCurrentHuntPlan = function() {
       saveHuntPlans();
       renderSavedPropertiesSelect();
       renderSavedPlansList();
-      showNotice('Hunt saved offline.', 'success', 3200);
+      showNotice(isMushroomModule() ? 'Forage saved offline.' : 'Hunt saved offline.', 'success', 3200);
     }
   });
 };
@@ -11810,7 +12582,7 @@ function loadSavedHuntPlan(id) {
     ...h,
     education: buildCustomHotspotEducation({
       habitat: h.habitat,
-      base: (isMushroomModule() ? MUSHROOM_EDUCATION : SHED_EDUCATION)[h.habitat] || (isMushroomModule() ? MUSHROOM_EDUCATION : SHED_EDUCATION).transition,
+      base: getActiveEducationSet()[h.habitat] || getActiveEducationSet().transition || getActiveEducationSet().travelCorridor,
       latlng: Array.isArray(h.coords) ? L.latLng(h.coords[0], h.coords[1]) : null,
       bounds: plan.bounds
         ? L.latLngBounds([plan.bounds.south, plan.bounds.west], [plan.bounds.north, plan.bounds.east])
@@ -11847,8 +12619,8 @@ function loadSavedHuntPinsOnly(plan) {
       if (!h || !Array.isArray(h.coords) || h.coords.length < 2) return null;
       const latlng = L.latLng(h.coords[0], h.coords[1]);
       const habitat = h.habitat || 'transition';
-      const eduSetRestore = isMushroomModule() ? MUSHROOM_EDUCATION : SHED_EDUCATION;
-      const base = eduSetRestore[habitat] || eduSetRestore.transition;
+      const eduSetRestore = getActiveEducationSet();
+      const base = eduSetRestore[habitat] || eduSetRestore.transition || eduSetRestore.travelCorridor;
       const education = buildCustomHotspotEducation({
         habitat,
         base,
@@ -11911,7 +12683,7 @@ window.savedHuntGo = function() {
     window.lockInArea();
     return;
   }
-  showNotice('Define a hunt area first.', 'warning', 3200);
+  showNotice(isMushroomModule() ? 'Define a forage area first.' : 'Define a hunt area first.', 'warning', 3200);
 };
 
 window.savedHuntBuildNew = function() {
@@ -11921,7 +12693,7 @@ window.savedHuntBuildNew = function() {
     window.lockInArea();
     return;
   }
-  showNotice('Define a hunt area first.', 'warning', 3200);
+  showNotice(isMushroomModule() ? 'Define a forage area first.' : 'Define a hunt area first.', 'warning', 3200);
 };
 
 window.savedHuntCancel = function() {
@@ -11933,7 +12705,7 @@ window.savedHuntCancel = function() {
   if (select) select.value = '';
   setFieldCommandStep(1);
   openFieldCommandTray();
-  showNotice('Saved hunt cleared. Start a new area.', 'info', 3200);
+  showNotice(isMushroomModule() ? 'Saved forage area cleared. Start a new area.' : 'Saved hunt cleared. Start a new area.', 'info', 3200);
 };
 
 function removeSavedHuntPlan(id) {
@@ -11945,9 +12717,9 @@ function removeSavedHuntPlan(id) {
 
 window.logJournalEntry = function() {
   openInputModal({
-    title: 'Hunt Journal Entry',
-    message: 'Log a scouting note or hunt journal entry.',
-    placeholder: 'Example: Bedding area with heavy trails on north slope.',
+    title: isMushroomModule() ? 'Forage Journal Entry' : 'Hunt Journal Entry',
+    message: isMushroomModule() ? 'Log a scouting note or forage journal entry.' : 'Log a scouting note or hunt journal entry.',
+    placeholder: isMushroomModule() ? 'Example: Found morels near dead elm on north-facing slope.' : 'Example: Bedding area with heavy trails on north slope.',
     multiline: true,
     confirmLabel: 'Save Entry',
     onSubmit: (notes) => {
@@ -11972,15 +12744,15 @@ window.openHuntJournalPanel = function() {
   const modal = document.createElement('div');
   modal.className = 'ht-modal';
   modal.innerHTML = `
-    <h3>Hunt Journal</h3>
+    <h3>${isMushroomModule() ? 'Forage Journal' : 'Hunt Journal'}</h3>
     <div style="display:grid;gap:8px;margin-bottom:10px;">
       <label style="font-size:12px;color:#bbb;">Type</label>
       <select id="journalType" class="ht-select">
         <option value="all" selected>All Entries</option>
         <option value="waypoint">Waypoints</option>
-        <option value="deer_pin">Deer Pins</option>
+        <option value="deer_pin">${isMushroomModule() ? 'Forage Pins' : 'Deer Pins'}</option>
         <option value="turkey_pin">Turkey Pins</option>
-        <option value="shed_find">Shed Finds</option>
+        <option value="shed_find">${isMushroomModule() ? 'Mushroom Finds' : 'Shed Finds'}</option>
         <option value="note">Notes</option>
       </select>
       <label style="font-size:12px;color:#bbb;">Date Range</label>
@@ -12201,6 +12973,10 @@ function getMicroFeatureHint() {
 }
 
 function getMicroPinIcon(feature) {
+  // Mushroom module: use mushroom-themed micro pins
+  if (isMushroomModule()) {
+    return getMushroomMicroPinIcon(feature);
+  }
   const safeType = String(feature?.type || 'micro').toLowerCase();
   const cssType = safeType.replace(/_/g, '-');
   const label = String(feature?.icon || feature?.label || 'M').slice(0, 2).toUpperCase();
@@ -12227,7 +13003,10 @@ function buildMicroHotspot(feature, parentHotspot) {
       tips: feature?.tips || '',
       lookFor: feature?.lookFor || '',
       why: feature?.why || [],
-      approach: feature?.approach || []
+      approach: feature?.approach || [],
+      treeFocus: feature?.treeFocus || [],
+      treeNotes: feature?.treeNotes || '',
+      treeId: feature?.treeId || null
     }
   };
 }
@@ -12273,7 +13052,7 @@ function dropMicroFeaturesForActiveSearchArea() {
   if (!layer || !bounds) return;
 
   const placed = [];
-  MICRO_FEATURE_TEMPLATES.forEach((template, idx) => {
+  getMicroFeatureTemplates().forEach((template, idx) => {
     const point = getRandomPointInArea(areaLayer, areaType, bounds, placed);
     if (!point) return;
     const feature = {
@@ -12747,7 +13526,7 @@ function detectTerrainFeatures(samples, elevations) {
     const isHigh = elev[i] > prev + minProm && elev[i] > next + minProm;
     const isMicro = elev[i] > prev + microProm && elev[i] > next + microProm;
     if (!isHigh && isMicro) {
-      addFeature(i, 'micro_nob', 'Micro Nob', 'Small rise just off the main line. Mature bucks favor these subtle vantage points on calm, downwind approach.', { downwindMeters: 18 });
+      addFeature(i, 'micro_nob', isMushroomModule() ? 'Micro Rise' : 'Micro Nob', isMushroomModule() ? 'Subtle rise with drainage below. Check the shaded base for moisture pockets and host trees.' : 'Small rise just off the main line. Mature bucks favor these subtle vantage points on calm, downwind approach.', { downwindMeters: 18 });
     }
   }
 
@@ -12770,13 +13549,13 @@ function detectTerrainFeatures(samples, elevations) {
     const leftAbs = Math.abs(leftSlope);
     const rightAbs = Math.abs(rightSlope);
     if (leftAbs >= minorPinchMin && rightAbs >= minorPinchMin && leftAbs <= minorPinchMax && rightAbs <= minorPinchMax) {
-      addFeature(i, 'micro_pinch', 'Micro Pinch', 'Subtle pinch where terrain tightens. Check downwind for quiet mature buck movement.', { downwindMeters: 16 });
+      addFeature(i, 'micro_pinch', isMushroomModule() ? 'Tight Draw' : 'Micro Pinch', isMushroomModule() ? 'Subtle narrows where moisture and debris accumulate. Scan the leaf litter edges.' : 'Subtle pinch where terrain tightens. Check downwind for quiet mature buck movement.', { downwindMeters: 16 });
     }
 
     const prevAbs = Math.abs(slopes[i - 1]);
     const currAbs = Math.abs(slopes[i]);
     if (prevAbs >= steepSlope && currAbs <= 0.05) {
-      addFeature(i, 'micro_exit', 'Quiet Exit', 'Easy-out transition off a steeper face. Mature bucks use these low-pressure exits just downwind.', { downwindMeters: 14 });
+      addFeature(i, 'micro_exit', isMushroomModule() ? 'Slope Transition' : 'Quiet Exit', isMushroomModule() ? 'Transition from steep slope to flat ground. Soil settles here and holds moisture.' : 'Easy-out transition off a steeper face. Mature bucks use these low-pressure exits just downwind.', { downwindMeters: 14 });
     }
   }
 
@@ -12810,7 +13589,7 @@ function detectTerrainFeatures(samples, elevations) {
     const angle = Math.acos(dot);
     const slopeAbs = Math.abs(slopes[i] ?? 0);
     if (angle >= 0.65 && slopeAbs <= 0.06) {
-      addFeature(i, 'cut_through', 'Cut-Through', 'Subtle connector between travel lines. Prime for mature buck sheds just off the main corridor.', { downwindMeters: 16 });
+      addFeature(i, 'cut_through', 'Cut-Through', isMushroomModule() ? 'Subtle connector between micro-drainages. Prime for hidden mushroom patches just off the main draw.' : 'Subtle connector between travel lines. Prime for mature buck sheds just off the main corridor.', { downwindMeters: 16 });
     }
   }
 
@@ -13140,7 +13919,7 @@ function buildScoutingBrief(hotspots, criteria, windDir) {
       <div style="font-size:12px;color:#bbb;">Wind: ${windDir || '--'} • Effort: ${effort} • Time fit: ${timeFit}</div>
       <div style="font-size:12px;color:#bbb;">Estimated route: ${estMiles.toFixed(1)} miles • ${estMinutes} mins</div>
       <div style="font-size:12px;color:#bbb;">Hotspots: ${hotspotCount} • ${pressure}</div>
-      <div style="font-size:12px;color:#bbb;">Top Core Buck Zones</div>
+      <div style="font-size:12px;color:#bbb;">${isTurkeyModule() ? 'Top Turkey Setup Zones' : (isMushroomModule() ? 'Top Core Morel Zones' : 'Top Core Buck Zones')}</div>
       ${zones}
     </div>
   `;
@@ -13285,13 +14064,17 @@ window.speakHuntPlan = function() {
     .sort((a, b) => (a.rank ?? 0) - (b.rank ?? 0));
 
   // Build speech text
-  let speechText = "Welcome to your Hun-tek AI shed hunting strategy. Here's your priority breakdown. ";
+  let speechText = isMushroomModule()
+    ? "Welcome to your Hun-tek AI mushroom foraging strategy. Here's your priority breakdown. "
+    : "Welcome to your Hun-tek AI shed hunting strategy. Here's your priority breakdown. ";
   hotspots.forEach((hotspot) => {
     const rank = hotspot?.rank ?? hotspot?.priority ?? 1;
     speechText += `Priority ${rank}: ${hotspot.education.title}. ${hotspot.education.description} Field tip: ${hotspot.education.tips}. `;
   });
   
-  speechText += "Good luck and happy shed hunting!";
+  speechText += isMushroomModule()
+    ? "Good luck and happy foraging!"
+    : "Good luck and happy shed hunting!";
   
   speakText(speechText);
   showNotice('Playing audio briefing. Tap Stop Audio to end.', 'info', 4200);
@@ -13377,7 +14160,7 @@ window.clearRouteOnly = function() {
 
 window.buildRoutePreview = function() {
   if (hotspotMarkers.length === 0 && !isFlyModule()) {
-    showNotice('No pins yet. Build a hunt plan first.', 'warning', 3600);
+    showNotice(isMushroomModule() ? 'No pins yet. Build a forage plan first.' : 'No pins yet. Build a hunt plan first.', 'warning', 3600);
     return;
   }
 
@@ -13409,13 +14192,13 @@ window.buildRoutePreview = function() {
     createOptimalRoute('loop');
   }
 
-  showNotice('Route built. Tap LET\'S GO to launch the hunt.', 'success', 4200);
+  showNotice(isMushroomModule() ? 'Route built. Tap LET\'S GO to start foraging.' : 'Route built. Tap LET\'S GO to launch the hunt.', 'success', 4200);
   showAdvancedToolsTray();
 };
 
 window.finalizeRoutePlan = function() {
   if (hotspotMarkers.length === 0 && !isFlyModule()) {
-    showNotice('No pins yet. Build a hunt plan first.', 'warning', 3600);
+    showNotice(isMushroomModule() ? 'No pins yet. Build a forage plan first.' : 'No pins yet. Build a hunt plan first.', 'warning', 3600);
     return;
   }
 
@@ -13481,7 +14264,7 @@ window.finalizeRoutePlan = function() {
   }
 
   startLocationWatch();
-  showNotice('Hunt live. Alerts enabled for hotspots + terrain features.', 'success', 5200);
+  showNotice(isMushroomModule() ? 'Forage live. Alerts enabled for hotspots + terrain features.' : 'Hunt live. Alerts enabled for hotspots + terrain features.', 'success', 5200);
 
   const panel = document.getElementById('strategy-panel');
   if (panel) panel.remove();
@@ -13576,7 +14359,7 @@ window.clearAllDrawings = function() {
   endPointMarker = null;
   document.body.classList.remove('ht-hunt-active');
   
-  showNotice('All drawings and hunt data cleared.', 'success', 4200);
+  showNotice(isMushroomModule() ? 'All drawings and forage data cleared.' : 'All drawings and hunt data cleared.', 'success', 4200);
 };
 
 
@@ -13599,8 +14382,12 @@ document.addEventListener('DOMContentLoaded', () => {
   bindToolbarToggleButtons();
 
   const isFly = isFlyModule();
-  if (isFly) {
-    flyMapPending = true;
+  const isMush = isMushroomModule();
+  const isTurk = isTurkeyModule();
+  if (isFly || isMush || isTurk) {
+    if (isFly) flyMapPending = true;
+    if (isMush) mushroomMapPending = true;
+    if (isTurk) turkeyMapPending = true;
     document.body.classList.add('ht-map-pending');
     document.body.classList.remove('ht-map-active');
     // Start hero slideshow — rotate images every 6s
@@ -13639,7 +14426,7 @@ document.addEventListener('DOMContentLoaded', () => {
   updateSaveAreaState(false);
   showQuickStartCallout();
   startOnboarding();
-  if (!isFly) {
+  if (!isFly && !isMush) {
     restoreLastKnownLocation();
     tryAutoCenterWithoutPrompt();
     setDefaultAreaFromLocation();
@@ -13769,6 +14556,462 @@ document.addEventListener('DOMContentLoaded', () => {
       if (timerEl) timerEl.textContent = m + ':' + String(s).padStart(2, '0');
     }, 1000);
     showNotice('🐟 Session started — tight lines!', 'success', 3000);
+  };
+
+  // ════════════════════════════════════════════════════════════
+  // ═══ FISH NOW — COMPLETE MULTI-STEP WORKFLOW ENGINE ═══════
+  // ════════════════════════════════════════════════════════════
+
+  /* ── State ── */
+  const fishFlow = {
+    step: 0,           // 0=idle, 1=area-action, 2=strategy, 3=route, 4=briefing, 5=live
+    area: null,        // matched TROUT_WATERS entry
+    method: 'fly',
+    wade: 'waders',
+    experience: 'learning',
+    sessionTimer: null,
+    sessionSeconds: 0,
+    areaMarker: null,  // Leaflet marker for area pill pin
+    routeStartMarker: null,
+    routeEndMarker: null,
+    routePolyline: null,
+  };
+
+  /* ── Step visibility helper ── */
+  function fishShowStep(stepNum) {
+    fishFlow.step = stepNum;
+    const steps = ['fishStep1_areaAction','fishStep2_strategy','fishStep3_route','fishStep4_briefing','fishStep5_live'];
+    steps.forEach((id, i) => {
+      const el = document.getElementById(id);
+      if (el) el.style.display = (i + 1 === stepNum) ? '' : 'none';
+    });
+  }
+
+  /* ── Find nearest trout water from GPS ── */
+  function findNearestWater(lat, lng) {
+    if (!window.TROUT_WATERS || !window.TROUT_WATERS.length) return null;
+    let best = null, bestDist = Infinity;
+    window.TROUT_WATERS.forEach(w => {
+      if (!w.lat || !w.lng) return;
+      const d = Math.sqrt(Math.pow(lat - w.lat, 2) + Math.pow(lng - w.lng, 2));
+      if (d < bestDist) { bestDist = d; best = w; }
+    });
+    return best;
+  }
+
+  /* ── Create sleek area pin on map ── */
+  function placeAreaPin(water) {
+    if (!water || !water.lat || !water.lng || typeof map === 'undefined' || !map) return;
+    // Remove old pin
+    if (fishFlow.areaMarker) { map.removeLayer(fishFlow.areaMarker); fishFlow.areaMarker = null; }
+    // Custom DivIcon — small sleek pill with area name
+    const pillIcon = L.divIcon({
+      className: 'ht-area-pin',
+      html: '<div class="ht-area-pin-pill"><span class="ht-area-pin-dot"></span>' + water.name + '</div>',
+      iconSize: [0, 0],
+      iconAnchor: [0, 16]
+    });
+    fishFlow.areaMarker = L.marker([water.lat, water.lng], { icon: pillIcon, zIndexOffset: 900 }).addTo(map);
+    // Click the pin → scroll to action bar
+    fishFlow.areaMarker.on('click', function() {
+      fishShowStep(1);
+      const el = document.getElementById('fishStep1_areaAction');
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    });
+  }
+
+  /* ═══ FISH NOW — Main entry (called when user taps FISH NOW pill) ═══ */
+  window.showStreamPanel = function showStreamPanel(panelId) {
+    const panelIds = ['fishNowPanel', 'mySpotsPanel', 'tripPlannerPanel', 'flyBoxPanel'];
+    panelIds.forEach(id => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.style.display = id === panelId ? '' : 'none';
+    });
+    document.querySelectorAll('.ht-stream-pill').forEach(pill => {
+      pill.classList.toggle('ht-stream-pill--active', pill.getAttribute('data-panel') === panelId);
+    });
+
+    // Activate map + fade hero
+    if (!document.body.classList.contains('ht-map-active')) {
+      activateFlyMap();
+    }
+
+    // If Fish Now → start the multi-step workflow
+    if (panelId === 'fishNowPanel' && isFlyModule()) {
+      fishNowInit();
+    } else if (panelId !== 'fishNowPanel') {
+      centerOnMyLocationInternal();
+    }
+  };
+
+  /* ── Fish Now Init: GPS center + find area + show area pin ── */
+  function fishNowInit() {
+    fishShowStep(0); // hide all steps initially
+    // GPS center at ~1000ft out (zoom 16 ≈ 1000ft)
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(function(pos) {
+        const lat = pos.coords.latitude, lng = pos.coords.longitude;
+        if (typeof map !== 'undefined' && map) {
+          map.setView([lat, lng], 16, { animate: true, duration: 1.2 });
+        }
+        // Find nearest water
+        const water = findNearestWater(lat, lng);
+        if (water) {
+          fishFlow.area = water;
+          placeAreaPin(water);
+          // Populate step 1
+          const titleEl = document.getElementById('fishAreaTitle');
+          const descEl = document.getElementById('fishAreaDesc');
+          if (titleEl) titleEl.textContent = '📍 ' + water.name;
+          if (descEl) descEl.textContent = (water.ribbon || water.category) + ' • ' + (water.streamMiles ? water.streamMiles + ' mi' : '') + ' • ' + (water.species || []).join(', ');
+          // Show step 1 after a short delay for map animation
+          setTimeout(() => fishShowStep(1), 800);
+        } else {
+          showNotice('No trout water found near your location. Try the SPOTS panel.', 'error', 4000);
+        }
+      }, function() {
+        // GPS error — try last known
+        centerOnMyLocationInternal();
+        showNotice('Enable GPS to find your nearest trout water.', 'error', 3500);
+      }, { enableHighAccuracy: true, maximumAge: 10000, timeout: 15000 });
+    }
+  }
+
+  /* ═══ Step 1 actions ═══ */
+  window.fishStepCheckIn = function() {
+    if (!fishFlow.area) return;
+    showNotice('✅ Checked in at ' + fishFlow.area.name, 'success', 2500);
+    fishShowStep(2);
+  };
+
+  window.fishStepSaveSpot = function() {
+    if (!fishFlow.area) return;
+    // Save to localStorage
+    try {
+      const key = 'huntech_saved_fishing_spots_v1';
+      const saved = JSON.parse(localStorage.getItem(key) || '[]');
+      if (!saved.find(s => s.id === fishFlow.area.id)) {
+        saved.push({ id: fishFlow.area.id, name: fishFlow.area.name, lat: fishFlow.area.lat, lng: fishFlow.area.lng, savedAt: Date.now() });
+        localStorage.setItem(key, JSON.stringify(saved));
+      }
+      showNotice('📌 ' + fishFlow.area.name + ' saved to your spots!', 'success', 2500);
+    } catch (e) { /* ignore */ }
+  };
+
+  window.fishStepStartOver = function() {
+    if (fishFlow.areaMarker && typeof map !== 'undefined' && map) {
+      map.removeLayer(fishFlow.areaMarker);
+      fishFlow.areaMarker = null;
+    }
+    fishFlow.area = null;
+    fishFlow.step = 0;
+    fishShowStep(0);
+    fishNowInit(); // re-start
+  };
+
+  /* ═══ Step 2: Strategy pill handlers ═══ */
+  window.pickFishMethod = function(btn, val) {
+    fishFlow.method = val;
+    btn.closest('.ht-method-row').querySelectorAll('.ht-method-btn').forEach(b => b.classList.remove('ht-method-btn--active'));
+    btn.classList.add('ht-method-btn--active');
+  };
+  window.pickFishWade = function(btn, val) {
+    fishFlow.wade = val;
+    btn.closest('.ht-method-row').querySelectorAll('.ht-method-btn').forEach(b => b.classList.remove('ht-method-btn--active'));
+    btn.classList.add('ht-method-btn--active');
+  };
+  window.pickFishExp = function(btn, val) {
+    fishFlow.experience = val;
+    btn.closest('.ht-method-row').querySelectorAll('.ht-method-btn').forEach(b => b.classList.remove('ht-method-btn--active'));
+    btn.classList.add('ht-method-btn--active');
+  };
+
+  window.fishStepLetsGo = function() {
+    if (!fishFlow.area) return;
+    showNotice('🎯 Locking in your plan…', 'success', 2000);
+    fishShowStep(3);
+    // Zoom to water area
+    if (typeof map !== 'undefined' && map && fishFlow.area.lat) {
+      map.setView([fishFlow.area.lat, fishFlow.area.lng], 16, { animate: true });
+    }
+  };
+
+  /* ═══ Step 3: Define Route ═══ */
+  window.fishBeginRoute = function() {
+    showNotice('📍 Tap the map to set your parking spot', 'info', 4000);
+    if (typeof map !== 'undefined' && map) {
+      map.once('click', function(e) {
+        // Place parking marker
+        if (fishFlow.routeStartMarker) map.removeLayer(fishFlow.routeStartMarker);
+        fishFlow.routeStartMarker = L.marker(e.latlng, {
+          icon: L.divIcon({ className: 'ht-route-pin ht-route-pin-start', html: '🅿️', iconSize: [28, 28], iconAnchor: [14, 14] })
+        }).addTo(map);
+        showNotice('🅿️ Parking set! Now tap your turnaround point', 'success', 3500);
+        // Wait for turnaround
+        map.once('click', function(e2) {
+          if (fishFlow.routeEndMarker) map.removeLayer(fishFlow.routeEndMarker);
+          fishFlow.routeEndMarker = L.marker(e2.latlng, {
+            icon: L.divIcon({ className: 'ht-route-pin ht-route-pin-end', html: '🏁', iconSize: [28, 28], iconAnchor: [14, 14] })
+          }).addTo(map);
+          // Draw route line
+          if (fishFlow.routePolyline) map.removeLayer(fishFlow.routePolyline);
+          fishFlow.routePolyline = L.polyline([fishFlow.routeStartMarker.getLatLng(), e2.latlng], {
+            color: '#00FF88', weight: 3, dashArray: '8,8', opacity: 0.8
+          }).addTo(map);
+          showNotice('🏁 Route set! Lock it in when ready.', 'success', 3000);
+          const lockBtn = document.getElementById('fishRouteLockBtn');
+          if (lockBtn) lockBtn.style.display = '';
+        });
+      });
+    }
+  };
+
+  window.fishLockRoute = function() {
+    showNotice('🔒 Route locked — generating your briefing…', 'success', 2500);
+    setTimeout(() => {
+      fishShowStep(4);
+      generateFishBriefing();
+    }, 600);
+  };
+
+  window.fishClearRoute = function() {
+    if (fishFlow.routeStartMarker && map) map.removeLayer(fishFlow.routeStartMarker);
+    if (fishFlow.routeEndMarker && map) map.removeLayer(fishFlow.routeEndMarker);
+    if (fishFlow.routePolyline && map) map.removeLayer(fishFlow.routePolyline);
+    fishFlow.routeStartMarker = null;
+    fishFlow.routeEndMarker = null;
+    fishFlow.routePolyline = null;
+    const lockBtn = document.getElementById('fishRouteLockBtn');
+    if (lockBtn) lockBtn.style.display = 'none';
+    showNotice('🔄 Route cleared', 'info', 2000);
+  };
+
+  /* ═══ Step 4: AI Briefing Generator ═══ */
+  function generateFishBriefing() {
+    const w = fishFlow.area;
+    if (!w) return;
+
+    const introEl = document.getElementById('fishCoachIntro');
+    const bodyEl = document.getElementById('fishBriefingBody');
+    if (!introEl || !bodyEl) return;
+
+    // Coach introduction
+    const coachNames = ['River', 'Brooks', 'Hatch', 'Drift'];
+    const coach = coachNames[Math.floor(Math.random() * coachNames.length)];
+    introEl.innerHTML = '<strong>Hey — I\'m Coach ' + coach + '</strong>, your Huntech AI stream guide. ' +
+      'I\'ve analyzed <em>' + w.name + '</em> and here\'s what you need to know for today\'s session.';
+
+    // Build detailed briefing
+    const method = fishFlow.method === 'fly' ? 'fly fishing' : fishFlow.method === 'spin' ? 'spin fishing' : 'bait fishing';
+    const season = getCurrentSeason();
+    const hatches = w.hatches ? w.hatches[season] : null;
+    const topFlies = w.topFlies ? w.topFlies.slice(0, 5).join(', ') : 'General nymphs and dries';
+    const tips = w.coachTips ? w.coachTips.slice(0, 3) : [];
+    const regs = w.regulations || {};
+
+    let html = '';
+    html += '<div class="ht-brief-section"><strong>📍 ' + w.name + '</strong>';
+    html += '<br>' + (w.description || (w.ribbon || '') + ' trout water in ' + (w.region || 'Missouri'));
+    html += '<br>Species: ' + (w.species || ['rainbow']).join(', ');
+    html += ' • ' + (w.streamMiles ? w.streamMiles + ' stream miles' : '') + '</div>';
+
+    html += '<div class="ht-brief-section"><strong>🎣 Your Setup</strong>';
+    html += '<br>Method: ' + method.charAt(0).toUpperCase() + method.slice(1);
+    html += ' • ' + (fishFlow.wade === 'waders' ? 'Wading in' : 'Streamside');
+    html += ' • ' + fishFlow.experience + ' level</div>';
+
+    if (hatches) {
+      html += '<div class="ht-brief-section"><strong>🦟 Hatch Report (' + season + ')</strong>';
+      html += '<br>' + hatches + '</div>';
+    }
+
+    html += '<div class="ht-brief-section"><strong>🪰 Top Flies</strong>';
+    html += '<br>' + topFlies + '</div>';
+
+    if (regs.method || regs.dailyLimit) {
+      html += '<div class="ht-brief-section"><strong>📋 Regulations</strong>';
+      if (regs.method) html += '<br>Method: ' + regs.method;
+      if (regs.dailyLimit) html += '<br>Daily limit: ' + regs.dailyLimit;
+      if (regs.minSize) html += ' • Min size: ' + regs.minSize;
+      if (regs.specialRules) html += '<br>' + regs.specialRules;
+      html += '</div>';
+    }
+
+    if (tips.length) {
+      html += '<div class="ht-brief-section"><strong>💡 Coach ' + coach + '\'s Tips</strong>';
+      tips.forEach(t => { html += '<br>• ' + t; });
+      html += '</div>';
+    }
+
+    html += '<div class="ht-brief-section"><strong>🌊 Water Intel</strong>';
+    if (w.flowSource) html += '<br>Flow: ' + w.flowSource;
+    html += '<br>Difficulty: ' + (w.difficulty || 'moderate');
+    html += ' • Solitude: ' + (w.solitude || 'moderate');
+    if (w.familyFriendly) html += ' • Family friendly ✅';
+    html += '</div>';
+
+    bodyEl.innerHTML = html;
+  }
+
+  function getCurrentSeason() {
+    const m = new Date().getMonth();
+    if (m >= 2 && m <= 4) return 'spring';
+    if (m >= 5 && m <= 7) return 'summer';
+    if (m >= 8 && m <= 10) return 'fall';
+    return 'winter';
+  }
+
+  /* ═══ Step 5: Start Fishing Session ═══ */
+  window.fishStartSession = function() {
+    fishShowStep(5);
+    const nameEl = document.getElementById('liveWaterName2');
+    if (nameEl && fishFlow.area) nameEl.textContent = fishFlow.area.name;
+
+    // Start timer
+    fishFlow.sessionSeconds = 0;
+    if (fishFlow.sessionTimer) clearInterval(fishFlow.sessionTimer);
+    fishFlow.sessionTimer = setInterval(() => {
+      fishFlow.sessionSeconds++;
+      const m = Math.floor(fishFlow.sessionSeconds / 60);
+      const s = fishFlow.sessionSeconds % 60;
+      const el = document.getElementById('liveTimer2');
+      if (el) el.textContent = m + ':' + String(s).padStart(2, '0');
+    }, 1000);
+    showNotice('🐟 Tight lines! Streamside Command is live.', 'success', 3000);
+  };
+
+  /* ═══ Streamside Command Actions ═══ */
+  window.fishLogCatch = function() {
+    // Open file picker for photo
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.capture = 'environment';
+    input.onchange = function(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      // Save catch to log
+      try {
+        const key = 'huntech_catch_log_v1';
+        const log = JSON.parse(localStorage.getItem(key) || '[]');
+        log.push({
+          water: fishFlow.area ? fishFlow.area.name : 'Unknown',
+          method: fishFlow.method,
+          timestamp: Date.now(),
+          fileName: file.name,
+          size: file.size
+        });
+        localStorage.setItem(key, JSON.stringify(log));
+      } catch(ex) { /* */ }
+      showNotice('📸 Catch logged! Nice fish! 🐟', 'success', 3000);
+    };
+    input.click();
+  };
+
+  window.fishLogFlyData = function() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.capture = 'environment';
+    input.onchange = function(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      try {
+        const key = 'huntech_fly_data_log_v1';
+        const log = JSON.parse(localStorage.getItem(key) || '[]');
+        log.push({
+          water: fishFlow.area ? fishFlow.area.name : 'Unknown',
+          timestamp: Date.now(),
+          fileName: file.name,
+          type: 'streamside-observation'
+        });
+        localStorage.setItem(key, JSON.stringify(log));
+      } catch(ex) { /* */ }
+      showNotice('🦟 Fly data logged! This helps the AI learn.', 'success', 3000);
+    };
+    input.click();
+  };
+
+  window.fishMyFlyBox = function() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.capture = 'environment';
+    input.onchange = function(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      showNotice('🪺 Scanning your fly box with AI… This may take a moment.', 'info', 4000);
+      // Simulate AI scan
+      setTimeout(() => {
+        const commonFlies = ['Adams #14', 'Elk Hair Caddis #16', 'Pheasant Tail #18', 'Woolly Bugger #10', 'Zebra Midge #20', 'Hare\'s Ear #14', 'Copper John #16', 'Blue Wing Olive #18'];
+        const detected = commonFlies.sort(() => Math.random() - 0.5).slice(0, 4 + Math.floor(Math.random() * 3));
+        try {
+          const key = 'huntech_fly_box_v1';
+          const box = JSON.parse(localStorage.getItem(key) || '[]');
+          detected.forEach(f => { if (!box.includes(f)) box.push(f); });
+          localStorage.setItem(key, JSON.stringify(box));
+        } catch(ex) { /* */ }
+        showNotice('🪺 ' + detected.length + ' flies detected: ' + detected.join(', '), 'success', 5000);
+      }, 2500);
+    };
+    input.click();
+  };
+
+  window.fishAiRecommend = function() {
+    if (!fishFlow.area) {
+      showNotice('Check in to a water first for AI recommendations.', 'error', 3000);
+      return;
+    }
+    const w = fishFlow.area;
+    const season = getCurrentSeason();
+    const hatches = w.hatches ? w.hatches[season] : 'general insect activity';
+    const topFlies = w.topFlies ? w.topFlies.slice(0, 3) : ['Adams', 'Pheasant Tail', 'Elk Hair Caddis'];
+
+    // Check user's fly box
+    let userBox = [];
+    try { userBox = JSON.parse(localStorage.getItem('huntech_fly_box_v1') || '[]'); } catch(ex) { /* */ }
+
+    let msg = '🧠 <strong>AI Fly Coach — ' + w.name + '</strong><br>';
+    msg += '<strong>Current conditions:</strong> ' + season + ' season';
+    if (hatches) msg += ', ' + hatches;
+    msg += '<br><strong>Top picks right now:</strong> ' + topFlies.join(', ');
+    if (userBox.length) {
+      const match = topFlies.filter(f => userBox.some(b => b.toLowerCase().includes(f.toLowerCase().split(' ')[0])));
+      if (match.length) {
+        msg += '<br>✅ <strong>You have:</strong> ' + match.join(', ') + ' — use these!';
+      } else {
+        msg += '<br>⚠️ Nothing in your fly box matches. Try: ' + topFlies[0];
+      }
+    }
+    if (w.coachTips && w.coachTips[0]) {
+      msg += '<br><strong>Pro tip:</strong> ' + w.coachTips[0];
+    }
+
+    // Show as a persistent notice
+    showNotice(msg, 'success', 8000);
+  };
+
+  window.fishEndSession = function() {
+    if (fishFlow.sessionTimer) { clearInterval(fishFlow.sessionTimer); fishFlow.sessionTimer = null; }
+    const mins = Math.floor(fishFlow.sessionSeconds / 60);
+    showNotice('⏹ Session ended — ' + mins + ' minutes on the water. Nice work!', 'success', 4000);
+    // Save session log
+    try {
+      const key = 'huntech_session_log_v1';
+      const log = JSON.parse(localStorage.getItem(key) || '[]');
+      log.push({
+        water: fishFlow.area ? fishFlow.area.name : 'Unknown',
+        method: fishFlow.method,
+        duration: fishFlow.sessionSeconds,
+        timestamp: Date.now()
+      });
+      localStorage.setItem(key, JSON.stringify(log));
+    } catch(ex) { /* */ }
+    // Reset
+    fishShowStep(0);
+    fishFlow.step = 0;
+    fishFlow.sessionSeconds = 0;
   };
 
   // Add visible labels to drawing controls
