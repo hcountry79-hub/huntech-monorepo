@@ -868,12 +868,24 @@ function initializeMap() {
     zoomSnap: 0.5,
     zoomDelta: 0.5,
     wheelPxPerZoomLevel: 120,
-    inertiaDeceleration: 6000,
-    inertiaMaxSpeed: 900
+    // Mobile-optimized touch settings
+    inertiaDeceleration: 3000,    // smoother panning deceleration
+    inertiaMaxSpeed: 1500,        // allow faster fling gestures
+    tapTolerance: 15,             // more forgiving tap detection on touch
+    bounceAtZoomLimits: false,    // no rubber-band at min/max zoom
+    touchZoom: true,              // pinch-to-zoom enabled
+    tap: true                     // tap events enabled
   });
 
   const mapEl = map.getContainer();
   if (mapEl) mapEl.classList.add('ht-map-canvas');
+
+  // The #map element is CSS-oversized to 142% for rotation coverage.
+  // Tell Leaflet about the actual container size so it loads enough tiles.
+  requestAnimationFrame(() => {
+    if (map) map.invalidateSize({ animate: false });
+  });
+
   if (mapEl) {
     const markInteraction = () => {
       lastMapInteractionAt = Date.now();
@@ -923,32 +935,40 @@ function initializeMap() {
     showNoticeThrottled(key, message, 'warning', 4200);
   };
 
+  // keepBuffer: extra tile rows beyond viewport for rotation coverage + smooth scrolling
+  const _tileOpts = { keepBuffer: 6, updateWhenZooming: false, updateWhenIdle: true };
+
   const satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
     attribution: '&copy; Esri',
-    maxZoom: 19
+    maxZoom: 19,
+    ..._tileOpts
   });
   satellite.on('tileerror', tileErrorNotice('satellite-tiles', 'Base map tiles failed to load. Check internet access.'));
   const satelliteHybrid = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
     attribution: '&copy; Esri',
-    maxZoom: 19
+    maxZoom: 19,
+    ..._tileOpts
   });
   satelliteHybrid.on('tileerror', tileErrorNotice('hybrid-tiles', 'Hybrid base tiles failed to load. Check internet access.'));
   const hybridRoads = L.tileLayer('https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}', {
     attribution: '&copy; Esri',
     maxZoom: 19,
-    pane: 'hybridRoadsPane'
+    pane: 'hybridRoadsPane',
+    ..._tileOpts
   });
   hybridRoads.on('tileerror', tileErrorNotice('hybrid-roads-tiles', 'Hybrid road tiles failed to load.'));
   const hybridHydro = L.tileLayer('https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Hydro_Reference/MapServer/tile/{z}/{y}/{x}', {
     attribution: '&copy; Esri',
     maxZoom: 19,
-    pane: 'hybridLabelsPane'
+    pane: 'hybridLabelsPane',
+    ..._tileOpts
   });
   hybridHydro.on('tileerror', tileErrorNotice('hybrid-hydro-tiles', 'Hybrid hydro tiles failed to load.'));
   const hybridLabels = L.tileLayer('https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', {
     attribution: '&copy; Esri',
     maxZoom: 19,
-    pane: 'hybridLabelsPane'
+    pane: 'hybridLabelsPane',
+    ..._tileOpts
   });
   hybridLabels.on('tileerror', tileErrorNotice('hybrid-label-tiles', 'Hybrid label tiles failed to load.'));
   const hybrid = L.layerGroup([satelliteHybrid, hybridRoads, hybridHydro, hybridLabels]);
@@ -956,11 +976,12 @@ function initializeMap() {
   const latestImageryUrl = String(window.LATEST_IMAGERY_TILE_URL || '').trim();
   const latestImageryNoteText = String(window.LATEST_IMAGERY_NOTE || '').trim();
   const latestImagery = latestImageryUrl
-    ? L.tileLayer(latestImageryUrl, { attribution: '&copy; Esri', maxZoom: 19 })
+    ? L.tileLayer(latestImageryUrl, { attribution: '&copy; Esri', maxZoom: 19, ..._tileOpts })
     : null;
   const topo = L.tileLayer('https://basemap.nationalmap.gov/arcgis/rest/services/USGSTopo/MapServer/tile/{z}/{y}/{x}', {
     attribution: '&copy; USGS The National Map',
-    maxZoom: 19
+    maxZoom: 19,
+    ..._tileOpts
   });
   topo.on('tileerror', tileErrorNotice('topo-tiles', 'USGS topo tiles failed to load.'));
   if (latestImagery) {
@@ -977,7 +998,7 @@ function initializeMap() {
   } else {
     const lidarUrl = (window.LIDAR_TILE_URL || '').trim();
     if (lidarUrl) {
-      lidarHillshadeLayer = L.tileLayer(lidarUrl, { opacity: 0.55, maxZoom: 19, zIndex: 350 });
+      lidarHillshadeLayer = L.tileLayer(lidarUrl, { opacity: 0.55, maxZoom: 19, zIndex: 350, ..._tileOpts });
       lidarHillshadeLayer.on('tileerror', () => {
         showNoticeThrottled('lidar-tiles', 'LiDAR/Hillshade overlay failed to load tiles.', 'warning', 4200);
       });
@@ -992,7 +1013,7 @@ function initializeMap() {
   try {
     const tileUrl = (window.PUBLIC_LAND_TILE_URL || DEFAULT_PUBLIC_LAND_TILE_URL || '').trim();
     if (tileUrl) {
-      publicLandLayer = L.tileLayer(tileUrl, { opacity: 0.7, maxZoom: 19, zIndex: 450 });
+      publicLandLayer = L.tileLayer(tileUrl, { opacity: 0.7, maxZoom: 19, zIndex: 450, ..._tileOpts });
       publicLandLayer.on('tileerror', () => {
         showNoticeThrottled('public-land-tiles', 'Public land overlay failed to load tiles.', 'warning', 4200);
       });
@@ -1006,7 +1027,7 @@ function initializeMap() {
   try {
     const privateUrl = (window.PRIVATE_PARCELS_TILE_URL || '').trim();
     if (privateUrl) {
-      privateParcelsLayer = L.tileLayer(privateUrl, { opacity: 0.65, maxZoom: 19, zIndex: 460 });
+      privateParcelsLayer = L.tileLayer(privateUrl, { opacity: 0.65, maxZoom: 19, zIndex: 460, ..._tileOpts });
       privateParcelsLayer.on('tileerror', () => {
         showNoticeThrottled('private-parcels-tiles', 'Private parcels overlay failed to load tiles.', 'warning', 4200);
       });
@@ -7271,7 +7292,7 @@ function enablePrivateParcelsLayer() {
   }
 
   if (!privateParcelsLayer) {
-    privateParcelsLayer = L.tileLayer(tileUrl, { opacity: 0.65, maxZoom: 19, zIndex: 460 });
+    privateParcelsLayer = L.tileLayer(tileUrl, { opacity: 0.65, maxZoom: 19, zIndex: 460, keepBuffer: 6, updateWhenZooming: false, updateWhenIdle: true });
     privateParcelsLayer.on('tileerror', () => {
       showNotice('Private parcels overlay failed to load tiles.', 'warning', 4200);
     });
@@ -7314,7 +7335,7 @@ function enablePublicLandLayer() {
   }
 
   const tileUrl = window.PUBLIC_LAND_TILE_URL || DEFAULT_PUBLIC_LAND_TILE_URL;
-  publicLandLayer = L.tileLayer(tileUrl, { opacity: 0.7, maxZoom: 19, zIndex: 450 });
+  publicLandLayer = L.tileLayer(tileUrl, { opacity: 0.7, maxZoom: 19, zIndex: 450, keepBuffer: 6, updateWhenZooming: false, updateWhenIdle: true });
   publicLandLayer.on('tileerror', () => {
     showNotice('Public land overlay failed to load tiles.', 'warning', 4200);
   });
@@ -9503,24 +9524,22 @@ function applyMapRotation() {
     if (!container) return;
 
     const bearing = Number.isFinite(mapBearingDeg) ? mapBearingDeg : 0;
+    const isRotated = Math.abs(bearing) > 0.01;
 
-    // Rotate the entire map CONTAINER (not the internal mapPane).
-    // This avoids fighting with Leaflet's own transform management on mapPane,
-    // which causes tile flashing and wrong-zoom tiles.
-    // The container overflow is hidden, so we scale up to cover exposed corners.
-    const absBearing = Math.abs(bearing % 360);
-    const theta = (absBearing % 90) * (Math.PI / 180);
-    const scaleNeeded = Math.abs(bearing) > 0.5
-      ? (Math.sin(theta) + Math.cos(theta))
-      : 1;
+    // Pure rotation — no scale needed.
+    // #map is CSS-oversized to 142% with the parent clipping overflow,
+    // so Leaflet pre-loads enough tiles to cover all rotation angles.
+    container.style.transform = isRotated ? `rotate(${bearing}deg)` : '';
 
-    container.style.transform = Math.abs(bearing) > 0.01
-      ? `rotate(${bearing}deg) scale(${scaleNeeded.toFixed(4)})`
-      : '';
-    container.style.transformOrigin = '50% 50%';
-    container.style.overflow = 'hidden';
+    // Counter-rotate Leaflet control containers so buttons stay upright
+    const counterRotate = isRotated ? `rotate(${-bearing}deg)` : '';
+    const controlCorners = container.querySelectorAll('.leaflet-top, .leaflet-bottom');
+    for (const corner of controlCorners) {
+      corner.style.transform = counterRotate;
+      corner.style.transformOrigin = 'center center';
+    }
 
-    // Update compass needle if present
+    // Update compass needle — show the bearing direction
     if (compassNeedle) {
       compassNeedle.style.transform = `rotate(${bearing}deg)`;
     }
