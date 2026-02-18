@@ -1,0 +1,9 @@
+{
+  "name": "HUNTECH - Field Command System",
+  "short_name": "HUNTECH",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffc107",
+  "theme_color": "#ffc107",
+  "description": "AI-powered shed hunting and scouting system with GPS tracking"
+}

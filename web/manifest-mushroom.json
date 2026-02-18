@@ -1,0 +1,27 @@
+{
+  "name": "HUNTECH - Mushroom Module",
+  "short_name": "HUNTECH",
+  "start_url": "mushroom.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#ffd86b",
+  "theme_color": "#ffd86b",
+  "description": "AI-powered mushroom hunting scouting system with GPS tracking",
+  "icons": [
+    {
+      "src": "assets/mushroom-logo.png",
+      "sizes": "768x768",
+      "type": "image/png"
+    },
+    {
+      "src": "assets/mushroom-badge.png",
+      "sizes": "768x768",
+      "type": "image/png"
+    },
+    {
+      "src": "assets/mushroom-module-logo.png",
+      "sizes": "768x768",
+      "type": "image/png"
+    }
+  ]
+}

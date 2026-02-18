@@ -2,30 +2,30 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="HUNTECH">
-  <meta name="theme-color" content="#ffc107">
-  <meta name="description" content="AI-powered shed hunting and scouting system with GPS tracking">
-  <link rel="manifest" href="manifest.json">
-  <link rel="apple-touch-icon" href="assets/app-icon-180.png">
-  <title>HUNTECH - Field Command System</title>
-  <link href="https://unpkg.com/maplibre-gl@3.6.1/dist/maplibre-gl.css" rel="stylesheet">
-  <link rel="stylesheet" href="app.css?v=20260215b">
+  <meta name="theme-color" content="#ffd86b">
+  <meta name="description" content="AI-powered mushroom hunting scouting system with GPS tracking">
+  <link rel="manifest" href="manifest-mushroom.json">
+  <link rel="apple-touch-icon" href="assets/mushroom-logo.png">
+  <title>HUNTECH - Mushroom Module</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css" />
+  <link rel="stylesheet" href="app.css?v=20260210">
 
   <!-- AWS Backend Configuration -->
-  <script src="config.js?v=20260209c"></script>
-  <script src="api.js?v=20260209c"></script>
-  
+  <script src="config.js?v=20260210a"></script>
+  <script src="api.js?v=20260210a"></script>
 </head>
-<body class="module-shed">
+<body class="module-mushroom">
   <header class="ht-topbar">
     <div class="ht-header-left">
       <div class="ht-brand">
         <div class="ht-brand-icon" aria-label="Huntech logo">
-          <img src="assets/huntech-logo.png" alt="Huntech logo" width="38" height="38" loading="eager">
+          <img src="assets/mushroom-logo.png" alt="Mushroom module logo" width="38" height="38" loading="eager">
         </div>
         <span class="ht-brand-text">HUNT<span class="ht-brand-mark">E</span>CH</span>
       </div>
@@ -33,9 +33,9 @@
       <div class="ht-module-switch" aria-label="Select module">
         <span class="ht-module-label">Module</span>
         <select class="ht-module-select" onchange="window.location.href=this.value">
-          <option value="index.html" selected>Shed</option>
+          <option value="index.html">Shed</option>
           <option value="fly-fishing.html">Fly Fishing</option>
-          <option value="mushroom.html">Mushroom</option>
+          <option value="mushroom.html" selected>Mushroom</option>
           <option value="turkey.html">Turkey</option>
         </select>
       </div>
@@ -96,10 +96,10 @@
   </header>
 
   <main class="ht-map-container">
-    <div id="map" role="region" aria-label="Map" style="position:absolute;inset:0;"></div>
+    <div id="map"></div>
   </main>
 
-  <button class="ht-map-locate-btn" type="button" onclick="centerOnMyLocation()" title="Center on my location (enable precise location for best accuracy)" aria-label="Center on my location">
+  <button class="ht-map-locate-btn" type="button" onclick="centerOnMyLocation()" title="Center on my location" aria-label="Center on my location">
     <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
       <path d="M12 2a1 1 0 0 1 1 1v1.06a8.01 8.01 0 0 1 6.94 6.94H21a1 1 0 1 1 0 2h-1.06a8.01 8.01 0 0 1-6.94 6.94V21a1 1 0 1 1-2 0v-1.06a8.01 8.01 0 0 1-6.94-6.94H3a1 1 0 1 1 0-2h1.06A8.01 8.01 0 0 1 11 4.06V3a1 1 0 0 1 1-1zm0 4a6 6 0 1 0 0 12a6 6 0 0 0 0-12zm0 3a3 3 0 1 1 0 6a3 3 0 0 1 0-6z"/>
     </svg>
@@ -108,9 +108,9 @@
   <div class="ht-toolbar" id="toolbar">
     <div class="ht-toolbar-tab">
       <div class="ht-toolbar-tab-row">
-        <button class="ht-toolbar-mini-btn ht-toolbar-mini-btn-startover" type="button" onclick="startOver()" data-full-label="START OVER" data-short-label="START OVER">START OVER</button>
+        <button class="ht-toolbar-mini-btn ht-toolbar-mini-btn-startover" type="button" onclick="window.startOver()" data-full-label="START OVER" data-short-label="START OVER">START OVER</button>
         <button class="ht-toolbar-tab-btn ht-toolbar-toggle-btn ht-field-command-btn" type="button" aria-label="Toggle Field Command">
-          <span class="ht-toolbar-tab-label" data-full-label="FIELD COMMAND" data-short-label="FIELD COMMAND">FIELD COMMAND</span>
+          <span class="ht-toolbar-tab-label" data-full-label="FIELD COMMAND" data-short-label="FIELD">FIELD COMMAND</span>
         </button>
         <button class="ht-toolbar-mini-btn" type="button" onclick="showAdvancedToolsTray()" data-full-label="TOOLS" data-short-label="TOOLS">TOOLS</button>
       </div>
@@ -213,11 +213,14 @@
           <button class="ht-pill-btn" onclick="toggleToolbar()">Close</button>
         </div>
       </div>
+      </div>
 
     </div>
   </div>
 
-  <script src="https://unpkg.com/maplibre-gl@3.6.1/dist/maplibre-gl.js"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
+  <script src="https://unpkg.com/esri-leaflet@3.0.12/dist/esri-leaflet.js"></script>
 
   <script>
     if ('serviceWorker' in navigator) {
@@ -231,7 +234,7 @@
     }
   </script>
 
-  <script src="maplibre.js?v=20260215b"></script>
-  <script src="ui-bridge.js?v=20260215b"></script>
+  <script src="regulations.js?v=20260210a"></script>
+  <script src="main.js?v=20260210a"></script>
 </body>
 </html>
