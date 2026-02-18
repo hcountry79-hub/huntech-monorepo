@@ -14363,6 +14363,56 @@ window.clearAllDrawings = function() {
 };
 
 
+/* ═══ FISH NOW — showStreamPanel (TOP-LEVEL, always available) ═══ */
+window.showStreamPanel = function showStreamPanel(panelId) {
+  console.log('HUNTECH: showStreamPanel called with', panelId);
+  try {
+    // Auto-expand toolbar so user sees the panel content
+    var toolbar = document.getElementById('toolbar');
+    if (toolbar && toolbar.classList.contains('collapsed')) {
+      if (typeof window.toggleToolbar === 'function') {
+        window.toggleToolbar();
+      } else {
+        toolbar.classList.remove('collapsed');
+        document.body.classList.remove('ht-toolbar-collapsed');
+      }
+    }
+
+    // Show/hide panels
+    var panelIds = ['fishNowPanel', 'mySpotsPanel', 'tripPlannerPanel', 'flyBoxPanel'];
+    panelIds.forEach(function(id) {
+      var el = document.getElementById(id);
+      if (!el) return;
+      el.style.display = id === panelId ? '' : 'none';
+    });
+    document.querySelectorAll('.ht-stream-pill').forEach(function(pill) {
+      pill.classList.toggle('ht-stream-pill--active', pill.getAttribute('data-panel') === panelId);
+    });
+
+    // Activate map + fade hero
+    if (!document.body.classList.contains('ht-map-active')) {
+      console.log('HUNTECH: Activating fly map...');
+      activateFlyMap();
+    }
+
+    // If Fish Now → start the multi-step workflow
+    if (panelId === 'fishNowPanel' && isFlyModule()) {
+      console.log('HUNTECH: Starting fishNowInit...');
+      if (typeof window._fishNowInitFn === 'function') {
+        window._fishNowInitFn();
+      } else {
+        console.warn('HUNTECH: fishNowInit not ready yet');
+        showNotice('Loading Fish Now… try again in a moment.', 'info', 2000);
+      }
+    } else if (panelId !== 'fishNowPanel') {
+      centerOnMyLocationInternal();
+    }
+  } catch(e) {
+    console.error('HUNTECH: showStreamPanel error:', e);
+    showNotice('Error: ' + e.message, 'error', 5000);
+  }
+};
+
 // Initialize on load
 document.addEventListener('DOMContentLoaded', () => {
   const updateTopbarHeight = () => {
@@ -14603,40 +14653,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  /* ═══ FISH NOW — Main entry (called when user taps FISH NOW pill) ═══ */
-  window.showStreamPanel = function showStreamPanel(panelId) {
-    console.log('HUNTECH: showStreamPanel called with', panelId);
-    const panelIds = ['fishNowPanel', 'mySpotsPanel', 'tripPlannerPanel', 'flyBoxPanel'];
-    panelIds.forEach(id => {
-      const el = document.getElementById(id);
-      if (!el) return;
-      el.style.display = id === panelId ? '' : 'none';
-    });
-    document.querySelectorAll('.ht-stream-pill').forEach(pill => {
-      pill.classList.toggle('ht-stream-pill--active', pill.getAttribute('data-panel') === panelId);
-    });
-
-    // Activate map + fade hero
-    if (!document.body.classList.contains('ht-map-active')) {
-      console.log('HUNTECH: Activating fly map...');
-      activateFlyMap();
-    }
-
-    // If Fish Now → start the multi-step workflow
-    if (panelId === 'fishNowPanel' && isFlyModule()) {
-      console.log('HUNTECH: Starting fishNowInit...');
-      try {
-        fishNowInit();
-      } catch(e) {
-        console.error('HUNTECH: fishNowInit error:', e);
-        showNotice('Fish Now error: ' + e.message, 'error', 5000);
-      }
-    } else if (panelId !== 'fishNowPanel') {
-      centerOnMyLocationInternal();
-    }
-  };
-
-  /* ── Fish Now Init: GPS center + find area + show area pin ── */
+  /* ═══ FISH NOW — fishNowInit registered on window for top-level showStreamPanel ═══ */
   function fishNowInit() {
     console.log('HUNTECH: fishNowInit running');
     fishShowStep(0); // show loading state
@@ -14673,6 +14690,8 @@ document.addEventListener('DOMContentLoaded', () => {
       showNotice('GPS not available on this device.', 'error', 3500);
     }
   }
+  // Expose on window so top-level showStreamPanel can call it
+  window._fishNowInitFn = fishNowInit;
 
   /* ═══ Step 1 actions ═══ */
   window.fishStepCheckIn = function() {

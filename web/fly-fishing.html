@@ -17,11 +17,11 @@
   <title>HUNTECH - Fly Fishing Module</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css" />
-  <link rel="stylesheet" href="app.css?v=20260218b">
+  <link rel="stylesheet" href="app.css?v=20260218c">
 
   <!-- AWS Backend Configuration -->
-  <script src="config.js?v=20260218b"></script>
-  <script src="api.js?v=20260218b"></script>
+  <script src="config.js?v=20260218c"></script>
+  <script src="api.js?v=20260218c"></script>
 </head>
 <body class="module-fly">
   <header class="ht-topbar">
@@ -30,7 +30,7 @@
         <div class="ht-brand-icon" aria-label="Huntech Fly Fishing logo">
           <img src="assets/fly-module-logo.svg" alt="Huntech Fly Fishing logo" width="38" height="38" loading="eager">
         </div>
-        <span class="ht-brand-text">HUNT<span class="ht-brand-mark">E</span>CH</span>
+        <span class="ht-brand-text">HUNT<span class="ht-brand-mark">Ξ</span>CH</span>
       </div>
 
       <div class="ht-module-switch" aria-label="Select module">
@@ -147,6 +147,7 @@
       <!-- ────── PILL NAVIGATION ────── -->
       <div class="ht-stream-pills" id="streamPills">
         <button class="ht-stream-pill ht-stream-pill--active" data-panel="fishNowPanel" onclick="showStreamPanel('fishNowPanel')">FISH NOW</button>
+        <button class="ht-stream-pill" onclick="showMap()">MAP</button>
         <button class="ht-stream-pill" data-panel="mySpotsPanel" onclick="showStreamPanel('mySpotsPanel')">SPOTS</button>
         <button class="ht-stream-pill" data-panel="tripPlannerPanel" onclick="showStreamPanel('tripPlannerPanel')">PLANNER</button>
         <button class="ht-stream-pill" data-panel="flyBoxPanel" onclick="showStreamPanel('flyBoxPanel')">FLY BOX</button>
@@ -515,8 +516,8 @@
     }
   </script>
 
-  <script src="regulations.js?v=20260218b"></script>
-  <script src="fly-fishing-data.js?v=20260218b"></script>
-  <script src="main.js?v=20260218b"></script>
+  <script src="regulations.js?v=20260218c"></script>
+  <script src="fly-fishing-data.js?v=20260218c"></script>
+  <script src="main.js?v=20260218c"></script>
 </body>
 </html>
