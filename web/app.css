@@ -2556,33 +2556,33 @@ body.module-fly #map {
   transform: scale(1.0);
 }
 
-/* Per-slide centering — each photo focused on its subject */
-/* OIP(3): Brown trout underwater, half-submerge — center on trout body */
+/* Per-slide centering — subjects focused ABOVE the Stream Command tray */
+/* OIP(3): Brown trout underwater — fish in upper zone */
 .ht-slide-trout {
-  background-position: center 30%;
+  background-position: center 15%;
   background-size: cover;
 }
-/* OIP(1): Underwater trout — dark/murky image needs punch */
+/* OIP(1): Underwater trout — dark/murky, needs punch, fish up top */
 .ht-slide-trout-alt {
-  background-position: center 35%;
+  background-position: center 10%;
   background-size: cover;
   filter: brightness(1.15) saturate(1.55) contrast(1.25);
 }
-/* OIP(2): Green stream with light rays — center on fisherman + stream */
+/* OIP(2): Green stream with light rays — fisherman in upper half */
 .ht-slide-stream {
-  background-position: center 45%;
+  background-position: center 20%;
   background-size: cover;
   filter: brightness(1.45) saturate(1.35) contrast(1.05);
 }
-/* OIP(4): Golden mist fisherman silhouette — center on figure */
+/* OIP(4): Golden mist fisherman silhouette — figure up top */
 .ht-slide-golden {
-  background-position: center 40%;
+  background-position: center 15%;
   background-size: cover;
   filter: brightness(1.3) saturate(1.4) contrast(1.1);
 }
-/* OIP(5): Stream with light rays through trees — center on light */
+/* OIP(5): Stream with light rays through trees — canopy + light up top */
 .ht-slide-rays {
-  background-position: center 42%;
+  background-position: center 18%;
   background-size: cover;
   filter: brightness(1.45) saturate(1.35) contrast(1.05);
 }
@@ -2990,21 +2990,21 @@ body.module-mushroom .ht-map-hero-meta {
     background-size: auto 55vh;
     background-position: center top;
   }
-  /* Per-slide X-position to center on fish/subject */
+  /* Per-slide position: fish/subject in top band above tray */
   .ht-slide-trout {
-    background-position: 55% top;
+    background-position: 55% 5%;
   }
   .ht-slide-trout-alt {
-    background-position: 50% top;
+    background-position: 50% 0%;
   }
   .ht-slide-stream {
-    background-position: 50% top;
+    background-position: 50% 10%;
   }
   .ht-slide-golden {
-    background-position: 50% top;
+    background-position: 50% 5%;
   }
   .ht-slide-rays {
-    background-position: 50% top;
+    background-position: 50% 8%;
   }
   /* Stronger vignette for smooth blend at image boundary */
   .ht-hero-vignette {
@@ -4011,6 +4011,560 @@ body.module-mushroom .ht-map-hero-meta {
 
 .ht-deer-pin-sighting::after {
   border-top-color: rgba(255, 255, 255, 0.85);
+}
+
+/* ===================================================================
+   Morel Mushroom Pin Icons (Mushroom Module)
+   =================================================================== */
+.ht-morel-pin-wrapper {
+  position: relative;
+  width: 40px;
+  height: 56px;
+}
+
+.ht-morel-pin {
+  width: 38px;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.55)) drop-shadow(0 0 14px rgba(200, 148, 42, 0.35));
+  transition: transform 0.2s ease, filter 0.2s ease;
+  cursor: pointer;
+}
+
+.ht-morel-pin:hover {
+  transform: scale(1.12);
+  filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.65)) drop-shadow(0 0 20px rgba(200, 148, 42, 0.55));
+}
+
+.ht-morel-pin-svg {
+  width: 100%;
+  height: 100%;
+}
+
+.ht-morel-pin-svg svg {
+  width: 100%;
+  height: 100%;
+}
+
+.ht-morel-pin-rank {
+  position: absolute;
+  right: -6px;
+  bottom: 2px;
+  min-width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #c8942a, #e0b832);
+  color: #1a1000;
+  font-size: 10px;
+  font-weight: 900;
+  display: grid;
+  place-items: center;
+  border: 1.5px solid rgba(0, 0, 0, 0.6);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.45);
+  letter-spacing: 0.2px;
+}
+
+/* Morel pin pulse animation on focus */
+.ht-morel-pin-wrapper .ht-pin--pulse .ht-morel-pin {
+  animation: morelPulse 0.8s ease-out;
+}
+
+@keyframes morelPulse {
+  0% { transform: scale(1); }
+  30% { transform: scale(1.25); }
+  60% { transform: scale(0.95); }
+  100% { transform: scale(1); }
+}
+
+/* ===================================================================
+   Mushroom Micro Pin Icons
+   =================================================================== */
+.ht-mushroom-micro-pin {
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, rgba(14, 14, 14, 0.95), rgba(28, 20, 10, 0.95));
+  border: 2px solid rgba(200, 148, 42, 0.8);
+  display: grid;
+  place-items: center;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.45);
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.ht-mushroom-micro-pin:hover {
+  transform: scale(1.15);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.55), 0 0 12px rgba(200, 148, 42, 0.4);
+}
+
+.ht-mushroom-micro-emoji {
+  font-size: 14px;
+  line-height: 1;
+}
+
+/* ===================================================================
+   Enhanced Tree ID Cards
+   =================================================================== */
+.ht-tree-id-card {
+  background: linear-gradient(135deg, rgba(20, 18, 12, 0.98), rgba(30, 26, 16, 0.96));
+  border: 1px solid rgba(200, 148, 42, 0.35);
+  border-radius: 12px;
+  padding: 14px;
+  margin: 10px 0;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+}
+
+.ht-tree-id-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(200, 148, 42, 0.2);
+}
+
+.ht-tree-id-icon {
+  width: 42px;
+  height: 42px;
+  flex-shrink: 0;
+}
+
+.ht-tree-svg {
+  width: 100%;
+  height: 100%;
+}
+
+.ht-tree-id-name {
+  font-weight: 900;
+  font-size: 14px;
+  color: #e0c080;
+  letter-spacing: 0.3px;
+}
+
+.ht-tree-id-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+@media (min-width: 420px) {
+  .ht-tree-id-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .ht-tree-id-grid .ht-tree-id-cell:last-child {
+    grid-column: 1 / -1;
+  }
+}
+
+.ht-tree-id-cell {
+  background: rgba(0, 0, 0, 0.25);
+  border-radius: 8px;
+  padding: 8px 10px;
+  border: 1px solid rgba(200, 148, 42, 0.12);
+}
+
+.ht-tree-id-cell-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: rgba(200, 148, 42, 0.7);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  margin-bottom: 4px;
+}
+
+.ht-tree-id-detail {
+  font-size: 12px;
+  color: #d4c8b0;
+  line-height: 1.45;
+}
+
+.ht-tree-id-tip {
+  background: rgba(200, 148, 42, 0.12);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 12px;
+  color: #f0d890;
+  line-height: 1.45;
+  border-left: 3px solid rgba(200, 148, 42, 0.6);
+}
+
+/* ===================================================================
+   Camera Tree / Leaf ID Overlay
+   =================================================================== */
+.ht-tree-camera-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  background: rgba(0, 0, 0, 0.92);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  animation: fadeInUp 0.25s ease-out;
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.ht-tree-camera-panel {
+  width: 100%;
+  max-width: 480px;
+  max-height: 95vh;
+  background: linear-gradient(180deg, #1a1608, #0e0b04);
+  border-radius: 18px 18px 0 0;
+  overflow-y: auto;
+  box-shadow: 0 -8px 40px rgba(0, 0, 0, 0.6);
+}
+
+.ht-tree-camera-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 18px;
+  border-bottom: 1px solid rgba(200, 148, 42, 0.25);
+  font-weight: 800;
+  font-size: 16px;
+  color: #e0c080;
+  letter-spacing: 0.3px;
+}
+
+.ht-tree-camera-close {
+  background: none;
+  border: 1px solid rgba(200, 148, 42, 0.3);
+  color: #c8942a;
+  font-size: 18px;
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  transition: background 0.15s;
+}
+
+.ht-tree-camera-close:hover {
+  background: rgba(200, 148, 42, 0.15);
+}
+
+.ht-tree-camera-body {
+  padding: 16px 18px;
+}
+
+.ht-tree-camera-preview {
+  width: 100%;
+  aspect-ratio: 4/3;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #000;
+  margin-bottom: 12px;
+  border: 1px solid rgba(200, 148, 42, 0.2);
+}
+
+.ht-tree-camera-preview video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.ht-tree-camera-fallback {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  color: #a08860;
+  font-size: 13px;
+  text-align: center;
+  padding: 20px;
+}
+
+.ht-tree-camera-instructions {
+  text-align: center;
+  margin-bottom: 14px;
+}
+
+.ht-tree-camera-instructions p {
+  color: #c4b08a;
+  font-size: 13px;
+  line-height: 1.5;
+  margin: 0 0 4px;
+}
+
+.ht-tree-camera-hint {
+  font-size: 11px !important;
+  color: #8a7a5a !important;
+}
+
+.ht-tree-camera-actions {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.ht-tree-camera-btn {
+  flex: 1;
+  padding: 12px 16px;
+  border: none;
+  border-radius: 10px;
+  font-weight: 800;
+  font-size: 14px;
+  cursor: pointer;
+  letter-spacing: 0.3px;
+  transition: transform 0.12s, box-shadow 0.12s;
+}
+
+.ht-tree-camera-btn:active {
+  transform: scale(0.97);
+}
+
+.ht-tree-camera-btn--capture {
+  background: linear-gradient(135deg, #c8942a, #e0b832);
+  color: #1a1000;
+  box-shadow: 0 4px 14px rgba(200, 148, 42, 0.4);
+}
+
+.ht-tree-camera-btn--upload {
+  background: rgba(200, 148, 42, 0.15);
+  color: #e0c080;
+  border: 1px solid rgba(200, 148, 42, 0.35);
+}
+
+.ht-tree-camera-btn--back {
+  background: rgba(200, 148, 42, 0.12);
+  color: #c4a870;
+  border: 1px solid rgba(200, 148, 42, 0.25);
+  margin-top: 12px;
+}
+
+.ht-tree-camera-loading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #c4b08a;
+  font-size: 13px;
+  padding: 16px 0;
+}
+
+.ht-tree-camera-spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid rgba(200, 148, 42, 0.3);
+  border-top-color: #c8942a;
+  border-radius: 999px;
+  animation: spinTreeId 0.8s linear infinite;
+}
+
+@keyframes spinTreeId {
+  to { transform: rotate(360deg); }
+}
+
+/* Tree ID result display */
+.ht-tree-id-result {
+  background: rgba(20, 18, 12, 0.95);
+  border: 1px solid rgba(200, 148, 42, 0.3);
+  border-radius: 12px;
+  padding: 16px;
+  margin-top: 12px;
+}
+
+.ht-tree-id-result-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.ht-tree-id-result-name {
+  font-weight: 900;
+  font-size: 18px;
+  color: #e0c080;
+}
+
+.ht-tree-id-result-sci {
+  font-size: 12px;
+  color: #a09070;
+  margin-top: 2px;
+}
+
+.ht-tree-id-result-confidence {
+  font-size: 11px;
+  font-weight: 700;
+  color: #c8942a;
+  background: rgba(200, 148, 42, 0.15);
+  padding: 3px 10px;
+  border-radius: 999px;
+  margin-top: 4px;
+  display: inline-block;
+}
+
+.ht-tree-id-result-img {
+  width: 100%;
+  max-height: 200px;
+  object-fit: cover;
+  border-radius: 8px;
+  margin-bottom: 12px;
+}
+
+.ht-tree-id-result-relevance {
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  line-height: 1.5;
+  margin-top: 10px;
+}
+
+.ht-tree-relevance--high {
+  background: rgba(76, 175, 80, 0.15);
+  border-left: 3px solid #4caf50;
+  color: #a5d6a7;
+}
+
+.ht-tree-relevance--medium {
+  background: rgba(255, 193, 7, 0.12);
+  border-left: 3px solid #ffc107;
+  color: #ffe082;
+}
+
+.ht-tree-relevance--low {
+  background: rgba(158, 158, 158, 0.1);
+  border-left: 3px solid #9e9e9e;
+  color: #bdbdbd;
+}
+
+.ht-tree-id-result-family {
+  font-size: 11px;
+  color: #8a7a5a;
+  margin-top: 6px;
+}
+
+/* Visual Guide Grid (fallback) */
+.ht-tree-id-fallback {
+  margin-top: 8px;
+}
+
+.ht-tree-id-fallback-title {
+  font-weight: 900;
+  font-size: 16px;
+  color: #e0c080;
+  margin-bottom: 4px;
+}
+
+.ht-tree-id-fallback-subtitle {
+  font-size: 12px;
+  color: #8a7a5a;
+  margin-bottom: 14px;
+}
+
+.ht-tree-id-fallback-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+@media (min-width: 420px) {
+  .ht-tree-id-fallback-grid {
+    grid-template-columns: 1fr 1fr 1fr;
+  }
+}
+
+.ht-tree-id-guide-card {
+  background: rgba(20, 18, 12, 0.95);
+  border: 1px solid rgba(200, 148, 42, 0.25);
+  border-radius: 10px;
+  padding: 10px;
+  text-align: center;
+  cursor: pointer;
+  transition: transform 0.12s, border-color 0.12s, box-shadow 0.12s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.ht-tree-id-guide-card:hover,
+.ht-tree-id-guide-card:focus {
+  transform: scale(1.04);
+  border-color: rgba(200, 148, 42, 0.6);
+  box-shadow: 0 4px 14px rgba(200, 148, 42, 0.2);
+}
+
+.ht-tree-id-guide-svg {
+  width: 40px;
+  height: 40px;
+}
+
+.ht-tree-id-guide-svg-lg {
+  width: 60px;
+  height: 60px;
+  flex-shrink: 0;
+}
+
+.ht-tree-id-guide-name {
+  font-weight: 800;
+  font-size: 11px;
+  color: #e0c080;
+  line-height: 1.2;
+}
+
+.ht-tree-id-guide-clue {
+  font-size: 10px;
+  color: #8a7a5a;
+  line-height: 1.3;
+}
+
+/* Camera ID button in education tile */
+.ht-edu-pill--camera {
+  background: linear-gradient(135deg, rgba(76, 175, 80, 0.2), rgba(76, 175, 80, 0.08));
+  border: 1px solid rgba(76, 175, 80, 0.5);
+  color: #a5d6a7;
+  font-weight: 700;
+  font-size: 12px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.12s;
+}
+
+.ht-edu-pill--camera:hover {
+  background: rgba(76, 175, 80, 0.25);
+  transform: scale(1.03);
+}
+
+/* Education section -- trees styling */
+.ht-edu-section--trees {
+  border-left: 3px solid rgba(107, 142, 35, 0.7);
+  padding-left: 12px;
+}
+
+.ht-edu-section--season {
+  border-left: 3px solid rgba(255, 193, 7, 0.5);
+  padding-left: 12px;
+}
+
+.ht-edu-cue-list {
+  list-style: none;
+  padding: 0;
+  margin: 6px 0 0;
+}
+
+.ht-edu-cue-list li {
+  font-size: 12px;
+  color: #c4b08a;
+  padding: 3px 0;
+  padding-left: 16px;
+  position: relative;
+}
+
+.ht-edu-cue-list li::before {
+  content: '\25CF';
+  position: absolute;
+  left: 0;
+  color: rgba(200, 148, 42, 0.5);
+  font-size: 8px;
+  top: 5px;
 }
 
 .ht-pin-popup {
