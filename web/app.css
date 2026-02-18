@@ -1840,6 +1840,11 @@ body.module-fly.ht-field-step-2 #defineAreaPanel {
   left: -21%;
   transform-origin: center center;
   background: #111; /* dark fallback — eliminates white flash during zoom/rotate */
+  touch-action: none;                          /* prevent browser gesture hijacking */
+  -webkit-tap-highlight-color: transparent;     /* no blue flash on touch */
+  -webkit-touch-callout: none;                 /* no callout popup on long press */
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 /* Dark background on the Leaflet container itself */
@@ -1854,6 +1859,11 @@ body.module-fly.ht-field-step-2 #defineAreaPanel {
   outline: 1px solid transparent;
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
+}
+
+/* GPU-promote the tile pane for smooth compositing during drag/zoom */
+.leaflet-tile-pane {
+  will-change: transform;
 }
 
 /* Keep tile pane dark while tiles load */
