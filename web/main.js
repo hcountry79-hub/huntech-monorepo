@@ -872,7 +872,7 @@ function initializeMap() {
   map = L.map('map', {
     center: [38.26, -90.55],
     zoom: 10,
-    maxZoom: 22,
+    maxZoom: 20,
     zoomControl: false,
     zoomSnap: 0.5,
     zoomDelta: 0.5,
@@ -1022,7 +1022,7 @@ function initializeMap() {
   // - updateInterval:100     → queue new tiles every 100ms during movement (stock 200)
   // - keepBuffer:4           → enough buffer rows for 142% oversized map + fast panning
   // - maxZoom:22             → allows deep zoom; maxNativeZoom sets CSS-upscale threshold
-  const _tileOpts = { keepBuffer: 4, updateWhenZooming: true, updateWhenIdle: false, updateInterval: 100, maxZoom: 22 };
+  const _tileOpts = { keepBuffer: 4, updateWhenZooming: true, updateWhenIdle: false, updateInterval: 100, maxZoom: 20 };
 
   const satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
     attribution: '&copy; Esri',
@@ -1079,12 +1079,13 @@ function initializeMap() {
     lidarHillshadeLayer = window.L.esri.imageMapLayer({
       url: lidarImageUrl,
       opacity: 0.7,
+      maxZoom: 20,
       renderingRule: { rasterFunction: 'Hillshade Multidirectional' }
     });
   } else {
     const lidarUrl = (window.LIDAR_TILE_URL || '').trim();
     if (lidarUrl) {
-      lidarHillshadeLayer = L.tileLayer(lidarUrl, { opacity: 0.55, maxNativeZoom: 19, zIndex: 350, ..._tileOpts });
+      lidarHillshadeLayer = L.tileLayer(lidarUrl, { opacity: 0.55, maxNativeZoom: 16, zIndex: 350, ..._tileOpts });
       lidarHillshadeLayer.on('tileerror', () => {
         showNoticeThrottled('lidar-tiles', 'LiDAR/Hillshade overlay failed to load tiles.', 'warning', 4200);
       });
@@ -1154,18 +1155,9 @@ function initializeMap() {
       staticHost.appendChild(stack);
     }
     let windPill = stack.querySelector('.ht-map-wind-pill');
-    if (!windPill) {
-      windPill = document.createElement('div');
-      windPill.className = 'ht-map-wind-pill';
-      windPill.setAttribute('aria-live', 'polite');
-      windPill.innerHTML = `
-        <span class="ht-map-wind-label">Wind</span>
-        <span class="ht-map-wind-value">--</span>
-      `;
-      stack.appendChild(windPill);
-    }
+    // Wind pill removed — keeping the lookup so compassWindValue doesn't break
+    compassWindValue = windPill ? windPill.querySelector('.ht-map-wind-value') : null;
     stack.appendChild(layersControlEl);
-    compassWindValue = windPill.querySelector('.ht-map-wind-value');
   }
   const syncLayersOpenState = () => {
     if (!layersControlEl || !document.body) return;
@@ -8026,10 +8018,13 @@ window.exitHunt = function() {
 function updateLocateMeOffset() {
   const toolbar = document.getElementById('toolbar');
   if (!toolbar) return;
-  const rect = toolbar.getBoundingClientRect();
+  // Always position relative to the tab row (the always-visible pill strip),
+  // NOT the full expanded toolbar — so the locate button never gets hidden.
+  const tabRow = toolbar.querySelector('.ht-toolbar-tab-row') || toolbar.querySelector('.ht-toolbar-tab') || toolbar;
+  const rect = tabRow.getBoundingClientRect();
   const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
-  const bottomGap = Math.max(0, viewportHeight - rect.bottom);
-  const offset = Math.max(72, Math.round(rect.height + bottomGap + 10));
+  const distFromBottom = viewportHeight - rect.top;
+  const offset = Math.max(72, Math.round(distFromBottom + 10));
   document.documentElement.style.setProperty('--toolbar-offset', `${offset}px`);
 }
 

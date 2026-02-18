@@ -3399,7 +3399,7 @@ body.ht-layers-open .ht-compass-windreadout {
 .ht-map-locate-btn {
   position: fixed;
   right: calc(12px + env(safe-area-inset-right));
-  bottom: var(--toolbar-offset, 96px);
+  bottom: var(--toolbar-offset, 72px);
   z-index: 1300;
   width: 52px;
   height: 52px;
