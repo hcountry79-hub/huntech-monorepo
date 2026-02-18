@@ -5484,9 +5484,9 @@ function ensureDrawHelper() {
   helper.innerHTML = `
     <div class="ht-draw-helper-text" id="htDrawHelperText"></div>
     <div class="ht-draw-helper-actions">
-      <button class="ht-draw-helper-btn primary" id="htDrawHelperLock" onclick="lockDrawHelper()">Lock In</button>
-      <button class="ht-draw-helper-btn" id="htDrawHelperReset" onclick="resetDrawHelper()">Reset</button>
-      <button class="ht-draw-helper-btn primary" id="htDrawHelperCancel" onclick="cancelDrawHelper()">Cancel</button>
+      <button class="ht-draw-helper-btn primary" id="htDrawHelperLock">Lock In</button>
+      <button class="ht-draw-helper-btn" id="htDrawHelperReset">Reset</button>
+      <button class="ht-draw-helper-btn primary" id="htDrawHelperCancel">Cancel</button>
     </div>
   `;
   helper.addEventListener('click', (event) => event.stopPropagation());
@@ -6344,9 +6344,9 @@ function highlightMdcSelectedArea(feature) {
   if (UI_POPUPS_ENABLED) {
     const bounds = getBoundsFromArcgisGeometry(geometry);
     const anchor = bounds ? bounds.getCenter() : map.getCenter();
-    mdcSelectedAreaPopup = L.popup({ closeButton: true, autoClose: true, closeOnClick: true })
+    mdcSelectedAreaPopup = L.popup({ closeButton: true, autoClose: true, closeOnClick: true, className: 'ht-mdc-popup-dark' })
       .setLatLng(anchor)
-      .setContent(`<div style="font-weight:800;">${escapeHtml(name)}</div>`)
+      .setContent(`<div style="background:#0b0b0b;color:#ffd400;padding:8px 16px;border-radius:999px;font-weight:800;font-size:13px;border:1.5px solid #ffd400;text-align:center;">${escapeHtml(name)}</div>`)
       .openOn(map);
   }
 }
@@ -7556,11 +7556,12 @@ async function enableMdcLandLayer() {
   mdcLandLayer = L.geoJSON(mdcLandFeatures, {
     pane: 'mdcSelectionPane',
     style: () => ({
-      color: '#ffd24d',
+      color: '#ffd400',
       weight: 3,
-      opacity: 0.98,
-      fillColor: '#ffe082',
-      fillOpacity: 0.16,
+      opacity: 1,
+      fillColor: 'transparent',
+      fillOpacity: 0,
+      dashArray: null,
       className: 'ht-mdc-area-outline'
     }),
     onEachFeature: (feature, layer) => {
@@ -7573,24 +7574,24 @@ async function enableMdcLandLayer() {
       });
       layer.on('mouseover', () => {
         layer.setStyle({
-          weight: 3.8,
-          fillOpacity: 0.22,
-          color: '#fff0b3'
+          weight: 4.5,
+          fillOpacity: 0,
+          color: '#fff200'
         });
       });
       layer.on('mouseout', () => {
         layer.setStyle({
           weight: 3,
-          fillOpacity: 0.16,
-          color: '#ffd24d'
+          fillOpacity: 0,
+          color: '#ffd400'
         });
       });
       const attrs = feature?.attributes || {};
       const name = attrs.OFF_Name || attrs.Area_Name || 'MDC Conservation Area';
       const acreage = getMdcAcreage(attrs);
       const popup = `
-        <div style="font-weight:800;">${escapeHtml(name)}</div>
-        ${acreage ? `<div style="font-size:12px;color:#333;">${escapeHtml(acreage)}</div>` : ''}
+        <div style="background:#0b0b0b;color:#ffd400;padding:8px 14px;border-radius:999px;font-weight:800;font-size:12px;border:1.5px solid #ffd400;text-align:center;white-space:nowrap;">${escapeHtml(name)}</div>
+        ${acreage ? `<div style="background:#0b0b0b;color:#ffd400;padding:4px 12px;border-radius:999px;font-size:11px;font-weight:700;text-align:center;margin-top:4px;">${escapeHtml(acreage)}</div>` : ''}
       `;
       maybeBindPopup(layer, popup);
     }
@@ -9760,12 +9761,15 @@ function setCompassLock(nextState, notify = true) {
     compassLockBtn.classList.toggle('is-locked', compassLocked);
   }
   if (compassLocked) {
-    stopDeviceCompassHeading();
-    // Animate smoothly back to north instead of snapping
+    // Keep device compass running so the user arrow still reflects heading,
+    // but animate the MAP back to north-up (maybeApplyBearingFromHeading
+    // already returns early when compassLocked is true).
     _animateBearingTo(0, 400, () => {
       mapBearingDeg = 0;
       applyMapRotation();
     });
+    // Ensure compass is started so arrow keeps tracking even in north-up mode
+    startDeviceCompassHeading().catch(() => {});
   } else {
     // When unlocked: start listening to compass heading.
     // Do NOT instantly snap to heading — let maybeApplyBearingFromHeading
