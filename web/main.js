@@ -14625,6 +14625,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   /* ═══ FISH NOW — Main entry (called when user taps FISH NOW pill) ═══ */
   window.showStreamPanel = function showStreamPanel(panelId) {
+    console.log('HUNTECH: showStreamPanel called with', panelId);
     const panelIds = ['fishNowPanel', 'mySpotsPanel', 'tripPlannerPanel', 'flyBoxPanel'];
     panelIds.forEach(id => {
       const el = document.getElementById(id);
@@ -14637,12 +14638,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Activate map + fade hero
     if (!document.body.classList.contains('ht-map-active')) {
+      console.log('HUNTECH: Activating fly map...');
       activateFlyMap();
     }
 
     // If Fish Now → start the multi-step workflow
     if (panelId === 'fishNowPanel' && isFlyModule()) {
-      fishNowInit();
+      console.log('HUNTECH: Starting fishNowInit...');
+      try {
+        fishNowInit();
+      } catch(e) {
+        console.error('HUNTECH: fishNowInit error:', e);
+        showNotice('Fish Now error: ' + e.message, 'error', 5000);
+      }
     } else if (panelId !== 'fishNowPanel') {
       centerOnMyLocationInternal();
     }
@@ -14650,10 +14658,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
   /* ── Fish Now Init: GPS center + find area + show area pin ── */
   function fishNowInit() {
+    console.log('HUNTECH: fishNowInit running');
     fishShowStep(0); // show loading state
+    showNotice('📡 Centering on your GPS…', 'success', 2000);
     // GPS center at ~1000ft out (zoom 16 ≈ 1000ft)
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(function(pos) {
+        console.log('HUNTECH: GPS got position', pos.coords.latitude, pos.coords.longitude);
         const lat = pos.coords.latitude, lng = pos.coords.longitude;
         if (typeof map !== 'undefined' && map) {
           map.setView([lat, lng], 16, { animate: true, duration: 1.2 });
