@@ -2678,7 +2678,7 @@ body.module-fly #map {
 /* Per-slide centering — 12-image fly fishing slideshow */
 /* All fly-module slides: zoomed out, centered in clear zone above tray */
 body.module-fly .ht-hero-slide {
-  background-size: auto 40vh;
+  background-size: auto 48vh;
   background-position: center 15%;
 }
 /* Per-slide fine-tuning */
@@ -3159,7 +3159,7 @@ body.module-mushroom .ht-map-hero-meta {
   }
   /* Mobile: proportional sizing for fly module thumbnails */
   body.module-fly .ht-hero-slide {
-    background-size: auto 35vh;
+    background-size: auto 42vh;
     background-position: center 10%;
   }
   /* Stronger vignette for smooth blend at image boundary */
