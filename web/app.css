@@ -56,10 +56,262 @@ body.module-fly .ht-map-fab-btn {
 }
 
 body.module-mushroom {
-  --gold: #ffd86b;
-  --gold-dark: #f0b83a;
+  --gold: #f0c040;
+  --gold-dark: #c8981e;
   --accent: #7cffc7;
-  --panel-edge: rgba(255, 216, 107, 0.5);
+  --panel-edge: rgba(124, 255, 199, 0.35);
+  --mushroom-soil: #2d1810;
+  --mushroom-bark: #3a2518;
+  --mushroom-moss: #4a7a50;
+  --mushroom-canopy: #2a5e35;
+  --mushroom-cream: #f5ecd8;
+  --mushroom-morel: #c8a060;
+  --mushroom-cap: #8b6934;
+  --mushroom-duff: #5a4830;
+  --mushroom-spore: rgba(200, 160, 96, 0.25);
+}
+
+/* ── Mushroom topbar ── */
+body.module-mushroom .ht-topbar {
+  border-bottom-color: rgba(124, 255, 199, 0.3);
+  background: linear-gradient(135deg,
+    rgba(45, 24, 16, 0.96),
+    rgba(58, 37, 24, 0.94) 50%,
+    rgba(45, 24, 16, 0.96));
+}
+
+body.module-mushroom .ht-brand-mark {
+  color: #7cffc7;
+  text-shadow: 0 0 14px rgba(124, 255, 199, 0.5);
+}
+
+body.module-mushroom .mushroom-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: #7cffc7;
+  background: rgba(124, 255, 199, 0.12);
+  border: 1px solid rgba(124, 255, 199, 0.35);
+  border-radius: 999px;
+  padding: 2px 10px;
+  margin-left: 6px;
+  white-space: nowrap;
+}
+
+/* ── Mushroom toolbar ── */
+body.module-mushroom .ht-toolbar {
+  background: linear-gradient(180deg,
+    rgba(45, 24, 16, 0.97),
+    rgba(35, 18, 10, 0.94));
+  max-height: clamp(280px, 40vh, 380px);
+}
+
+body.module-mushroom .ht-field-command-btn {
+  background: linear-gradient(150deg, rgba(124, 255, 199, 0.18), rgba(45, 24, 16, 0.95));
+  border-color: rgba(124, 255, 199, 0.5);
+  color: #c8f0d8;
+}
+
+body.module-mushroom .ht-gold-btn {
+  background: linear-gradient(160deg,
+    rgba(200, 160, 96, 0.28),
+    rgba(124, 255, 199, 0.12));
+  border-color: rgba(124, 255, 199, 0.5);
+  color: #e8f0e0;
+  text-shadow:
+    0 1px 1px rgba(0, 0, 0, 0.65),
+    0 0 5px rgba(124, 255, 199, 0.25);
+}
+
+body.module-mushroom .ht-gold-btn:hover,
+body.module-mushroom .ht-gold-btn:focus {
+  background: linear-gradient(160deg,
+    rgba(200, 160, 96, 0.4),
+    rgba(124, 255, 199, 0.22));
+  border-color: rgba(124, 255, 199, 0.7);
+}
+
+body.module-mushroom .ht-gold-btn.ht-go-btn {
+  background: linear-gradient(160deg,
+    rgba(124, 255, 199, 0.35),
+    rgba(74, 122, 80, 0.3));
+  border-color: rgba(124, 255, 199, 0.7);
+  color: #ddffd0;
+  font-weight: 900;
+}
+
+body.module-mushroom .ht-gold-btn.ht-clear-btn {
+  background: rgba(160, 80, 60, 0.2);
+  border-color: rgba(200, 120, 80, 0.4);
+  color: #e0c0a0;
+}
+
+body.module-mushroom .ht-define-title,
+body.module-mushroom .ht-route-title {
+  color: #7cffc7;
+}
+
+body.module-mushroom .ht-accordion-header {
+  border-bottom-color: rgba(124, 255, 199, 0.15);
+}
+
+body.module-mushroom .ht-form-label {
+  color: #a0d0b0;
+}
+
+body.module-mushroom .ht-select {
+  background: rgba(45, 24, 16, 0.8);
+  border-color: rgba(124, 255, 199, 0.3);
+  color: #e0e8d8;
+}
+
+/* ── Mushroom education tile ── */
+body.module-mushroom #education-tile {
+  background: linear-gradient(160deg,
+    rgba(45, 24, 16, 0.98),
+    rgba(42, 94, 53, 0.15),
+    rgba(35, 18, 10, 0.98));
+  border-color: rgba(124, 255, 199, 0.3);
+}
+
+body.module-mushroom #education-tile .ht-edu-subtitle {
+  color: #7cffc7;
+}
+
+body.module-mushroom #education-tile .ht-edu-section {
+  border-left-color: rgba(124, 255, 199, 0.5);
+}
+
+body.module-mushroom #education-tile .ht-edu-section-title {
+  color: #7cffc7;
+}
+
+body.module-mushroom #education-tile .ht-edu-pill {
+  background: rgba(124, 255, 199, 0.14);
+  color: #7cffc7;
+  border-color: rgba(124, 255, 199, 0.5);
+}
+
+/* ── Tree Identification cards ── */
+body.module-mushroom .ht-edu-section--trees {
+  border-left-color: rgba(200, 160, 96, 0.7);
+  background: rgba(200, 160, 96, 0.06);
+}
+
+body.module-mushroom .ht-tree-id-card {
+  margin: 8px 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(200, 160, 96, 0.25);
+  background: linear-gradient(140deg,
+    rgba(58, 37, 24, 0.5),
+    rgba(45, 24, 16, 0.4));
+}
+
+body.module-mushroom .ht-tree-id-name {
+  font-weight: 900;
+  font-size: 15px;
+  color: #f0c040;
+  margin-bottom: 5px;
+  letter-spacing: 0.3px;
+}
+
+body.module-mushroom .ht-tree-id-detail {
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: #d0c8b8;
+  margin: 2px 0;
+}
+
+body.module-mushroom .ht-tree-id-detail strong {
+  color: #e8d8c0;
+  font-weight: 700;
+}
+
+body.module-mushroom .ht-tree-id-tip {
+  margin-top: 6px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: rgba(124, 255, 199, 0.08);
+  border: 1px solid rgba(124, 255, 199, 0.2);
+  font-size: 13px;
+  color: #b0e8c0;
+  line-height: 1.4;
+}
+
+/* ── Season indicator ── */
+body.module-mushroom .ht-edu-section--season {
+  border-left-color: rgba(124, 255, 199, 0.6);
+  background: rgba(74, 122, 80, 0.1);
+}
+
+body.module-mushroom .ht-edu-cue-list {
+  margin: 4px 0 0 18px;
+  padding: 0;
+  font-size: 14px;
+  line-height: 1.55;
+  color: #c8e0cc;
+}
+
+body.module-mushroom .ht-edu-cue-list li {
+  margin: 3px 0;
+}
+
+/* ── Mushroom mission briefing ── */
+body.module-mushroom .ht-strategy-panel {
+  border: 1px solid rgba(124, 255, 199, 0.25);
+  background: linear-gradient(160deg,
+    rgba(45, 24, 16, 0.97),
+    rgba(42, 94, 53, 0.12),
+    rgba(35, 18, 10, 0.97));
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.45);
+}
+
+body.module-mushroom .ht-strategy-panel .ht-mission-stat {
+  border-color: rgba(124, 255, 199, 0.2);
+  background: rgba(124, 255, 199, 0.06);
+}
+
+body.module-mushroom .ht-pill-btn {
+  border-color: rgba(124, 255, 199, 0.4);
+  color: #c8f0d8;
+}
+
+body.module-mushroom .ht-pill-btn:hover {
+  background: rgba(124, 255, 199, 0.12);
+  border-color: rgba(124, 255, 199, 0.6);
+}
+
+/* ── Mushroom map locate button ── */
+body.module-mushroom .ht-map-locate-btn {
+  border-color: rgba(124, 255, 199, 0.5);
+  background: rgba(45, 24, 16, 0.85);
+  color: #7cffc7;
+}
+
+body.module-mushroom .ht-map-locate-btn:hover {
+  background: rgba(124, 255, 199, 0.15);
+}
+
+/* ── Mushroom search bar ── */
+body.module-mushroom .ht-search-input {
+  background: rgba(45, 24, 16, 0.6);
+  border-color: rgba(124, 255, 199, 0.25);
+  color: #e8f0e0;
+}
+
+body.module-mushroom .ht-search-input::placeholder {
+  color: rgba(124, 255, 199, 0.4);
+}
+
+body.module-mushroom .ht-search-btn {
+  background: rgba(124, 255, 199, 0.15);
+  border-color: rgba(124, 255, 199, 0.4);
+  color: #7cffc7;
 }
 
 body.module-turkey {
@@ -2276,54 +2528,49 @@ body.module-fly #map {
   align-items: flex-end;
   justify-content: flex-start;
   padding: clamp(22px, 4vw, 52px);
-  background-image:
-    radial-gradient(ellipse at 25% 20%, rgba(43, 212, 255, 0.18), transparent 55%),
-    radial-gradient(ellipse at 75% 60%, rgba(124, 255, 199, 0.1), transparent 50%),
-    linear-gradient(180deg, rgba(4, 12, 18, 0.10) 0%, rgba(4, 12, 18, 0.30) 30%, rgba(4, 12, 18, 0.65) 70%, rgba(4, 12, 18, 0.88) 100%),
-    url('assets/OIP (3).webp');
-  background-position: center, center, center, center 22%;
-  background-repeat: no-repeat, no-repeat, no-repeat, no-repeat;
-  background-size: cover, cover, cover, cover;
   color: #e8fbff;
   z-index: 1200;
   overflow: hidden;
   opacity: 0;
   transform: translateZ(0);
   transition: opacity 1.2s ease, transform 1.6s ease;
-  animation: flyHeroDrift 20s ease-in-out infinite alternate;
   pointer-events: none;
-  image-rendering: -webkit-optimize-contrast;
-  filter: brightness(1.1) saturate(1.15);
 }
 
-.ht-map-hero::before {
-  content: '';
+/* ── Rotating hero slide images ── */
+.ht-hero-slide {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-repeat: no-repeat;
+  background-position: center 20%;
+  opacity: 0;
+  transform: scale(1.05);
+  transition: opacity 2.5s ease-in-out, transform 8s ease-in-out;
+  will-change: opacity, transform;
+  image-rendering: -webkit-optimize-contrast;
+  filter: brightness(1.08) saturate(1.15);
+}
+.ht-hero-slide--active {
+  opacity: 1;
+  transform: scale(1.0);
+}
+
+/* Vignette + colour overlay on top of slides */
+.ht-hero-vignette {
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(circle at 20% 15%, rgba(43, 212, 255, 0.15), transparent 45%),
-    radial-gradient(circle at 80% 30%, rgba(124, 255, 199, 0.1), transparent 52%);
-  opacity: 0.85;
+    radial-gradient(ellipse at 25% 20%, rgba(43, 212, 255, 0.14), transparent 55%),
+    radial-gradient(ellipse at 75% 60%, rgba(124, 255, 199, 0.08), transparent 50%),
+    linear-gradient(180deg, rgba(4, 12, 18, 0.08) 0%, rgba(4, 12, 18, 0.25) 30%, rgba(4, 12, 18, 0.60) 70%, rgba(4, 12, 18, 0.88) 100%);
   pointer-events: none;
-  animation: heroShimmer 8s ease-in-out infinite alternate;
-}
-
-@keyframes heroShimmer {
-  0%   { opacity: 0.6; }
-  100% { opacity: 1; }
-}
-
-.ht-map-hero::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: none;
-  opacity: 0;
-  pointer-events: none;
+  z-index: 1;
 }
 
 .ht-map-hero-content {
   position: relative;
+  z-index: 2;
   max-width: min(420px, 78vw);
   padding: 16px 18px;
   border-radius: 18px;
@@ -2365,10 +2612,12 @@ body.module-fly #map {
 
 body.module-fly.ht-map-pending .ht-map-hero {
   opacity: 1;
+  pointer-events: auto;
 }
 
 body.module-fly:not(.ht-map-active) .ht-map-hero {
   opacity: 1;
+  pointer-events: auto;
 }
 
 body.module-fly.ht-map-pending #map {
@@ -2422,19 +2671,11 @@ body.module-fly.ht-map-active .ht-map-locate-btn {
   transform: translateY(0);
 }
 
-@keyframes flyHeroDrift {
-  0% {
-    background-position: center, center, center, 50% 18%;
-  }
-  100% {
-    background-position: center, center, center, 50% 28%;
-  }
-}
-
 @media (max-width: 600px) {
+  .ht-hero-slide {
+    background-position: center 15%;
+  }
   .ht-map-hero {
-    background-size: cover, cover, cover, cover;
-    background-position: center, center, center, center 15%;
     padding: 16px;
     align-items: flex-end;
   }

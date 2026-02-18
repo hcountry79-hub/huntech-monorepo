@@ -1315,20 +1315,30 @@ function bindToolbarToggleButtons() {
 }
 
 function activateFlyMap() {
-  if (!isFlyModule() || mapInitialized) return;
-  flyMapPending = false;
-  document.body.classList.remove('ht-map-pending');
-  document.body.classList.add('ht-map-active');
-  initializeMap();
-  restoreLastKnownLocation();
-  tryAutoCenterWithoutPrompt();
-  setDefaultAreaFromLocation();
-  updateFilterChips();
-  updateWorkflowUI();
-  updateLocateMeOffset();
-  setTimeout(() => {
-    if (map && typeof map.invalidateSize === 'function') map.invalidateSize();
-  }, 320);
+  if (!isFlyModule()) return;
+  if (!mapInitialized) {
+    flyMapPending = false;
+    document.body.classList.remove('ht-map-pending');
+    document.body.classList.add('ht-map-active');
+    initializeMap();
+    restoreLastKnownLocation();
+    setDefaultAreaFromLocation();
+    updateFilterChips();
+    updateWorkflowUI();
+    updateLocateMeOffset();
+    setTimeout(() => {
+      if (map && typeof map.invalidateSize === 'function') map.invalidateSize();
+    }, 320);
+  } else {
+    // Map already initialized — just ensure classes are correct
+    document.body.classList.remove('ht-map-pending');
+    document.body.classList.add('ht-map-active');
+    setTimeout(() => {
+      if (map && typeof map.invalidateSize === 'function') map.invalidateSize();
+    }, 320);
+  }
+  // Always center on user GPS when activating
+  setTimeout(() => centerOnMyLocationInternal(), 500);
 }
 
 // Initialize map
@@ -4650,6 +4660,33 @@ function handleMapClick(e) {
       }
     });
   }
+
+  if (mapClickMode === 'turkey-pin') {
+    mapClickMode = null;
+    openTurkeyPinModal({
+      onSubmit: ({ type, confidence, notes }) => {
+        const entry = {
+          id: `turkey_${Date.now()}`,
+          type: 'turkey_pin',
+          coords: [e.latlng.lat, e.latlng.lng],
+          signType: type,
+          confidence,
+          notes,
+          timestamp: new Date().toISOString()
+        };
+        huntJournalEntries.unshift(entry);
+        saveHuntJournal();
+        if (typeof window.registerTurkeyPinMarker === 'function') {
+          window.registerTurkeyPinMarker(entry);
+        } else {
+          // Fallback: use generic branded pin
+          L.marker(e.latlng, { icon: getBrandedPinIcon('T') }).addTo(map);
+        }
+        showNotice('Turkey pin logged.', 'success', 3200);
+        queueLiveStrategyUpdate('turkey-pin');
+      }
+    });
+  }
 }
 
 
@@ -6688,33 +6725,50 @@ function openTurkeyPinModal({ onSubmit }) {
   backdrop.className = 'ht-modal-backdrop';
   backdrop.style.display = 'flex';
 
-  const modal = document.createElement('div');
-  modal.className = 'ht-modal';
-  modal.innerHTML = `
-    <h3>Drop Turkey Pin</h3>
-    <div style="display:grid;gap:8px;">
-      <label style="font-size:12px;color:#bbb;">Pin Type</label>
-      <select id="tpType" class="ht-select">
+  // Build pin type options dynamically from turkey-data.js if available
+  let pinTypeOptions = '';
+  if (typeof TURKEY_PIN_TYPES !== 'undefined' && TURKEY_PIN_TYPES) {
+    const types = Object.entries(TURKEY_PIN_TYPES);
+    types.forEach(([key, pt], i) => {
+      pinTypeOptions += `<option value="${key}"${i === 0 ? ' selected' : ''}>${pt.label}</option>\n`;
+    });
+  } else {
+    // Fallback
+    pinTypeOptions = `
         <option value="roost" selected>Roost tree/zone</option>
-        <option value="flydown">Fly-down</option>
+        <option value="gobble">Gobble heard</option>
         <option value="strut">Strut zone</option>
         <option value="feeding">Feeding area</option>
         <option value="scratchings">Scratchings</option>
-        <option value="tracks">Tracks/droppings</option>
-        <option value="sighting">Sighting/gobble</option>
-        <option value="call_setup">Call setup</option>
+        <option value="tracks">Tracks</option>
+        <option value="dustingBowl">Dusting bowl</option>
+        <option value="droppings">Droppings</option>
+        <option value="feather">Feather</option>
+        <option value="sighting">Visual sighting</option>
+        <option value="callSetup">Call setup</option>
         <option value="pressure">Hunter pressure</option>
         <option value="access">Access/parking</option>
         <option value="decoy">Decoy setup</option>
+        <option value="flydown">Fly-down</option>`;
+  }
+
+  const modal = document.createElement('div');
+  modal.className = 'ht-modal ht-turkey-pin-popup';
+  modal.innerHTML = `
+    <h3 style="color:#c8a96e;">Drop Turkey Pin</h3>
+    <div style="display:grid;gap:8px;">
+      <label style="font-size:12px;color:rgba(232,220,200,0.7);">Pin Type</label>
+      <select id="tpType" class="ht-select">
+        ${pinTypeOptions}
       </select>
-      <label style="font-size:12px;color:#bbb;">Confidence</label>
+      <label style="font-size:12px;color:rgba(232,220,200,0.7);">Confidence</label>
       <select id="tpConfidence" class="ht-select">
-        <option value="low">Low</option>
-        <option value="medium" selected>Medium</option>
-        <option value="high">High</option>
+        <option value="low">Low — guessing</option>
+        <option value="medium" selected>Medium — likely</option>
+        <option value="high">High — confirmed</option>
       </select>
-      <label style="font-size:12px;color:#bbb;">Notes</label>
-      <textarea id="tpNotes" rows="4" style="width:100%;background:rgba(255,255,255,0.08);border:1px solid rgba(255,193,7,0.3);color:#fff;border-radius:10px;padding:10px;font-size:14px;outline:none;"></textarea>
+      <label style="font-size:12px;color:rgba(232,220,200,0.7);">Notes</label>
+      <textarea id="tpNotes" rows="4" style="width:100%;background:rgba(42,35,25,0.6);border:1px solid rgba(200,169,110,0.3);color:#e8dcc8;border-radius:10px;padding:10px;font-size:14px;outline:none;" placeholder="What did you see, hear, or find?"></textarea>
     </div>
     <div class="ht-modal-actions">
       <button class="ht-modal-btn ghost" id="tpCancel">Cancel</button>
@@ -13549,14 +13603,19 @@ document.addEventListener('DOMContentLoaded', () => {
     flyMapPending = true;
     document.body.classList.add('ht-map-pending');
     document.body.classList.remove('ht-map-active');
-    const streamButtons = document.querySelectorAll('.ht-field-command-btn');
-    const handleStreamCommandClick = () => {
-      const toolbar = document.getElementById('toolbar');
-      if (toolbar && toolbar.classList.contains('collapsed')) {
-        activateFlyMap();
-      }
-    };
-    streamButtons.forEach((btn) => btn.addEventListener('click', handleStreamCommandClick));
+    // Start hero slideshow — rotate images every 6s
+    (function initHeroSlideshow() {
+      const slides = document.querySelectorAll('.ht-hero-slide');
+      if (slides.length < 2) return;
+      let current = 0;
+      setInterval(() => {
+        // Don't rotate if hero is already faded out
+        if (document.body.classList.contains('ht-map-active')) return;
+        slides[current].classList.remove('ht-hero-slide--active');
+        current = (current + 1) % slides.length;
+        slides[current].classList.add('ht-hero-slide--active');
+      }, 6000);
+    })();
   } else {
     initializeMap();
   }
@@ -13678,10 +13737,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // Activate map + fade hero away + center on GPS
     if (!document.body.classList.contains('ht-map-active')) {
       activateFlyMap();
-    }
-    // Always re-center on user location when switching to FISH NOW
-    if (panelId === 'fishNowPanel' && map) {
-      setTimeout(() => centerOnMyLocationInternal(), 600);
+    } else {
+      // Map already active — just re-center
+      centerOnMyLocationInternal();
     }
   };
 
