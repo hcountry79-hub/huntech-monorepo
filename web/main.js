@@ -872,44 +872,37 @@ function initializeMap() {
   map = L.map('map', {
     center: [38.26, -90.55],
     zoom: 10,
-    maxZoom: 22,                   // allow deep zoom; layers CSS-upscale via maxNativeZoom
+    maxZoom: 22,
     zoomControl: false,
     zoomSnap: 0.5,
     zoomDelta: 0.5,
     wheelPxPerZoomLevel: 90,
-    // ── Single-finger panning: aggressive inertia for buttery coast ──
+    // ── One-finger panning ──
     dragging: true,
     inertia: true,
-    inertiaDeceleration: 1200,    // lower = longer coast — stock 3000, feels like Apple Maps
+    inertiaDeceleration: 800,     // very long buttery coast (stock 3000)
     inertiaMaxSpeed: Infinity,    // no speed cap on fling
-    inertiaTimeMax: 400,          // ms window to catch fling gesture (stock 200)
-    easeLinearity: 0.35,          // higher = more momentum carried into coast (stock 0.2)
+    inertiaTimeMax: 500,          // ms window to catch fling gesture (stock 200)
+    easeLinearity: 0.4,           // momentum carried into coast (stock 0.2)
     // ── Touch ──
-    tapTolerance: 15,             // forgiving tap detection on touch
-    bounceAtZoomLimits: false,    // no rubber-band at min/max zoom
-    touchZoom: true,              // pinch-to-zoom enabled
-    tap: false,                   // no 200ms tap delay; native click works fine
+    tapTolerance: 15,
+    bounceAtZoomLimits: false,
+    touchZoom: true,
+    tap: false,                   // no 200ms tap delay; native click is fine
     // ── Animation ──
-    fadeAnimation: true,          // smooth tile fade-in
-    zoomAnimation: true,          // smooth zoom transition
-    markerZoomAnimation: true     // smooth marker repositioning during zoom
+    fadeAnimation: true,
+    zoomAnimation: true,
+    markerZoomAnimation: true
   });
 
   const mapEl = map.getContainer();
   if (mapEl) mapEl.classList.add('ht-map-canvas');
 
   // ── Rotation-corrected drag ──────────────────────────────────────────
-  // When #map has CSS transform:rotate(N deg), Leaflet computes drag
-  // offsets in screen space, but the mapPane CSS-translate is in the
-  // rotated coordinate system.  We patch _updatePosition (called inside
-  // _onMove, BEFORE the DOM update + 'drag' event) to rotate the drag
-  // delta into #map's local coordinate space.
-  //
-  // _onMove sets:  _newPos = _startPos + screenOffset   (each frame)
-  // Our patch:     _newPos = _startPos + R(-bearing)(screenOffset)
-  // Then the original _updatePosition applies the corrected _newPos
-  // to the DOM and fires 'drag'.  The Map.Drag handler stores _newPos
-  // snapshots for inertia — those are already corrected.
+  // #map has CSS transform:rotate(N deg).  Leaflet computes drag offsets
+  // in screen space, but the mapPane translate is in the rotated coord
+  // system.  We patch _updatePosition (runs BEFORE DOM update) to rotate
+  // the drag delta so the map tracks the finger 1:1.
   if (map.dragging && map.dragging._draggable) {
     const _d = map.dragging._draggable;
     const _origUpdatePos = _d._updatePosition;
@@ -925,6 +918,40 @@ function initializeMap() {
         );
       }
       _origUpdatePos.call(this);
+    };
+  }
+
+  // ── Rotation-corrected pinch zoom ────────────────────────────────────
+  // Leaflet's TouchZoom computes the pinch center in screen coordinates
+  // and converts it to a container point.  With CSS rotation on #map,
+  // that conversion is wrong — the zoom anchors to the wrong spot.
+  // Fix: patch _onMove to rotate the screen-space center into #map's
+  // local coordinate space before Leaflet processes it.
+  if (map.touchZoom && map.touchZoom._onMove) {
+    const _origTZMove = map.touchZoom._onMove;
+    map.touchZoom._onMove = function (e) {
+      if (Math.abs(mapBearingDeg) > 0.5 && e.touches && e.touches.length === 2) {
+        // Get the midpoint in screen space
+        const t1 = e.touches[0], t2 = e.touches[1];
+        const mx = (t1.clientX + t2.clientX) / 2;
+        const my = (t1.clientY + t2.clientY) / 2;
+        // Rotate it into #map's local coordinate space around the container center
+        const rect = map.getContainer().getBoundingClientRect();
+        const cx = rect.left + rect.width / 2;
+        const cy = rect.top + rect.height / 2;
+        const rad = -mapBearingDeg * Math.PI / 180;
+        const cos = Math.cos(rad), sin = Math.sin(rad);
+        const dx = mx - cx, dy = my - cy;
+        const rmx = cx + dx * cos - dy * sin;
+        const rmy = cy + dx * sin + dy * cos;
+        // Store the corrected center so Leaflet's _centerPoint uses it
+        if (this._centerPoint) {
+          this._centerPoint = map.containerPointToLayerPoint(
+            map.mouseEventToContainerPoint({ clientX: rmx, clientY: rmy })
+          );
+        }
+      }
+      _origTZMove.call(this, e);
     };
   }
 
@@ -989,11 +1016,13 @@ function initializeMap() {
     showNoticeThrottled(key, message, 'warning', 4200);
   };
 
-  // keepBuffer:3 — enough extra tile rows for rotation coverage + panning cushion
-  // without bloating the DOM (142% map already covers the diagonal; keepBuffer:6
-  // created ~255 tiles per layer which causes jank on mobile).
-  // maxZoom:22 on every layer; maxNativeZoom tells Leaflet where to CSS-upscale.
-  const _tileOpts = { keepBuffer: 3, updateWhenZooming: false, updateWhenIdle: true, maxZoom: 22 };
+  // Tile loading strategy:
+  // - updateWhenIdle:false  → load tiles DURING panning (no grey dead zones)
+  // - updateWhenZooming:true → load tiles DURING pinch zoom
+  // - updateInterval:100     → queue new tiles every 100ms during movement (stock 200)
+  // - keepBuffer:4           → enough buffer rows for 142% oversized map + fast panning
+  // - maxZoom:22             → allows deep zoom; maxNativeZoom sets CSS-upscale threshold
+  const _tileOpts = { keepBuffer: 4, updateWhenZooming: true, updateWhenIdle: false, updateInterval: 100, maxZoom: 22 };
 
   const satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
     attribution: '&copy; Esri',
