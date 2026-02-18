@@ -879,12 +879,13 @@ function initializeMap() {
     wheelPxPerZoomLevel: 90,
     // Mobile-optimized touch settings
     inertia: true,
-    inertiaDeceleration: 2200,    // lower = longer coast after fling
+    inertiaDeceleration: 1600,    // lower = longer smooth coast after fling
     inertiaMaxSpeed: Infinity,    // no cap on fling speed
+    inertiaTimeMax: 300,          // max ms between last move and lift for inertia to fire
     tapTolerance: 15,             // forgiving tap detection on touch
     bounceAtZoomLimits: false,    // no rubber-band at min/max zoom
     touchZoom: true,              // pinch-to-zoom enabled
-    tap: true,                    // tap events enabled
+    tap: false,                   // disable 200ms tap delay (we use native click)
     fadeAnimation: true,          // smooth tile fade-in
     zoomAnimation: true           // smooth zoom transition
   });
@@ -896,21 +897,43 @@ function initializeMap() {
   // When #map has CSS transform:rotate(), Leaflet processes drag deltas
   // in the unrotated coordinate system.  A rightward finger drag when
   // the map is rotated 90° should still pan the view rightward, but
-  // Leaflet would pan it downward.  Fix: rotate the drag offset vector
-  // by the current bearing so finger direction always matches view pan.
+  // Leaflet would pan it downward.
+  //
+  // Fix: patch _updatePosition (called from _onMove right before the DOM
+  // update + 'drag' event) so the rotation correction is applied IN TIME
+  // for Leaflet to use the corrected position.  We also track the
+  // previous corrected position so inertia velocity/direction is correct.
   if (map.dragging && map.dragging._draggable) {
     const _d = map.dragging._draggable;
-    const _origOnMove = _d._onMove;
-    _d._onMove = function (e) {
-      _origOnMove.call(this, e);
+    let _prevCorrectedPos = null;
+
+    // Patch _updatePosition — runs inside _onMove, BEFORE DOM update
+    const _origUpdatePos = _d._updatePosition;
+    _d._updatePosition = function () {
       if (Math.abs(mapBearingDeg) > 0.5 && this._newPos && this._startPos) {
         const rad = mapBearingDeg * Math.PI / 180;
         const c = Math.cos(rad), s = Math.sin(rad);
         const dx = this._newPos.x - this._startPos.x;
         const dy = this._newPos.y - this._startPos.y;
-        this._newPos.x = this._startPos.x + (dx * c + dy * s);
-        this._newPos.y = this._startPos.y + (-dx * s + dy * c);
+        // Rotate the drag delta to match the CSS-rotated coordinate space
+        this._newPos = L.point(
+          this._startPos.x + (dx * c + dy * s),
+          this._startPos.y + (-dx * s + dy * c)
+        );
+        // Fix _lastPos so fling/inertia uses rotated velocity vector
+        this._lastPos = _prevCorrectedPos || this._newPos;
+        _prevCorrectedPos = this._newPos.clone();
+      } else {
+        _prevCorrectedPos = null;
       }
+      _origUpdatePos.call(this);
+    };
+
+    // Clear tracked position on each new drag start
+    const _origOnDown = _d._onDown;
+    _d._onDown = function (e) {
+      _prevCorrectedPos = null;
+      _origOnDown.call(this, e);
     };
   }
 
