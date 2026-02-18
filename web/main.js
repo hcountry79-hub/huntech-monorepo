@@ -7178,12 +7178,16 @@ function getUserHeadingIcon(headingDeg) {
     className: 'ht-user-location',
     html: `
       <div class="ht-user-heading ${hasHeading ? '' : 'is-unknown'}" style="--heading:${rotation}deg">
-        <div class="ht-user-heading-arrow"></div>
+        <svg class="ht-user-arrow-svg" viewBox="0 0 40 80" xmlns="http://www.w3.org/2000/svg">
+          <path d="M20 2 L32 60 L20 50 L8 60 Z"
+                fill="#ffd400" stroke="#000" stroke-width="3"
+                stroke-linejoin="round" />
+        </svg>
         <div class="ht-user-heading-core"></div>
       </div>
     `,
-    iconSize: [48, 48],
-    iconAnchor: [24, 24]
+    iconSize: [40, 80],
+    iconAnchor: [20, 50]
   });
 }
 
