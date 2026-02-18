@@ -2557,25 +2557,24 @@ body.module-fly #map {
 }
 
 /* Per-slide centering — 12-image fly fishing slideshow */
-/* All fly-module slides: constrained height, anchored top, subjects above tray */
+/* All fly-module slides: zoomed out, centered in clear zone above tray */
 body.module-fly .ht-hero-slide {
-  background-size: auto 60vh;
-  background-position: center top;
+  background-size: auto 40vh;
+  background-position: center 15%;
 }
-/* New fly images (fly-hero-1 through fly-hero-8) */
-.ht-fly-slide-1  { background-position: center top; }
-.ht-fly-slide-2  { background-position: center top; }
-.ht-fly-slide-3  { background-position: center top; }
-.ht-fly-slide-4  { background-position: center top; }
-.ht-fly-slide-5  { background-position: center top; }
-.ht-fly-slide-6  { background-position: center top; }
-.ht-fly-slide-7  { background-position: center top; }
-.ht-fly-slide-8  { background-position: center top; }
-/* Kept old images (OIP 1,2,4,5) */
-.ht-fly-slide-9  { background-position: 60% top; filter: brightness(1.15) saturate(1.55) contrast(1.25); }
-.ht-fly-slide-10 { background-position: 50% top; filter: brightness(1.45) saturate(1.35) contrast(1.05); }
-.ht-fly-slide-11 { background-position: 50% top; filter: brightness(1.3) saturate(1.4) contrast(1.1); }
-.ht-fly-slide-12 { background-position: 50% top; filter: brightness(1.45) saturate(1.35) contrast(1.05); }
+/* Per-slide fine-tuning */
+.ht-fly-slide-1  { background-position: center 15%; }
+.ht-fly-slide-2  { background-position: center 15%; }
+.ht-fly-slide-3  { background-position: center 15%; }
+.ht-fly-slide-4  { background-position: center 15%; }
+.ht-fly-slide-5  { background-position: center 15%; }
+.ht-fly-slide-6  { background-position: center 15%; }
+.ht-fly-slide-7  { background-position: center 15%; }
+.ht-fly-slide-8  { background-position: center 15%; }
+.ht-fly-slide-9  { background-position: center 15%; filter: brightness(1.15) saturate(1.55) contrast(1.25); }
+.ht-fly-slide-10 { background-position: center 15%; filter: brightness(1.45) saturate(1.35) contrast(1.05); }
+.ht-fly-slide-11 { background-position: center 15%; filter: brightness(1.3) saturate(1.4) contrast(1.1); }
+.ht-fly-slide-12 { background-position: center 15%; filter: brightness(1.45) saturate(1.35) contrast(1.05); }
 
 /* Vignette: strong fade from image bottom into dark tray zone */
 .ht-hero-vignette {
@@ -2983,8 +2982,8 @@ body.module-mushroom .ht-map-hero-meta {
   }
   /* Mobile: proportional sizing for fly module thumbnails */
   body.module-fly .ht-hero-slide {
-    background-size: auto 50vh;
-    background-position: center top;
+    background-size: auto 35vh;
+    background-position: center 10%;
   }
   /* Stronger vignette for smooth blend at image boundary */
   .ht-hero-vignette {
