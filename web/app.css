@@ -2281,7 +2281,7 @@ body.module-fly #map {
     radial-gradient(ellipse at 75% 60%, rgba(124, 255, 199, 0.1), transparent 50%),
     linear-gradient(180deg, rgba(4, 12, 18, 0.10) 0%, rgba(4, 12, 18, 0.30) 30%, rgba(4, 12, 18, 0.65) 70%, rgba(4, 12, 18, 0.88) 100%),
     url('assets/OIP (3).webp');
-  background-position: center, center, center, center 40%;
+  background-position: center, center, center, center 22%;
   background-repeat: no-repeat, no-repeat, no-repeat, no-repeat;
   background-size: cover, cover, cover, cover;
   color: #e8fbff;
@@ -2424,17 +2424,17 @@ body.module-fly.ht-map-active .ht-map-locate-btn {
 
 @keyframes flyHeroDrift {
   0% {
-    background-position: center, center, center, 50% 35%;
+    background-position: center, center, center, 50% 18%;
   }
   100% {
-    background-position: center, center, center, 50% 50%;
+    background-position: center, center, center, 50% 28%;
   }
 }
 
 @media (max-width: 600px) {
   .ht-map-hero {
     background-size: cover, cover, cover, cover;
-    background-position: center, center, center, center 30%;
+    background-position: center, center, center, center 15%;
     padding: 16px;
     align-items: flex-end;
   }
