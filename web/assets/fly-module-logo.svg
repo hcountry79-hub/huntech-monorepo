@@ -1,13 +1,50 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" role="img" aria-label="Fly fishing module logo">
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" role="img" aria-label="Fly fishing module logo — trout and fly rod">
   <defs>
     <linearGradient id="flyGrad" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0" stop-color="#2bd4ff" />
       <stop offset="1" stop-color="#7cffc7" />
     </linearGradient>
+    <linearGradient id="troutBody" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#7cffc7" />
+      <stop offset=".6" stop-color="#2bd4ff" />
+      <stop offset="1" stop-color="#1a8fcf" />
+    </linearGradient>
+    <linearGradient id="waterGrad" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#2bd4ff" stop-opacity=".25" />
+      <stop offset="1" stop-color="#7cffc7" stop-opacity=".25" />
+    </linearGradient>
   </defs>
+  <!-- Outer ring -->
   <circle cx="32" cy="32" r="30" fill="#07141c" stroke="url(#flyGrad)" stroke-width="2" />
-  <path d="M14 44 C 24 30, 34 21, 52 18" stroke="url(#flyGrad)" stroke-width="2.6" fill="none" stroke-linecap="round" />
-  <circle cx="44" cy="28" r="6" fill="none" stroke="#7cffc7" stroke-width="2" />
-  <path d="M50 28 L58 24 L58 32 Z" fill="#2bd4ff" />
-  <circle cx="42" cy="26" r="1.2" fill="#7cffc7" />
+  <!-- Water ripples at bottom -->
+  <path d="M10 46 Q16 43 22 46 Q28 49 34 46 Q40 43 46 46 Q52 49 56 46" stroke="url(#waterGrad)" stroke-width="1.6" fill="none" stroke-linecap="round" opacity=".7" />
+  <path d="M8 50 Q14 47 20 50 Q26 53 32 50 Q38 47 44 50 Q50 53 56 50" stroke="url(#waterGrad)" stroke-width="1.2" fill="none" stroke-linecap="round" opacity=".4" />
+  <!-- Trout body — leaping arc -->
+  <path d="M14 38 C18 34, 22 24, 30 20 C34 18, 38 19, 40 22 C42 25, 40 28, 36 30 C32 32, 26 34, 22 36 C19 37, 16 38, 14 38 Z" fill="url(#troutBody)" opacity=".95" />
+  <!-- Trout belly shading -->
+  <path d="M16 37 C20 34, 26 30, 34 26 C30 30, 24 33, 18 36 Z" fill="#fff" opacity=".15" />
+  <!-- Trout spots -->
+  <circle cx="24" cy="28" r=".9" fill="#07141c" opacity=".5" />
+  <circle cx="28" cy="25" r=".7" fill="#07141c" opacity=".45" />
+  <circle cx="31" cy="23" r=".8" fill="#07141c" opacity=".5" />
+  <circle cx="27" cy="30" r=".6" fill="#07141c" opacity=".4" />
+  <circle cx="22" cy="32" r=".7" fill="#07141c" opacity=".4" />
+  <!-- Trout eye -->
+  <circle cx="35" cy="23" r="1.4" fill="#fff" />
+  <circle cx="35.3" cy="22.8" r=".7" fill="#07141c" />
+  <!-- Trout tail fin -->
+  <path d="M14 38 C11 35, 9 32, 8 28 C10 31, 12 34, 14 36 Z" fill="#2bd4ff" opacity=".8" />
+  <path d="M14 38 C11 40, 9 43, 8 47 C10 44, 12 41, 14 39 Z" fill="#2bd4ff" opacity=".8" />
+  <!-- Dorsal fin -->
+  <path d="M26 24 C28 18, 32 17, 33 20 L30 22 Z" fill="#1a8fcf" opacity=".7" />
+  <!-- Fly rod line — arcing from upper right -->
+  <path d="M56 8 C52 12, 44 16, 38 18" stroke="url(#flyGrad)" stroke-width="1.2" fill="none" stroke-linecap="round" />
+  <!-- Fly rod (thin diagonal) -->
+  <line x1="58" y1="6" x2="48" y2="14" stroke="#7cffc7" stroke-width="1.8" stroke-linecap="round" />
+  <!-- Fly at end of line -->
+  <circle cx="38" cy="18" r="1.6" fill="#ff6b4a" opacity=".9" />
+  <path d="M38 18 L41 16 L40 18 L42 17" stroke="#ffb74a" stroke-width=".5" fill="none" stroke-linecap="round" />
+  <!-- Water splash near trout mouth -->
+  <path d="M40 20 C41 18, 43 17, 44 19" stroke="#fff" stroke-width=".7" fill="none" stroke-linecap="round" opacity=".6" />
+  <path d="M42 22 C43 20, 45 20, 45 22" stroke="#fff" stroke-width=".5" fill="none" stroke-linecap="round" opacity=".4" />
 </svg>
