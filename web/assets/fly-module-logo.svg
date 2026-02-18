@@ -1,64 +1,149 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" role="img" aria-label="Fly fishing module logo — trout leaping at fly">
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" role="img" aria-label="Fly fishing module logo">
   <defs>
     <linearGradient id="ringGrad" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#2bd4ff" />
-      <stop offset="1" stop-color="#7cffc7" />
+      <stop offset="0" stop-color="#2bd4ff"/>
+      <stop offset=".5" stop-color="#4ae8d0"/>
+      <stop offset="1" stop-color="#7cffc7"/>
     </linearGradient>
-    <linearGradient id="troutBody" x1="0" y1="0" x2="1" y2=".4">
-      <stop offset="0" stop-color="#0d6986" />
-      <stop offset=".35" stop-color="#2bd4ff" />
-      <stop offset=".65" stop-color="#7cffc7" />
-      <stop offset="1" stop-color="#e8f5e9" />
-    </linearGradient>
-    <radialGradient id="glow" cx=".5" cy=".5" r=".5">
-      <stop offset="0" stop-color="#2bd4ff" stop-opacity=".18" />
-      <stop offset="1" stop-color="#2bd4ff" stop-opacity="0" />
+    <radialGradient id="bgGlow" cx=".35" cy=".6" r=".6">
+      <stop offset="0" stop-color="#0a2e3d" />
+      <stop offset=".6" stop-color="#071820" />
+      <stop offset="1" stop-color="#040c12" />
     </radialGradient>
-    <linearGradient id="waterGrad" x1="0" y1="0" x2="1" y2="0">
-      <stop offset="0" stop-color="#2bd4ff" stop-opacity=".3" />
-      <stop offset="1" stop-color="#7cffc7" stop-opacity=".3" />
+    <linearGradient id="waterSurface" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#2bd4ff" stop-opacity=".45"/>
+      <stop offset=".5" stop-color="#7cffc7" stop-opacity=".35"/>
+      <stop offset="1" stop-color="#2bd4ff" stop-opacity=".45"/>
     </linearGradient>
+    <linearGradient id="underwaterLight" x1=".3" y1="0" x2=".7" y2="1">
+      <stop offset="0" stop-color="#2bd4ff" stop-opacity=".12"/>
+      <stop offset="1" stop-color="#07141c" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="fishermanFill" x1=".5" y1="0" x2=".5" y2="1">
+      <stop offset="0" stop-color="#c8e6ec"/>
+      <stop offset=".15" stop-color="#8ec8d6"/>
+      <stop offset=".5" stop-color="#0e2a36"/>
+      <stop offset="1" stop-color="#050d12"/>
+    </linearGradient>
+    <linearGradient id="lineGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#7cffc7" stop-opacity=".9"/>
+      <stop offset="1" stop-color="#2bd4ff" stop-opacity=".7"/>
+    </linearGradient>
+    <linearGradient id="troutGrad" x1="0" y1=".2" x2="1" y2=".8">
+      <stop offset="0" stop-color="#0a4f5c"/>
+      <stop offset=".25" stop-color="#2bd4ff"/>
+      <stop offset=".5" stop-color="#ff6b4a" stop-opacity=".9"/>
+      <stop offset=".75" stop-color="#ffab40"/>
+      <stop offset="1" stop-color="#e8f5e9"/>
+    </linearGradient>
+    <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="1" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="softGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="2.5"/>
+    </filter>
+    <clipPath id="circClip"><circle cx="32" cy="32" r="29.5"/></clipPath>
   </defs>
-  <!-- Background ring with glow -->
-  <circle cx="32" cy="32" r="31" fill="#06111a" />
-  <circle cx="32" cy="32" r="30" fill="url(#glow)" stroke="url(#ringGrad)" stroke-width="1.8" />
-  <!-- Water ripples -->
-  <path d="M10 47 Q16 44 22 47 Q28 50 34 47 Q40 44 46 47 Q52 50 56 47" stroke="url(#waterGrad)" stroke-width="1.5" fill="none" stroke-linecap="round" />
-  <path d="M12 51 Q18 48 24 51 Q30 54 36 51 Q42 48 48 51 Q54 54 56 51" stroke="url(#waterGrad)" stroke-width="1" fill="none" stroke-linecap="round" opacity=".5" />
-  <!-- Trout — bold leaping arc, larger -->
-  <path d="M11 40 C14 36, 18 26, 28 20 C32 17, 37 17, 41 20 C44 23, 43 27, 39 30 C35 32, 28 35, 22 38 C17 40, 13 41, 11 40 Z" fill="url(#troutBody)" opacity=".95" />
-  <!-- Belly highlight -->
-  <path d="M14 39 C18 36, 26 30, 36 24 C32 29, 24 34, 16 38 Z" fill="#fff" opacity=".18" />
-  <!-- Parr marks / spots -->
-  <circle cx="22" cy="29" r="1" fill="#07141c" opacity=".4" />
-  <circle cx="26" cy="26" r=".8" fill="#07141c" opacity=".35" />
-  <circle cx="30" cy="23" r=".9" fill="#07141c" opacity=".4" />
-  <circle cx="25" cy="32" r=".7" fill="#07141c" opacity=".3" />
-  <circle cx="20" cy="33" r=".7" fill="#07141c" opacity=".3" />
-  <circle cx="33" cy="22" r=".7" fill="#07141c" opacity=".35" />
-  <!-- Red lateral stripe -->
-  <path d="M16 36 C22 33, 30 28, 38 24" stroke="#ff6b6b" stroke-width="1" fill="none" stroke-linecap="round" opacity=".35" />
-  <!-- Trout eye -->
-  <circle cx="37" cy="22" r="1.6" fill="#fff" />
-  <circle cx="37.4" cy="21.7" r=".8" fill="#07141c" />
-  <!-- Tail fin — forked -->
-  <path d="M11 40 C8 37, 7 33, 6 29 C8 32, 10 35, 12 37 Z" fill="#2bd4ff" opacity=".75" />
-  <path d="M11 40 C8 42, 7 46, 6 49 C8 46, 10 43, 12 41 Z" fill="#2bd4ff" opacity=".75" />
-  <!-- Dorsal fin -->
-  <path d="M24 24 C26 17, 31 16, 33 20 L29 23 Z" fill="#1592b5" opacity=".75" />
-  <!-- Pectoral fin -->
-  <path d="M34 27 C36 29, 37 32, 35 33 L33 30 Z" fill="#1a8fcf" opacity=".5" />
-  <!-- Fly line — elegant arc from upper right -->
-  <path d="M57 7 C53 11, 46 16, 40 19" stroke="url(#ringGrad)" stroke-width="1" fill="none" stroke-linecap="round" stroke-dasharray="none" />
-  <!-- Fly rod -->
-  <line x1="59" y1="5" x2="50" y2="12" stroke="#7cffc7" stroke-width="2" stroke-linecap="round" />
-  <!-- Rod grip -->
-  <line x1="59" y1="5" x2="61" y2="4" stroke="#5abf9e" stroke-width="2.5" stroke-linecap="round" />
-  <!-- Fly / lure -->
-  <circle cx="40" cy="19" r="1.8" fill="#ff5722" opacity=".9" />
-  <path d="M40 19 L43 17 M40 19 L42 20" stroke="#ffab40" stroke-width=".6" fill="none" stroke-linecap="round" />
-  <!-- Splash droplets -->
-  <circle cx="43" cy="16" r=".6" fill="#fff" opacity=".5" />
-  <circle cx="45" cy="18" r=".4" fill="#fff" opacity=".4" />
-  <path d="M42 21 C43 19, 45 19, 45 21" stroke="#fff" stroke-width=".6" fill="none" stroke-linecap="round" opacity=".45" />
+
+  <!-- === OUTER RING === -->
+  <circle cx="32" cy="32" r="31" fill="#040c12"/>
+  <circle cx="32" cy="32" r="30" fill="url(#bgGlow)" stroke="url(#ringGrad)" stroke-width="1.6"/>
+
+  <!-- === UNDERWATER ATMOSPHERE === -->
+  <g clip-path="url(#circClip)">
+    <!-- Light rays from above -->
+    <path d="M22 2 L18 38 L26 38 Z" fill="#2bd4ff" opacity=".04"/>
+    <path d="M30 2 L27 42 L35 42 Z" fill="#2bd4ff" opacity=".05"/>
+    <path d="M40 2 L36 36 L44 36 Z" fill="#7cffc7" opacity=".03"/>
+    <path d="M50 2 L44 34 L52 34 Z" fill="#2bd4ff" opacity=".025"/>
+    <!-- Underwater ambient glow -->
+    <rect x="2" y="38" width="60" height="26" fill="url(#underwaterLight)" opacity=".7"/>
+
+    <!-- === WATER SURFACE LINE (split-water effect) === -->
+    <path d="M2 38 Q10 36.5 18 38 Q26 39.5 32 38 Q38 36.5 46 38 Q54 39.5 62 38" stroke="url(#waterSurface)" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+    <!-- Surface shimmer -->
+    <path d="M5 37.5 Q12 36 20 37.5 Q28 39 35 37.5 Q42 36 50 37.5 Q56 39 62 37.5" stroke="#fff" stroke-width=".4" fill="none" stroke-linecap="round" opacity=".3"/>
+
+    <!-- === FISHERMAN SILHOUETTE (wading, casting) === -->
+    <!-- Legs in water -->
+    <path d="M24 38 L23 47 L21 47 L22.5 38 Z" fill="#0a1e28" opacity=".85"/>
+    <path d="M28 38 L29 47 L31 47 L29.5 38 Z" fill="#0a1e28" opacity=".85"/>
+    <!-- Water splash at legs -->
+    <ellipse cx="26" cy="38.5" rx="6" ry="1.5" fill="#2bd4ff" opacity=".12"/>
+    <!-- Body core -->
+    <path d="M22 38 C22 34, 23 30, 23 27 C23.5 25, 24 24, 25 23.5 L29 23.5 C30 24, 30.5 25, 31 27 C31 30, 32 34, 32 38 Z" fill="url(#fishermanFill)" opacity=".92"/>
+    <!-- Vest detail -->
+    <path d="M24 28 L25 33 L29 33 L30 28" stroke="#2bd4ff" stroke-width=".3" fill="none" opacity=".3"/>
+    <!-- Shoulders -->
+    <path d="M23 27 C22 26.5, 21.5 25, 22 24.5 L25 23.5" fill="#0e2a36" opacity=".9"/>
+    <path d="M31 27 C32 26.5, 32.5 25, 32 24.5 L29 23.5" fill="#0e2a36" opacity=".9"/>
+    <!-- Head -->
+    <ellipse cx="27" cy="22" rx="2.8" ry="3" fill="#0e2a36" opacity=".92"/>
+    <!-- Hat brim -->
+    <path d="M23 21.5 C23 20.5, 25 19.5, 27 19.5 C29 19.5, 31 20.5, 31 21.5 C30 21.2, 28 20.8, 27 20.8 C26 20.8, 24 21.2, 23 21.5 Z" fill="#0a1e28"/>
+    <!-- Hat crown -->
+    <path d="M24.5 21 C24.5 19.5, 25.5 18.5, 27 18.5 C28.5 18.5, 29.5 19.5, 29.5 21" fill="#0e2a36"/>
+
+    <!-- === CASTING ARM + ROD === -->
+    <!-- Back arm (rod arm) extending up-right -->
+    <path d="M31 25 C33 23, 35 20, 37 17" stroke="#0e2a36" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+    <!-- Hand/grip -->
+    <circle cx="37" cy="16.8" r="1" fill="#0e2a36"/>
+    <!-- Fly rod — long elegant diagonal -->
+    <line x1="37" y1="16.8" x2="52" y2="8" stroke="#7cffc7" stroke-width="1.4" stroke-linecap="round" filter="url(#glow)"/>
+    <!-- Rod tip -->
+    <circle cx="52" cy="8" r=".6" fill="#7cffc7" opacity=".8"/>
+
+    <!-- === FLY LINE — elegant loop === -->
+    <!-- Main line from rod tip, sweeping forward in a beautiful loop -->
+    <path d="M52 8 C54 6, 56 5, 55 8 C54 12, 48 18, 42 22 C38 24.5, 34 26, 30 25" stroke="url(#lineGrad)" stroke-width=".8" fill="none" stroke-linecap="round" filter="url(#glow)"/>
+    <!-- Leader/tippet — delicate -->
+    <path d="M30 25 C28 25, 26 27, 24 30" stroke="#2bd4ff" stroke-width=".4" fill="none" stroke-linecap="round" opacity=".7"/>
+    <!-- Fly at the end -->
+    <circle cx="24" cy="30.5" r="1.2" fill="#ff5722" opacity=".85"/>
+    <path d="M24 30.5 L22 29 M24 30.5 L22.5 32" stroke="#ffab40" stroke-width=".4" fill="none" stroke-linecap="round" opacity=".8"/>
+
+    <!-- === TROUT — underwater, eyeing the fly === -->
+    <!-- Main body -->
+    <path d="M8 48 C12 45, 16 42, 24 41 C28 40.5, 32 41, 35 42.5 C37 43.5, 38 45, 36 46.5 C34 48, 28 49, 22 49 C16 49, 11 49, 8 48 Z" fill="url(#troutGrad)" opacity=".85"/>
+    <!-- Belly highlight -->
+    <path d="M12 48 C16 46, 24 44, 34 43 C30 45.5, 22 47.5, 14 48 Z" fill="#fff" opacity=".12"/>
+    <!-- Orange/red belly stripe (brook trout inspired) -->
+    <path d="M12 47.5 C18 46, 26 45.5, 34 44.5" stroke="#ff6b4a" stroke-width="1.2" fill="none" stroke-linecap="round" opacity=".5"/>
+    <!-- Spots -->
+    <circle cx="18" cy="45" r=".6" fill="#ff6b4a" opacity=".4"/>
+    <circle cx="21" cy="43.5" r=".5" fill="#2bd4ff" opacity=".35"/>
+    <circle cx="24" cy="44.5" r=".5" fill="#ff6b4a" opacity=".35"/>
+    <circle cx="27" cy="43" r=".55" fill="#2bd4ff" opacity=".3"/>
+    <circle cx="30" cy="44" r=".45" fill="#ff6b4a" opacity=".35"/>
+    <circle cx="16" cy="46.5" r=".4" fill="#2bd4ff" opacity=".3"/>
+    <!-- Eye -->
+    <circle cx="34" cy="43" r="1.1" fill="#ffe082"/>
+    <circle cx="34.2" cy="42.8" r=".55" fill="#07141c"/>
+    <!-- Tail fin -->
+    <path d="M8 48 C6 46, 5 44, 4 42 C6 44, 7 46, 9 47 Z" fill="#2bd4ff" opacity=".6"/>
+    <path d="M8 48 C6 50, 5 52, 4 54 C6 52, 7 50, 9 49 Z" fill="#2bd4ff" opacity=".6"/>
+    <!-- Dorsal fin -->
+    <path d="M22 42 C23 39.5, 26 39, 28 41 L25 42 Z" fill="#1a8fcf" opacity=".55"/>
+    <!-- Pectoral fin -->
+    <path d="M32 45 C33 46.5, 33.5 48, 32 48.5 L31 46.5 Z" fill="#1592b5" opacity=".4"/>
+
+    <!-- === UNDERWATER PARTICLES / BUBBLES === -->
+    <circle cx="15" cy="42" r=".3" fill="#fff" opacity=".25"/>
+    <circle cx="20" cy="40" r=".25" fill="#fff" opacity=".2"/>
+    <circle cx="38" cy="44" r=".35" fill="#fff" opacity=".2"/>
+    <circle cx="42" cy="48" r=".2" fill="#fff" opacity=".15"/>
+    <circle cx="30" cy="52" r=".3" fill="#fff" opacity=".15"/>
+
+    <!-- === GRAVEL BOTTOM (subtle) === -->
+    <ellipse cx="14" cy="56" rx="2" ry=".8" fill="#1a3040" opacity=".4"/>
+    <ellipse cx="22" cy="57" rx="2.5" ry=".7" fill="#1a3040" opacity=".35"/>
+    <ellipse cx="32" cy="56.5" rx="1.8" ry=".6" fill="#1a3040" opacity=".3"/>
+    <ellipse cx="42" cy="57" rx="2.2" ry=".7" fill="#1a3040" opacity=".35"/>
+    <ellipse cx="50" cy="56" rx="1.5" ry=".6" fill="#1a3040" opacity=".3"/>
+  </g>
+
+  <!-- === RING HIGHLIGHT === -->
+  <circle cx="32" cy="32" r="30" fill="none" stroke="url(#ringGrad)" stroke-width="1.6"/>
 </svg>
