@@ -1839,6 +1839,26 @@ body.module-fly.ht-field-step-2 #defineAreaPanel {
   top: -21%;
   left: -21%;
   transform-origin: center center;
+  background: #111; /* dark fallback — eliminates white flash during zoom/rotate */
+}
+
+/* Dark background on the Leaflet container itself */
+.leaflet-container {
+  background: #111 !important;
+}
+
+/* Eliminate the white grid lines between tiles.
+   CSS transforms (rotation) create sub-pixel gaps;
+   a tiny transparent outline forces the GPU to over-paint. */
+.leaflet-tile {
+  outline: 1px solid transparent;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+/* Keep tile pane dark while tiles load */
+.leaflet-tile-pane {
+  background: #111;
 }
 
 body.module-fly #map {

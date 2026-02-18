@@ -875,18 +875,43 @@ function initializeMap() {
     zoomControl: false,
     zoomSnap: 0.5,
     zoomDelta: 0.5,
-    wheelPxPerZoomLevel: 120,
+    wheelPxPerZoomLevel: 90,
     // Mobile-optimized touch settings
-    inertiaDeceleration: 3000,    // smoother panning deceleration
-    inertiaMaxSpeed: 1500,        // allow faster fling gestures
-    tapTolerance: 15,             // more forgiving tap detection on touch
+    inertia: true,
+    inertiaDeceleration: 2200,    // lower = longer coast after fling
+    inertiaMaxSpeed: Infinity,    // no cap on fling speed
+    tapTolerance: 15,             // forgiving tap detection on touch
     bounceAtZoomLimits: false,    // no rubber-band at min/max zoom
     touchZoom: true,              // pinch-to-zoom enabled
-    tap: true                     // tap events enabled
+    tap: true,                    // tap events enabled
+    fadeAnimation: true,          // smooth tile fade-in
+    zoomAnimation: true           // smooth zoom transition
   });
 
   const mapEl = map.getContainer();
   if (mapEl) mapEl.classList.add('ht-map-canvas');
+
+  // ── Rotation-corrected drag ──────────────────────────────────────────
+  // When #map has CSS transform:rotate(), Leaflet processes drag deltas
+  // in the unrotated coordinate system.  A rightward finger drag when
+  // the map is rotated 90° should still pan the view rightward, but
+  // Leaflet would pan it downward.  Fix: rotate the drag offset vector
+  // by the current bearing so finger direction always matches view pan.
+  if (map.dragging && map.dragging._draggable) {
+    const _d = map.dragging._draggable;
+    const _origOnMove = _d._onMove;
+    _d._onMove = function (e) {
+      _origOnMove.call(this, e);
+      if (Math.abs(mapBearingDeg) > 0.5 && this._newPos && this._startPos) {
+        const rad = mapBearingDeg * Math.PI / 180;
+        const c = Math.cos(rad), s = Math.sin(rad);
+        const dx = this._newPos.x - this._startPos.x;
+        const dy = this._newPos.y - this._startPos.y;
+        this._newPos.x = this._startPos.x + (dx * c + dy * s);
+        this._newPos.y = this._startPos.y + (-dx * s + dy * c);
+      }
+    };
+  }
 
   // The #map element is CSS-oversized to 142% for rotation coverage.
   // Tell Leaflet about the actual container size so it loads enough tiles.
