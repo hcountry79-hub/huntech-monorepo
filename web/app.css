@@ -63,10 +63,17 @@ body.module-mushroom {
 }
 
 body.module-turkey {
-  --gold: #ff9b6b;
-  --gold-dark: #e67a45;
-  --accent: #ffc107;
-  --panel-edge: rgba(255, 155, 107, 0.5);
+  --gold: #c8a96e;
+  --gold-dark: #8b6914;
+  --accent: #d4a017;
+  --panel-edge: rgba(200, 169, 110, 0.5);
+  --turkey-bark: #2a2319;
+  --turkey-rust: #a13a2a;
+  --turkey-forest: #4a6741;
+  --turkey-parchment: #e8dcc8;
+  --turkey-barnwood: #7a6e5a;
+  --turkey-heartwood: #1a1612;
+  --turkey-walnut: #3a3228;
 }
 
 body.module-fly .ht-topbar {
@@ -2272,9 +2279,9 @@ body.module-fly #map {
   background-image:
     radial-gradient(ellipse at 25% 20%, rgba(43, 212, 255, 0.18), transparent 55%),
     radial-gradient(ellipse at 75% 60%, rgba(124, 255, 199, 0.1), transparent 50%),
-    linear-gradient(180deg, rgba(4, 12, 18, 0.15) 0%, rgba(4, 12, 18, 0.4) 30%, rgba(4, 12, 18, 0.75) 70%, rgba(4, 12, 18, 0.92) 100%),
-    url('assets/trout-logo.png');
-  background-position: center, center, center, center 35%;
+    linear-gradient(180deg, rgba(4, 12, 18, 0.10) 0%, rgba(4, 12, 18, 0.30) 30%, rgba(4, 12, 18, 0.65) 70%, rgba(4, 12, 18, 0.88) 100%),
+    url('assets/OIP (3).webp');
+  background-position: center, center, center, center 40%;
   background-repeat: no-repeat, no-repeat, no-repeat, no-repeat;
   background-size: cover, cover, cover, cover;
   color: #e8fbff;
@@ -2417,10 +2424,10 @@ body.module-fly.ht-map-active .ht-map-locate-btn {
 
 @keyframes flyHeroDrift {
   0% {
-    background-position: center, center, center, 50% 30%;
+    background-position: center, center, center, 50% 35%;
   }
   100% {
-    background-position: center, center, center, 50% 45%;
+    background-position: center, center, center, 50% 50%;
   }
 }
 
@@ -6979,4 +6986,397 @@ body.ht-hunt-active .ht-hunt-only {
   background: rgba(255,193,7,.15); color: var(--gold, #ffc107);
   border: 1px solid rgba(255,193,7,.3); border-radius: 8px;
   padding: 6px 16px; cursor: pointer; font-size: 13px; z-index: 32001;
+}
+
+/* ============================================================
+   TURKEY MODULE — "Old Timber" Theme
+   Barnwood grain, camo texture, rusty tin, aged parchment
+   ============================================================ */
+
+/* ---- Topbar ---- */
+body.module-turkey .ht-topbar {
+  border-bottom-color: rgba(200, 169, 110, 0.35);
+  background: linear-gradient(135deg,
+    rgba(26, 22, 18, 0.97),
+    rgba(42, 35, 25, 0.95) 40%,
+    rgba(26, 22, 18, 0.97) 100%
+  );
+}
+
+/* ---- Brand accent ---- */
+body.module-turkey .ht-brand-mark {
+  color: #c8a96e;
+  text-shadow: 0 0 12px rgba(200, 169, 110, 0.5);
+}
+
+/* ---- Toolbar — barnwood grain background ---- */
+body.module-turkey .ht-toolbar {
+  background:
+    repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 3px,
+      rgba(200, 169, 110, 0.03) 3px,
+      rgba(200, 169, 110, 0.03) 4px
+    ),
+    linear-gradient(180deg,
+      rgba(42, 35, 25, 0.97),
+      rgba(26, 22, 18, 0.95)
+    );
+  border-top: 1px solid rgba(200, 169, 110, 0.15);
+}
+
+/* ---- Field Command button — old leather ---- */
+body.module-turkey .ht-field-command-btn {
+  background: linear-gradient(150deg, rgba(200, 169, 110, 0.18), rgba(42, 35, 25, 0.95));
+  border-color: rgba(200, 169, 110, 0.5);
+  color: var(--turkey-parchment);
+}
+body.module-turkey .ht-field-command-btn:active {
+  background: linear-gradient(150deg, rgba(200, 169, 110, 0.3), rgba(42, 35, 25, 0.95));
+}
+
+/* ---- Accordion headers — walnut stain with rust rivets ---- */
+body.module-turkey .ht-accordion-header {
+  background: linear-gradient(90deg,
+    rgba(58, 50, 40, 0.9),
+    rgba(42, 35, 25, 0.95) 50%,
+    rgba(58, 50, 40, 0.9)
+  );
+  border-bottom: 1px solid rgba(200, 169, 110, 0.2);
+  position: relative;
+}
+body.module-turkey .ht-accordion-header::before,
+body.module-turkey .ht-accordion-header::after {
+  content: '';
+  position: absolute;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #a13a2a 40%, #6b2a1a 100%);
+  top: 50%;
+  transform: translateY(-50%);
+  box-shadow: 0 0 3px rgba(161, 58, 42, 0.5);
+}
+body.module-turkey .ht-accordion-header::before { left: 8px; }
+body.module-turkey .ht-accordion-header::after { right: 8px; }
+
+/* ---- Gold buttons — aged brass ---- */
+body.module-turkey .ht-gold-btn {
+  background: linear-gradient(135deg, #c8a96e 0%, #8b6914 100%);
+  color: #1a1612;
+  border: 1px solid rgba(200, 169, 110, 0.6);
+  font-weight: 800;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.15);
+  box-shadow:
+    0 2px 4px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
+}
+body.module-turkey .ht-gold-btn:hover {
+  background: linear-gradient(135deg, #d4b87a 0%, #a07a1c 100%);
+}
+body.module-turkey .ht-gold-btn:active {
+  background: linear-gradient(135deg, #8b6914 0%, #6b5010 100%);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.4);
+}
+
+/* ---- LET'S GO button — rust accent ---- */
+body.module-turkey .ht-go-btn {
+  background: linear-gradient(135deg, #c8a96e 0%, #a13a2a 100%) !important;
+  border-color: rgba(161, 58, 42, 0.7) !important;
+  color: #fff !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5) !important;
+  font-size: 16px;
+  letter-spacing: 1px;
+}
+
+/* ---- Select dropdowns ---- */
+body.module-turkey .ht-select {
+  background: rgba(42, 35, 25, 0.8);
+  border-color: rgba(200, 169, 110, 0.3);
+  color: var(--turkey-parchment);
+}
+
+/* ---- Turkey scenery ---- */
+.ht-turkey-scenery {
+  position: absolute;
+  top: 56px;
+  left: 0;
+  right: 0;
+  height: 80px;
+  pointer-events: none;
+  z-index: 1;
+  overflow: hidden;
+  opacity: 0.6;
+}
+.ht-turkey-scenery svg {
+  width: 100%;
+  height: 100%;
+}
+
+/* ---- Weapon selector ---- */
+.ht-weapon-select {
+  display: flex;
+  gap: 6px;
+  width: 100%;
+}
+.ht-weapon-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 6px;
+  border-radius: 10px;
+  border: 1.5px solid rgba(200, 169, 110, 0.25);
+  background: rgba(42, 35, 25, 0.7);
+  color: rgba(200, 169, 110, 0.65);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.ht-weapon-btn svg {
+  opacity: 0.6;
+  transition: opacity 0.2s ease;
+}
+.ht-weapon-btn:hover {
+  border-color: rgba(200, 169, 110, 0.5);
+  background: rgba(42, 35, 25, 0.9);
+}
+.ht-weapon-btn--active {
+  border-color: #c8a96e;
+  background: linear-gradient(135deg, rgba(200, 169, 110, 0.2), rgba(42, 35, 25, 0.95));
+  color: #c8a96e;
+  box-shadow:
+    0 0 8px rgba(200, 169, 110, 0.2),
+    inset 0 0 12px rgba(200, 169, 110, 0.08);
+}
+.ht-weapon-btn--active svg {
+  opacity: 1;
+  filter: drop-shadow(0 0 4px rgba(200, 169, 110, 0.4));
+}
+
+/* ---- Regulation banner ---- */
+.ht-turkey-reg-banner-container {
+  position: fixed;
+  top: 56px;
+  left: 0;
+  right: 0;
+  z-index: 900;
+  pointer-events: none;
+}
+.ht-turkey-reg-banner {
+  margin: 0 auto;
+  max-width: 600px;
+  padding: 6px 14px;
+  background: linear-gradient(135deg,
+    rgba(42, 35, 25, 0.95),
+    rgba(26, 22, 18, 0.92)
+  );
+  border-bottom: 1px solid rgba(200, 169, 110, 0.2);
+  border-radius: 0 0 12px 12px;
+  font-size: 11.5px;
+  pointer-events: auto;
+}
+.ht-reg-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 700;
+  color: var(--turkey-parchment);
+}
+.ht-reg-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.ht-reg-dot--open {
+  background: #4a6741;
+  box-shadow: 0 0 6px rgba(74, 103, 65, 0.6);
+  animation: regPulse 2s ease infinite;
+}
+.ht-reg-dot--closed {
+  background: #a13a2a;
+  box-shadow: 0 0 4px rgba(161, 58, 42, 0.4);
+}
+@keyframes regPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+.ht-reg-days {
+  margin-left: auto;
+  font-size: 10.5px;
+  color: rgba(200, 169, 110, 0.7);
+  font-weight: 500;
+}
+.ht-reg-hours, .ht-reg-date {
+  font-size: 10.5px;
+  color: rgba(200, 169, 110, 0.6);
+  margin-top: 2px;
+  padding-left: 13px;
+}
+
+/* ---- Turkey pin markers ---- */
+.ht-turkey-pin-wrapper {
+  background: transparent !important;
+  border: none !important;
+}
+.ht-turkey-pin {
+  width: 24px;
+  height: 28px;
+  border-radius: 50% 50% 50% 0;
+  transform: rotate(-45deg);
+  background: linear-gradient(135deg, #2a2319 0%, #1a1612 100%);
+  border: 2px solid #c8a96e;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow:
+    0 2px 6px rgba(0, 0, 0, 0.5),
+    0 0 8px rgba(200, 169, 110, 0.2);
+}
+.ht-turkey-pin-label {
+  transform: rotate(45deg);
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: 0.3px;
+  color: #c8a96e;
+  line-height: 1;
+}
+
+/* ---- Turkey pin popup ---- */
+.ht-turkey-pin-popup .ht-pin-popup-header {
+  border-bottom-color: rgba(200, 169, 110, 0.2);
+}
+.ht-turkey-pin-popup .ht-pin-popup-type {
+  color: #c8a96e;
+}
+.ht-turkey-pin-popup .ht-pin-popup-education {
+  font-size: 11px;
+  color: rgba(232, 220, 200, 0.7);
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(200, 169, 110, 0.1);
+  font-style: italic;
+}
+
+/* ---- Strategy panel — turkey theme ---- */
+body.module-turkey .ht-strategy-panel {
+  border: 1px solid rgba(200, 169, 110, 0.25);
+  background:
+    repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 4px,
+      rgba(200, 169, 110, 0.02) 4px,
+      rgba(200, 169, 110, 0.02) 5px
+    ),
+    linear-gradient(160deg,
+      rgba(42, 35, 25, 0.97),
+      rgba(26, 22, 18, 0.95)
+    );
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+  animation: turkeyPanelRise 0.5s ease;
+}
+
+@keyframes turkeyPanelRise {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ---- Mini toolbar buttons — barn tin ---- */
+body.module-turkey .ht-toolbar-mini-btn {
+  background: linear-gradient(135deg, rgba(122, 110, 90, 0.3), rgba(42, 35, 25, 0.8));
+  border-color: rgba(200, 169, 110, 0.3);
+  color: var(--turkey-parchment);
+}
+body.module-turkey .ht-toolbar-mini-btn:hover {
+  background: linear-gradient(135deg, rgba(200, 169, 110, 0.25), rgba(42, 35, 25, 0.9));
+}
+
+/* ---- Toolbar pill buttons ---- */
+body.module-turkey .ht-pill-btn {
+  border-color: rgba(200, 169, 110, 0.3);
+  background: rgba(42, 35, 25, 0.7);
+  color: var(--turkey-parchment);
+}
+body.module-turkey .ht-pill-btn:hover {
+  border-color: rgba(200, 169, 110, 0.6);
+  background: rgba(42, 35, 25, 0.9);
+}
+
+/* ---- Notice/toast overrides ---- */
+body.module-turkey .ht-notice {
+  background: rgba(42, 35, 25, 0.95);
+  border-color: rgba(200, 169, 110, 0.3);
+  color: var(--turkey-parchment);
+}
+
+/* ---- Advanced tools tray ---- */
+body.module-turkey .ht-tool-tray {
+  background: linear-gradient(180deg, rgba(42, 35, 25, 0.97), rgba(26, 22, 18, 0.95));
+  border-color: rgba(200, 169, 110, 0.2);
+}
+
+/* ---- Education tile ---- */
+body.module-turkey .ht-edu-tile {
+  background:
+    repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 5px,
+      rgba(200, 169, 110, 0.015) 5px,
+      rgba(200, 169, 110, 0.015) 6px
+    ),
+    linear-gradient(180deg, rgba(42, 35, 25, 0.97), rgba(26, 22, 18, 0.95));
+  border-color: rgba(200, 169, 110, 0.25);
+}
+
+/* ---- Route line ---- */
+body.module-turkey .leaflet-overlay-pane .ht-route-line {
+  stroke: #c8a96e;
+}
+
+/* ---- Camo background pattern for modals ---- */
+body.module-turkey .ht-modal {
+  background:
+    url("data:image/svg+xml,%3Csvg width='60' height='60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 0h30v30H0zM30 30h30v30H30z' fill='rgba(74,103,65,0.04)'/%3E%3Cpath d='M30 0h30v30H30zM0 30h30v30H0z' fill='rgba(139,105,20,0.03)'/%3E%3C/svg%3E"),
+    linear-gradient(160deg, rgba(42, 35, 25, 0.98), rgba(26, 22, 18, 0.96));
+  border-color: rgba(200, 169, 110, 0.3);
+  color: var(--turkey-parchment);
+}
+body.module-turkey .ht-modal h3 {
+  color: #c8a96e;
+}
+body.module-turkey .ht-modal-btn.primary {
+  background: linear-gradient(135deg, #c8a96e, #8b6914);
+  color: #1a1612;
+}
+body.module-turkey .ht-modal-btn.ghost {
+  border-color: rgba(200, 169, 110, 0.3);
+  color: var(--turkey-parchment);
+}
+
+/* ---- Search bar ---- */
+body.module-turkey .ht-search-input {
+  background: rgba(42, 35, 25, 0.8);
+  border-color: rgba(200, 169, 110, 0.2);
+  color: var(--turkey-parchment);
+}
+body.module-turkey .ht-search-btn {
+  background: rgba(200, 169, 110, 0.15);
+  border-color: rgba(200, 169, 110, 0.3);
+  color: #c8a96e;
+}
+
+/* ---- Feather divider (use between sections) ---- */
+.ht-feather-divider {
+  width: 100%;
+  height: 12px;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 12'%3E%3Cpath d='M0 6 Q50 0 100 6 Q150 12 200 6' fill='none' stroke='rgba(200,169,110,0.2)' stroke-width='1'/%3E%3C/svg%3E") center/200px 12px repeat-x;
+  margin: 4px 0;
 }

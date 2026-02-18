@@ -653,6 +653,457 @@ const HABITAT_LOOK_FOR = {
   open: 'Subtle low spots, fence gaps, and lone cover that pulls movement.'
 };
 
+// ===================================================================
+//   Module Detection Helpers
+// ===================================================================
+function isFlyModule() {
+  return Boolean(document.body && document.body.classList.contains('module-fly'));
+}
+
+function isMushroomModule() {
+  return Boolean(document.body && document.body.classList.contains('module-mushroom'));
+}
+
+function isTurkeyModule() {
+  return Boolean(document.body && document.body.classList.contains('module-turkey'));
+}
+
+// ===================================================================
+//   Mushroom Foraging — Education & Habitat Data
+//   Based on Missouri morel research, mycological field guides,
+//   and traditional foraging wisdom.
+// ===================================================================
+
+const MUSHROOM_EDUCATION = {
+  bedding: {
+    priority: 1,
+    title: 'South-Facing Hardwood Slope (Early Morels)',
+    description: 'Warm, sunlit slopes wake up first after spring rains. Morels fruit where leaf litter warms quickly and holds moisture against the soil. In Missouri, south-facing hardwood ridges produce the earliest flushes — often 7-10 days ahead of north slopes. The mycelium responds to soil temps reaching 50-55°F at 4 inches deep.',
+    tips: 'Start low on the slope and work uphill in 15-25 yard lanes. Scan near downed limbs and the uphill side of trees that catch morning and midday sun. Pause every few steps and look at ankle level — morels blend into last year\'s leaf litter.',
+    lookFor: 'Honeycomb caps poking through moist leaf litter, sun-warmed soil pockets near dying trees, bark mulch around old stumps. Half-free morels often appear a week before yellows.',
+    treeFocus: ['Elm (dying/dead)', 'Ash (declining)', 'Tulip Poplar', 'Sycamore', 'Cottonwood'],
+    treeNotes: 'Dying Elm: look for bark sloughing off in strips and branch dieback in the crown — this is the #1 morel producer in Missouri. Ash: opposite branching pattern with diamond-ridged bark, declining from Emerald Ash Borer. Tulip Poplar: tulip-shaped leaves (4 lobes), tall straight trunk. Sycamore: distinctive mottled white/tan/green bark that flakes in patches.',
+    seasonCues: [
+      'First green leaves appearing on south-facing slopes',
+      'Daytime highs consistently 60-70°F, nights staying above 40°F',
+      '48-72 hours after a soaking rain (1"+ over 24hrs)',
+      'Redbuds blooming and dogwoods just starting to open',
+      'Soil temperature at 4" depth reaching 50-55°F',
+      'May apples emerging and unfurling their umbrella leaves'
+    ],
+    treeId: {
+      elm: {
+        name: 'American Elm (Ulmus americana)',
+        bark: 'Deep, interlacing diamond ridges; gray-brown. Dying trees show loose, peeling bark strips.',
+        leaves: 'Alternate, doubly serrate, asymmetric base, 3-6" long. Look for last year\'s leaves on ground.',
+        shape: 'Classic vase shape when healthy. Dead elms have bare upper branches like skeleton fingers.',
+        tip: 'The #1 morel tree in Missouri. Dead and dying elms within the last 1-3 years are morel magnets. Check a 30-foot radius around every dying elm you find.'
+      },
+      ash: {
+        name: 'White/Green Ash (Fraxinus spp.)',
+        bark: 'Diamond pattern with tight, interlocking ridges. Gray to brown.',
+        leaves: 'Compound, opposite, 5-9 leaflets. Last year\'s fallen compound leaves are distinctive.',
+        shape: 'Oval crown, opposite branching. Many are declining from Emerald Ash Borer — look for D-shaped exit holes and bark blonding.',
+        tip: 'Declining ash trees (not fully dead) produce excellent morel flushes. The stress triggers the fungal fruiting. Check within 20 feet of the trunk base.'
+      },
+      tulipPoplar: {
+        name: 'Tulip Poplar (Liriodendron tulipifera)',
+        bark: 'Deep furrows in a tight diamond pattern; gray-brown. Younger trees have smooth, greenish bark.',
+        leaves: 'Unique 4-lobed tulip shape — flat across the top. Bright green, turning yellow in fall.',
+        shape: 'Tall, straight trunk that self-prunes lower branches. Crown is narrow and high.',
+        tip: 'Morels appear in the duff zone within 15 feet of mature tulip poplars, especially on south-facing slopes. Less famous than elm but very reliable in Missouri.'
+      },
+      sycamore: {
+        name: 'American Sycamore (Platanus occidentalis)',
+        bark: 'Unmistakable mottled patchwork of white, tan, and olive-green. Bark flakes in large irregular plates.',
+        leaves: 'Broad, 3-5 lobed, maple-like but larger (6-10"). Fuzzy undersides.',
+        shape: 'Massive spreading crown. Often found near water. Lower trunk can be hollow.',
+        tip: 'Sycamores along creek bottoms and floodplains produce mid-to-late season morels. The leaf litter holds moisture well and creates ideal fruiting microclimate.'
+      },
+      cottonwood: {
+        name: 'Eastern Cottonwood (Populus deltoides)',
+        bark: 'Deeply furrowed, thick ridges on mature trees. Young bark is smooth and yellowish.',
+        leaves: 'Triangular (deltoid), coarsely toothed, 3-5" wide. Flutter in light wind on flattened petioles.',
+        shape: 'Large, spreading crown. Found in bottomlands and near water.',
+        tip: 'Big cottonwoods in floodplains are prime late-season spots. Check the root flare zone and any area where leaf litter collects against the trunk.'
+      }
+    }
+  },
+  transition: {
+    priority: 2,
+    title: 'Edge + Warming Ridge Line (High Priority)',
+    description: 'Edges where hardwood canopy meets openings warm fast and trap humidity in the leaf litter. These transition zones get the "greenhouse effect" — sun warms the opening while the canopy holds moisture. Morels and other spring fungi hold in these micro-climates. In Missouri, ridge lines and field edges on the south and west sides produce consistently.',
+    tips: 'Work the edge line itself, then sweep 20-40 yards into the timber. Recheck every tree that shows early bud break — the leaf canopy closing overhead is a signal that soil temps are in the zone. Focus on the timber side of the edge.',
+    lookFor: 'Leaf litter breaks where sun hits the ground, old bark chips, damp soil along the edge transition. Small morels often hide right at the grass-timber line.',
+    treeFocus: ['White Oak', 'Hickory (Shagbark)', 'Elm (dying)', 'Hackberry'],
+    treeNotes: 'White Oak: rounded leaf lobes (no points), light gray scaly bark in loose plates. Hickory: shaggy bark peeling in long strips, compound leaves with 5-7 leaflets. Hackberry: warty gray bark with distinctive corky ridges.',
+    seasonCues: [
+      'Bud swell on hardwoods — buds fat but not yet open',
+      'Grass just starting to green at tree line edges',
+      'Warming trend after last frost — 3+ days of 60°F+ highs',
+      'Dandelions blooming in open fields nearby',
+      'Lilac bushes in early bloom (traditional morel indicator)'
+    ],
+    treeId: {
+      whiteOak: {
+        name: 'White Oak (Quercus alba)',
+        bark: 'Light gray, scaly, peeling in loose vertical strips and plates.',
+        leaves: 'Alternate, 7-9 rounded lobes (no sharp points). Deep sinuses. 5-9" long.',
+        shape: 'Broad, spreading crown with massive lateral branches.',
+        tip: 'White oaks in transition edges produce good morel habitat. The leaf litter decomposes slowly, providing steady nutrients. Check within 25 feet of mature white oaks at field edges.'
+      },
+      hickory: {
+        name: 'Shagbark Hickory (Carya ovata)',
+        bark: 'Long, shaggy strips peeling away from trunk — unmistakable "shredded" look.',
+        leaves: 'Compound, alternate, 5 leaflets (occasionally 7). End leaflet largest.',
+        shape: 'Tall with a narrow, open crown. Bark becomes shaggy at 20-25 years.',
+        tip: 'Hickory-oak transition zones are prime morel territory. The mixed leaf litter creates ideal soil chemistry. Focus on areas where hickory and elm or oak leaf litter overlap.'
+      },
+      hackberry: {
+        name: 'Common Hackberry (Celtis occidentalis)',
+        bark: 'Unique warty or corky ridges on gray bark — feels rough and bumpy.',
+        leaves: 'Alternate, simple, asymmetric base like elm but smoother edges. 2-5" long.',
+        shape: 'Medium tree, irregular crown shape. Often found in bottomlands and edges.',
+        tip: 'Hackberry indicates rich, moist soil — good morel habitat. Not a primary host tree but a reliable indicator species. Where hackberry grows, conditions favor morels.'
+      }
+    }
+  },
+  feeding: {
+    priority: 3,
+    title: 'Creek Bottoms + Floodplain (Mid-Season)',
+    description: 'As the season advances and south slopes dry out, cooler creek bottoms and floodplains keep moisture longer and produce steady mid-season flushes. In Missouri, the creeks that run through hardwood timber are gold — especially where old elms or cottonwoods line the banks. The consistent moisture means you can find morels here 1-2 weeks after the early slopes are done.',
+    tips: 'Grid the first benches (flat shelves) above the creek, focusing on the base of large trees. Check shaded, damp leaf litter especially on the north side of the creek channel. These areas often produce gray and yellow morels simultaneously.',
+    lookFor: 'Moist soil that springs back when you step on it, leaf duff near root flares, small drainages feeding into the main creek. Watch for half-free morels (Morchella punctipes) which appear slightly earlier than true morels in these bottoms.',
+    treeFocus: ['Cottonwood', 'Sycamore', 'Silver Maple', 'Box Elder', 'Elm (dead standing)'],
+    treeNotes: 'Silver Maple: deeply lobed leaves with silvery undersides, opposite branching. Box Elder: compound leaves with 3-5 leaflets, looks like a giant weed — but indicates rich bottomland soil perfect for morels.',
+    seasonCues: [
+      'Soil staying damp between rains without puddles',
+      'Leaf canopy 50-75% formed overhead',
+      'Daytime highs consistently 65-75°F',
+      'Jack-in-the-pulpit emerging in the understory',
+      'Wild phlox and trillium blooming on the slopes above',
+      'Morel season 2-3 weeks running on south slopes'
+    ],
+    treeId: {
+      silverMaple: {
+        name: 'Silver Maple (Acer saccharinum)',
+        bark: 'Shaggy, peeling in long thin strips on older trees. Silvery-gray.',
+        leaves: 'Deeply cut 5 lobes with silvery-white undersides. 4-7" wide.',
+        shape: 'Fast-growing, often multi-trunked. Branches brittle — look for storm damage.',
+        tip: 'Silver maples in floodplains create damp, shaded micro-sites perfect for mid-season morels. Check the root flare zone and any cavities where moisture collects.'
+      },
+      boxElder: {
+        name: 'Box Elder (Acer negundo)',
+        bark: 'Thin, pale gray-brown with shallow ridges. Often has green patches.',
+        leaves: 'Compound (unusual for a maple), opposite, 3-5 leaflets.',
+        shape: 'Scrubby, irregular. Often leans. Multiple trunks common.',
+        tip: 'Box elder is an understory indicator of rich, moist bottomland soil. Where box elders grow thick, the soil chemistry and moisture regime favor morel fruiting. Check the leaf litter within 10-15 feet.'
+      }
+    }
+  },
+  water: {
+    priority: 4,
+    title: 'Seeps + Drainages (Moisture Pockets)',
+    description: 'Natural seeps, springs, and small drainages create steady moisture zones that keep fungal mycelium active even when surrounding slopes dry out. In Missouri, these "wet-weather" drainages that only flow after rain are some of the most consistent late-season producers. The cool air pooling effect keeps soil temps in the fruiting zone longer.',
+    tips: 'Follow small drainages uphill from the creek. Scan the upslope side where water seeps out of the hillside. These areas often hold morels when everything else has dried up. Work slowly — the ground cover is thicker and morels hide well.',
+    lookFor: 'Moist leaf litter even on dry days, mossy logs and rocks, small springs bubbling up, green moss carpets on north-facing banks. Ferns unfurling (fiddleheads) indicate consistent moisture.',
+    treeFocus: ['Sycamore', 'Elm (standing dead)', 'Willow', 'Pawpaw'],
+    treeNotes: 'Willow: narrow lance-shaped leaves, flexible branches, always near water. Pawpaw: large tropical-looking leaves (8-12") in an understory cluster — indicates rich, moist soil. Where pawpaw grows, the soil is prime morel habitat.',
+    seasonCues: [
+      'Humidity stays high in drainage bottoms even on sunny days',
+      'Ground never fully dries between rains',
+      'Recent rain followed by 2-3 warm nights (above 50°F)',
+      'Fiddlehead ferns unfurling along the seep edges',
+      'Late-season on the main slopes but still finding fresh caps in the drainages'
+    ],
+    treeId: {
+      pawpaw: {
+        name: 'Pawpaw (Asimina triloba)',
+        bark: 'Smooth, thin, gray-brown with small lighter blotches.',
+        leaves: 'Very large (8-12"), oblong, drooping. Tropical appearance. Alternate.',
+        shape: 'Small understory tree, 15-30 feet. Forms colonies from root suckers.',
+        tip: 'Pawpaw groves indicate rich, consistently moist soil with high organic content — perfect morel conditions. Not a host tree itself, but the best indicator species in Missouri bottomlands. Grid pawpaw patches slowly and scan low.'
+      },
+      willow: {
+        name: 'Black Willow (Salix nigra)',
+        bark: 'Dark brown to black, deeply furrowed with interconnecting ridges.',
+        leaves: 'Narrow, lance-shaped, 3-6" long, finely serrate. Alternate.',
+        shape: 'Often leaning or multi-trunked. Flexible, drooping branches.',
+        tip: 'Willows mark consistent water sources. Check the uphill side of willow stands where the seep zone meets drier ground — that transition line often holds late morels.'
+      }
+    }
+  },
+  open: {
+    priority: 5,
+    title: 'Old Orchard + Disturbed Ground (Late/Bonus)',
+    description: 'Old apple orchards, burned areas, logged edges, and other disturbed ground can produce surprise morel flushes. In Missouri, abandoned homesteads with old fruit trees are legendary producers. Fire-scarred areas can fruit heavily the spring after a burn. These spots are unpredictable but can be incredibly productive when conditions align.',
+    tips: 'Check the base of old fruit trees and the first shade line of any remaining canopy. In burn areas, focus on the edges where the burn meets unburned timber. Move slow and scan 360° at each tree — morels can appear on any side.',
+    lookFor: 'Patchy leaf litter around old stumps, charcoal-stained soil, decaying wood and root zones, abandoned fencerows with old trees. Burn morels (Morchella tomentosa/sextelata) are darker and often grow in dense clusters.',
+    treeFocus: ['Apple (old orchard)', 'Elm (dying)', 'Hickory', 'Cherry (wild)'],
+    treeNotes: 'Old Apple: rough dark bark, open spreading crown, fruit "mummies" on the ground. Wild Cherry: horizontal lenticels on bark that look like dash lines, reddish-brown. Mature cherry bark becomes scaly and dark.',
+    seasonCues: [
+      'Late-season flush after warm rain (late April through mid-May in Missouri)',
+      'Warm days (70°F+) with cool nights (50-55°F)',
+      'Leaf litter still holding moisture under old canopy',
+      'Previous year burn areas greening up for the first time',
+      'Other hunters reporting the season is "over" on the main ridges'
+    ],
+    treeId: {
+      apple: {
+        name: 'Old Apple (Malus domestica)',
+        bark: 'Rough, scaly, dark gray-brown. Older trees have deeply furrowed bark.',
+        leaves: 'Simple, oval, finely serrate with soft fuzz underneath.',
+        shape: 'Open, twisted crown. Often leaning. Old orchards have regular spacing.',
+        tip: 'The most famous "bonus" morel spot in Missouri. Old abandoned orchards with dying apple trees produce morels reliably every spring. Check a full 30-foot radius around every old apple tree — the root system extends far and the mycelial network follows it.'
+      },
+      wildCherry: {
+        name: 'Wild Black Cherry (Prunus serotina)',
+        bark: 'Young: smooth, reddish-brown with horizontal lenticels (dash marks). Mature: dark, scaly, flaking in thick irregular plates.',
+        leaves: 'Alternate, simple, finely serrate with inward-curving teeth. Shiny dark green.',
+        shape: 'Tall, narrow crown in forests. Open-grown trees spread wider.',
+        tip: 'Wild cherry in transition edges and disturbed areas can produce late morels where the leaf litter mixes with decaying cherry wood. Check where cherry trees meet old fields.'
+      }
+    }
+  }
+};
+
+const MUSHROOM_FLAVOR = {
+  bedding: {
+    titles: ['Sun-Warmed Slope Pocket', 'Early Morel Ridge Break', 'South Slope Leaf Litter', 'Warm-Bed Hardwood Shelf', 'Elm Graveyard South Face'],
+    reasons: [
+      'This slope warms first in spring and kickstarts the morel flush after soaking rain.',
+      'Leaf litter here holds heat and moisture against the soil — perfect fruiting conditions.',
+      'A sheltered shelf on this south face keeps humidity steady even after wind shifts.',
+      'Dying elm and ash trees on this slope create a mycelial network primed for morels.',
+      'The soil temperature here reaches fruiting range (50-55°F) 7-10 days before north slopes.'
+    ],
+    search: [
+      'Work uphill in tight 15-yard lanes, scanning every 6-10 feet at ankle level.',
+      'Recheck the base of every dying hardwood and downed limb — scan a full circle.',
+      'Slow down near old stumps and scan the leaf litter in low-angle morning light.',
+      'Check the uphill side of large trees where rain runoff creates moisture pockets.',
+      'Come back to this spot 48 hours after each rain — fresh morels can appear overnight.'
+    ],
+    approach: [
+      'Enter from the bottom of the slope and work your way up; morels are easier to spot looking uphill.',
+      'Walk slowly with the sun at your back — caps glow amber in backlight and are easier to spot.',
+      'Bring a walking stick to gently move leaf litter near promising trees.',
+      'If you find one morel, stop and grid a tight 20-foot circle — they rarely grow alone.',
+      'Mark every find with a GPS waypoint; next year\'s flush will likely return within 10 feet.'
+    ]
+  },
+  transition: {
+    titles: ['Edge-Line Warming Zone', 'Timber-Field Transition Break', 'Ridge Shoulder Sweet Spot', 'Canopy Edge Greenhouse', 'Treeline Humidity Trap'],
+    reasons: [
+      'The edge where timber meets open ground creates a "greenhouse" — warm air + canopy moisture.',
+      'Mixed leaf litter from multiple hardwood species creates ideal soil chemistry for morels.',
+      'This ridge shoulder gets early sun exposure and holds moisture in the timber shadow.',
+      'Bud break on edge trees signals soil temps entering the morel fruiting window.',
+      'Humidity trapped under the closing canopy keeps the mycelium active longer here.'
+    ],
+    search: [
+      'Work the edge line itself first, then sweep 20-40 yards into the timber side.',
+      'Zigzag along the tree line — check both the open side and the shaded timber side.',
+      'Focus on trees showing the earliest bud break; the soil beneath them is warmest.',
+      'Grid any area where you see May apples or wild ginger emerging — same soil temp indicators.',
+      'Recheck this edge every 3-4 days during peak season; it can produce multiple flushes.'
+    ],
+    approach: [
+      'Enter from the open side and work into the timber; your eyes adjust to the shade.',
+      'If the edge faces south or west, start at the western end in morning and work east with the light.',
+      'Carry a mesh bag so spores drop through as you walk — you\'re seeding future flushes.',
+      'Mark the trees along the edge that produce; they\'re the host trees for the mycelial network.',
+      'Return after every substantial rain during the 3-week peak window.'
+    ]
+  },
+  feeding: {
+    titles: ['Creek Bottom Shelf', 'Floodplain Bench', 'Streamside Moisture Lane', 'Bottomland Flat', 'Drainage Confluence Zone'],
+    reasons: [
+      'This creek bottom holds moisture longer than any slope — extending your season 1-2 weeks.',
+      'The flat bench above the creek creates a humidity blanket under the canopy.',
+      'Floodplain soil is rich with decomposed organic matter — prime mycelial habitat.',
+      'Cottonwood and sycamore root systems along this creek create extensive morel networks.',
+      'Where small drainages meet the main creek, nutrients concentrate and morels cluster.'
+    ],
+    search: [
+      'Grid the first flat bench above the creek — this is where moisture and drainage balance perfectly.',
+      'Check the base of every large tree within 20 feet of the creek channel.',
+      'Work both sides of the creek; one bank often produces better depending on sun exposure.',
+      'Focus on the north bank where shade keeps soil damp, or south bank for warmth — check the date.',
+      'Scan log jams and downed wood along the creek; decaying wood holds moisture and feeds mycelium.'
+    ],
+    approach: [
+      'Walk the creek upstream; approach downed trees and root wads from the downstream side.',
+      'Wear waterproof boots — you\'ll cross the creek multiple times to check both banks.',
+      'Go slow in bottomland; the thick ground cover hides morels better than any slope.',
+      'Check under fern fronds and May-apple umbrellas — morels love the same damp shade.',
+      'If the water is up from recent rain, focus on the higher benches 20-30 feet from the creek.'
+    ]
+  },
+  water: {
+    titles: ['Seep Spring Moisture Line', 'Drainage Head Pocket', 'Wet-Weather Draw', 'Hillside Spring Zone', 'Ravine Seep Edge'],
+    reasons: [
+      'This seep line provides consistent moisture even when surrounding slopes dry out.',
+      'Cool air pools here after sunset, keeping soil temps in the fruiting zone longer.',
+      'The wet-weather draw creates a moisture gradient from saturated to just-damp — morel sweet spot.',
+      'Springs and seeps maintain the 50-55°F soil temp range well into late season.',
+      'Moss-covered rocks and logs here indicate the persistent humidity morels need.'
+    ],
+    search: [
+      'Follow the seep uphill and scan both sides of the flow line within 15 yards.',
+      'Check the mossy logs and root wads where the seep emerges from the hillside.',
+      'Grid the transition zone where wet ground gives way to just-damp leaf litter.',
+      'Look for fiddlehead ferns; where they grow, the moisture is consistent enough for morels.',
+      'Come back to this spot even in dry years — seeps produce when nothing else does.'
+    ],
+    approach: [
+      'Approach from downhill and work up along the seep — moisture concentration increases uphill.',
+      'Step carefully; the ground is soft and you can damage the mycelial mat under the surface.',
+      'These spots are often in deep shade — use a headlamp in early morning for better contrast.',
+      'Check north-facing banks of the ravine first; they stay moist throughout the day.',
+      'Identify and flag reliable seeps for future seasons; they produce year after year.'
+    ]
+  },
+  open: {
+    titles: ['Old Orchard Pocket', 'Burn Edge Revival Zone', 'Disturbed Ground Bonus Site', 'Fencerow Heritage Trees', 'Homestead Ghost Orchard'],
+    reasons: [
+      'Old orchard apple trees are legendary morel producers in Missouri; root systems feed mycelial networks for decades.',
+      'The year after a burn, disturbed soil and ash nutrients trigger massive morel flushes.',
+      'Logged edges and stumps from recent timber work create the decomposition morels need.',
+      'Old fencerow trees — especially elm and apple — survive decades after fields are cleared.',
+      'Abandoned homesteads with fruit trees are bucket-list morel spots that produce every year.'
+    ],
+    search: [
+      'Circle every old fruit tree in a full 30-foot radius; morels follow the root network.',
+      'In burn areas, focus on the edge where burn meets unburned forest — highest concentration.',
+      'Check old stumps, root balls, and any decaying wood at the ground surface.',
+      'Scan fencerows from end to end; every remaining tree gets a full circle search.',
+      'Mark productive orchard trees with GPS; they are annuity spots that pay for years.'
+    ],
+    approach: [
+      'Approach old orchards from the access road; the trees are usually spaced for walking.',
+      'In burn areas, watch your footing — burned ground hides holes and unstable root cavities.',
+      'Go early in the morning when morels are still damp and slightly glossy from dew.',
+      'Take photos of every find spot; over multiple years a pattern will emerge.',
+      'Ask landowners about old homesteads and orchards; local knowledge is irreplaceable.'
+    ]
+  }
+};
+
+const MUSHROOM_HABITAT_OVERVIEW = {
+  bedding: 'Early-season warm hardwood slope with sun exposure and leaf litter heat retention — morel priority zone.',
+  transition: 'Edge line where timber meets openings, warming quickly while trapping humidity in the leaf litter.',
+  feeding: 'Moist creek bottom and floodplain shelf with steady humidity and rich organic soil.',
+  water: 'Seep line, spring, or drainage that holds moisture consistently even on dry days.',
+  open: 'Old orchard, burn scar, or disturbed ground that produces bonus and late-season morel flushes.'
+};
+
+const MUSHROOM_HABITAT_LOOK_FOR = {
+  bedding: 'Honeycomb caps near dying elms, ash, and tulip poplars. Warm leaf litter on south-facing slopes. Sun-warmed soil pockets near downed limbs.',
+  transition: 'Leaf litter color changes at the timber-field edge, small dips that hold moisture, trees showing earliest bud break.',
+  feeding: 'Damp soil near root flare zones, shaded benches above the creek, decaying wood along the channel.',
+  water: 'Moist leaf litter even on dry days, mossy logs, spring seeps, fiddlehead ferns unfurling.',
+  open: 'Old fruit tree root lines, charcoal-stained soil in burn areas, decaying stumps and fencerow trees.'
+};
+
+// Mushroom-specific seasonal intelligence for Missouri
+const MUSHROOM_SEASON_STAGES = {
+  earlyPre: {
+    label: 'Pre-Season (Early March)',
+    soilTemp: '< 45°F',
+    focus: 'Scout and identify host trees. Mark dying elms, ash, and old orchards. No fruiting expected yet.',
+    indicators: 'Ground still frozen in spots. No green-up. Snow melt still running.'
+  },
+  early: {
+    label: 'Early Season (Late March - Early April)',
+    soilTemp: '45-50°F',
+    focus: 'South-facing slopes and warming ridges ONLY. Half-free morels may appear first. Small black morels near elms.',
+    indicators: 'Redbuds just starting to bloom. First dandelions in yards. Soil softening on south slopes.'
+  },
+  peak: {
+    label: 'Peak Season (Mid April - Early May)',
+    soilTemp: '50-58°F',
+    focus: 'All habitat types producing. Yellow morels at peak. Work south slopes → edges → creek bottoms as weeks progress.',
+    indicators: 'Dogwoods in full bloom. May apples fully unfurled. Lilacs blooming. Oak leaves dime-sized.'
+  },
+  late: {
+    label: 'Late Season (Mid May)',
+    soilTemp: '58-65°F',
+    focus: 'North slopes, deep bottoms, seep areas, and orchards. South slopes done. Big yellows in creek bottoms.',
+    indicators: 'Full leaf canopy. Ferns fully unfurled. Soil drying on slopes. Focus shifts to moisture retention zones.'
+  },
+  post: {
+    label: 'Post-Season (Late May+)',
+    soilTemp: '> 65°F',
+    focus: 'Season winding down. Only seeps and deep shade still producing. Start logging data for next year.',
+    indicators: 'Forest fully leafed out. Ground drying. Mushrooms found are often past prime.'
+  }
+};
+
+// ===================================================================
+//   Module-Aware Getter Functions
+// ===================================================================
+
+function getActiveEducationSet() {
+  return isMushroomModule() ? MUSHROOM_EDUCATION : SHED_EDUCATION;
+}
+
+function getActiveFlavorSet() {
+  return isMushroomModule() ? MUSHROOM_FLAVOR : HOTSPOT_FLAVOR;
+}
+
+function getActiveHabitatOverview() {
+  return isMushroomModule() ? MUSHROOM_HABITAT_OVERVIEW : HABITAT_OVERVIEW;
+}
+
+function getActiveHabitatLookFor() {
+  return isMushroomModule() ? MUSHROOM_HABITAT_LOOK_FOR : HABITAT_LOOK_FOR;
+}
+
+function getModuleEducationLabels() {
+  if (isMushroomModule()) {
+    return {
+      pinBrief: 'Forage Pin Brief',
+      reason: 'Forage briefing',
+      microReason: 'Micro forage brief',
+      whyTitle: 'Why this spot',
+      approachTitle: 'How to forage it',
+      lookForTitle: 'What to look for',
+      checkInLabel: 'Check In',
+      checkOutLabel: 'Check Out'
+    };
+  }
+  return {
+    pinBrief: 'Pin Education Brief',
+    reason: 'Education briefing',
+    microReason: 'Micro pin brief',
+    whyTitle: 'Why this pin',
+    approachTitle: 'How to hunt it',
+    lookForTitle: 'What to look for',
+    checkInLabel: 'Check In',
+    checkOutLabel: 'Check Out'
+  };
+}
+
+function getModulePinLabel() {
+  return isMushroomModule() ? 'forage pin' : 'pin';
+}
+
+function getModuleSweepVerb() {
+  return isMushroomModule() ? 'work' : 'sweep';
+}
+
+function getMushroomSeasonStage() {
+  const now = new Date();
+  const month = now.getMonth() + 1;
+  const day = now.getDate();
+  if (month < 3 || (month === 3 && day < 20)) return MUSHROOM_SEASON_STAGES.earlyPre;
+  if (month === 3 || (month === 4 && day < 10)) return MUSHROOM_SEASON_STAGES.early;
+  if ((month === 4 && day >= 10) || (month === 5 && day < 10)) return MUSHROOM_SEASON_STAGES.peak;
+  if (month === 5 && day < 25) return MUSHROOM_SEASON_STAGES.late;
+  return MUSHROOM_SEASON_STAGES.post;
+}
+
 function getThermalCueForType(type, windDir) {
   const key = String(type || '').toLowerCase();
   const cues = {
@@ -748,7 +1199,8 @@ function describeRelativePosition(bounds, latlng) {
 }
 
 function buildCustomHotspotEducation({ habitat, base, latlng, bounds, windDir, criteria }) {
-  const flavor = HOTSPOT_FLAVOR[habitat] || HOTSPOT_FLAVOR.transition;
+  const flavorSet = isMushroomModule() ? MUSHROOM_FLAVOR : HOTSPOT_FLAVOR;
+  const flavor = flavorSet[habitat] || flavorSet.transition;
   const safeLatLng = latlng ? L.latLng(latlng) : (bounds ? bounds.getCenter() : L.latLng(0, 0));
   const seed = seedFromLatLng(safeLatLng, habitat);
   const title = pickBySeed(flavor.titles, seed);
@@ -756,16 +1208,30 @@ function buildCustomHotspotEducation({ habitat, base, latlng, bounds, windDir, c
   const search = pickBySeed(flavor.search, seed + 0.27);
   const approach = pickBySeed(flavor.approach, seed + 0.39);
   const region = describeRelativePosition(bounds, safeLatLng);
-  const wind = windDir ? `Best with ${windDir} wind.` : 'Wind-neutral setup.';
-  const overview = HABITAT_OVERVIEW[habitat] || 'Travel corridor';
-  const lookFor = HABITAT_LOOK_FOR[habitat] || 'Fresh tracks, rubs, and subtle sign along the quietest line.';
+  const overviewMap = isMushroomModule() ? MUSHROOM_HABITAT_OVERVIEW : HABITAT_OVERVIEW;
+  const lookForMap = isMushroomModule() ? MUSHROOM_HABITAT_LOOK_FOR : HABITAT_LOOK_FOR;
+  const wind = isMushroomModule()
+    ? (windDir ? `Wind: ${windDir} — check sheltered pockets on the lee side.` : 'Calm conditions favor even moisture and steady fruiting.')
+    : (windDir ? `Best with ${windDir} wind.` : 'Wind-neutral setup.');
+  const overview = overviewMap[habitat] || (isMushroomModule() ? 'Foraging zone' : 'Travel corridor');
+  const lookFor = lookForMap[habitat] || (isMushroomModule() ? 'Moist leaf litter, host trees, and damp soil near woody debris.' : 'Fresh tracks, rubs, and subtle sign along the quietest line.');
   const profile = buildHotspotSearchSpec({ habitat, coords: [safeLatLng.lat, safeLatLng.lng] }, windDir);
   const searchLabel = profile?.label ? `Search shape: ${profile.label}.` : '';
   const seasonal = getSeasonalFocus();
   const approachSteps = [search, approach];
   if (searchLabel) approachSteps.push(`Cover the ${profile.label} starting on the ${region} side.`);
-  if (windDir) approachSteps.push(`Hold a ${windDir} wind and stay on the leeward edge first.`);
-  approachSteps.push('Stay 20-40 yards downwind of the main doe trail; mature bucks scent-check from cover.');
+  if (isMushroomModule()) {
+    approachSteps.push('Grid in tight 15-yard lanes and pause often to scan low in the leaf litter.');
+    approachSteps.push('Recheck hot trees after each rain window — morels can appear overnight.');
+  } else {
+    if (windDir) approachSteps.push(`Hold a ${windDir} wind and stay on the leeward edge first.`);
+    approachSteps.push('Stay 20-40 yards downwind of the main doe trail; mature bucks scent-check from cover.');
+  }
+
+  const treeFocus = Array.isArray(base?.treeFocus) ? base.treeFocus : [];
+  const treeNotes = base?.treeNotes || '';
+  const seasonCues = Array.isArray(base?.seasonCues) ? base.seasonCues : [];
+  const treeId = base?.treeId || null;
 
   return {
     priority: base?.priority || 3,
@@ -777,6 +1243,10 @@ function buildCustomHotspotEducation({ habitat, base, latlng, bounds, windDir, c
     ].filter(Boolean).join(' '),
     tips: lookFor,
     lookFor,
+    treeFocus,
+    treeNotes,
+    seasonCues,
+    treeId,
     why: [reason, seasonal].filter(Boolean),
     approach: approachSteps.filter(Boolean)
   };
@@ -4647,8 +5117,10 @@ function getMdcLogoUrl() {
 }
 
 function getHuntechLogoUrl() {
-  const url = String(window.HUNTECH_LOGO_URL || 'assets/huntech-logo.png').trim();
-  return url;
+  const override = String(window.HUNTECH_LOGO_URL || '').trim();
+  if (override) return override;
+  if (isMushroomModule()) return 'assets/mushroom-logo.png';
+  return 'assets/huntech-logo.png';
 }
 
 function getHuntechLogoMarkup(className = 'ht-huntech-logo') {
@@ -4899,7 +5371,7 @@ function showEducationTile(hotspot, reason) {
         ${logo}
         <div class="ht-edu-title-stack">
           <div class="ht-edu-title" style="color:${accent};">${isMicroFeature ? 'Micro Feature' : `Priority ${rank}`}: ${escapeHtml(hotspot.education.title)}</div>
-          <div class="ht-edu-subtitle">Pin Education Brief</div>
+          <div class="ht-edu-subtitle">${labels.pinBrief}</div>
         </div>
       </div>
       <button onclick="closeEducationTile()" class="ht-edu-close-btn" type="button">Close</button>
@@ -4912,21 +5384,43 @@ function showEducationTile(hotspot, reason) {
     <div class="ht-edu-desc">${escapeHtml(descriptionText)}</div>
     ${whyList ? `
       <div class="ht-edu-section ht-edu-section--accent" style="border-left-color:${accent};">
-        <div class="ht-edu-section-title">Why this pin</div>
+        <div class="ht-edu-section-title">${labels.whyTitle}</div>
         ${whyList}
       </div>
     ` : ''}
     ${approachList ? `
       <div class="ht-edu-section ht-edu-section--approach">
-        <div class="ht-edu-section-title">How to hunt it</div>
+        <div class="ht-edu-section-title">${labels.approachTitle}</div>
         ${approachList}
       </div>
     ` : ''}
     ${thermalCard}
     <div class="ht-edu-section ht-edu-section--accent" style="border-left-color:${accent};">
-      <div class="ht-edu-section-title">What to look for</div>
+      <div class="ht-edu-section-title">${labels.lookForTitle}</div>
       <div class="ht-edu-desc">${escapeHtml(lookForText)}</div>
     </div>
+    ${isMushroomModule() && hotspot.education?.treeFocus?.length ? `
+    <div class="ht-edu-section ht-edu-section--trees">
+      <div class="ht-edu-section-title">\uD83C\uDF33 Key Trees to Find</div>
+      <div class="ht-edu-desc">${escapeHtml(hotspot.education.treeFocus.join(', '))}</div>
+      ${hotspot.education.treeNotes ? `<div class="ht-edu-desc ht-edu-desc--muted">${escapeHtml(hotspot.education.treeNotes)}</div>` : ''}
+      ${hotspot.education.treeId ? Object.values(hotspot.education.treeId).map(t => `
+        <div class="ht-tree-id-card">
+          <div class="ht-tree-id-name">${escapeHtml(t.name)}</div>
+          <div class="ht-tree-id-detail"><strong>Bark:</strong> ${escapeHtml(t.bark)}</div>
+          <div class="ht-tree-id-detail"><strong>Leaves:</strong> ${escapeHtml(t.leaves)}</div>
+          <div class="ht-tree-id-detail"><strong>Shape:</strong> ${escapeHtml(t.shape)}</div>
+          <div class="ht-tree-id-tip">\uD83D\uDCA1 ${escapeHtml(t.tip)}</div>
+        </div>
+      `).join('') : ''}
+    </div>
+    ` : ''}
+    ${isMushroomModule() && hotspot.education?.seasonCues?.length ? `
+    <div class="ht-edu-section ht-edu-section--season">
+      <div class="ht-edu-section-title">\uD83D\uDCC5 Season Indicators</div>
+      <ul class="ht-edu-cue-list">${hotspot.education.seasonCues.map(c => `<li>${escapeHtml(c)}</li>`).join('')}</ul>
+    </div>
+    ` : ''}
   `;
   tile.style.display = 'block';
   updateEducationCheckinButton();
@@ -9129,7 +9623,8 @@ window.startShedHunt = async function(options = {}) {
     const attemptLimit = criteria?.depth === 'deep' ? 60 : 35;
     for (let i = 0; i < remainingCount; i++) {
       const habitat = habitatPool[i % habitatPool.length];
-      const baseEdu = SHED_EDUCATION[habitat];
+      const eduSet = isMushroomModule() ? MUSHROOM_EDUCATION : SHED_EDUCATION;
+      const baseEdu = eduSet[habitat];
       let latlng = null;
       let flatRejects = 0;
       for (let attempt = 0; attempt < attemptLimit; attempt++) {
@@ -10879,10 +11374,19 @@ function showStrategyPanel(hotspots, temp, windSpeed, windDir, options = {}) {
   const firstLookFor = firstHotspot?.education?.lookFor || firstHotspot?.education?.tips || '';
   const firstWhy = Array.isArray(firstHotspot?.education?.why) ? firstHotspot.education.why : [];
   const firstApproach = Array.isArray(firstHotspot?.education?.approach) ? firstHotspot.education.approach : [];
-  const missionText = `Balanced route for your ${missionTime}-minute window: the path favors easy walking while still prioritizing your top hotspots. The route may not follow priority order, so always hit Priority 1-2 pins first, then flow into the nearest next pin to keep the walk efficient. Walk the downwind side of primary doe trails to mirror mature buck travel. Check in on each pin to start tracking, then tap Check Out to close the search shape before moving on.`;
-  const phaseOne = `Phase 1: Entry + check-in. Approach from the downwind side, confirm wind with milkweed or powder, then tap Check In when you reach ${firstTitle}.`;
-  const phaseTwo = `Phase 2: Sweep. Walk each search shape in 30-60 yard lanes. Work leeward edges, trail crossings, and benches that keep your wind off likely beds. Stay 20-40 yards downwind of doe trails to follow how a mature buck checks them.`;
-  const phaseThree = `Phase 3: Exit + adjust. If sign is hot, tighten to micro-grids around the last find. If cold, move to the next closest priority pin to keep distance low.`;
+  const isMush = isMushroomModule();
+  const missionText = isMush
+    ? `Balanced route for your ${missionTime}-minute window: the path favors moisture, canopy cover, and host trees while prioritizing your top forage pins. The route may not follow priority order — start with the highest-priority pins, then flow to the nearest next pin to keep the walk efficient. Check in at each pin to start tracking, then tap Check Out to close the search shape before moving on.`
+    : `Balanced route for your ${missionTime}-minute window: the path favors easy walking while still prioritizing your top hotspots. The route may not follow priority order, so always hit Priority 1-2 pins first, then flow into the nearest next pin to keep the walk efficient. Walk the downwind side of primary doe trails to mirror mature buck travel. Check in on each pin to start tracking, then tap Check Out to close the search shape before moving on.`;
+  const phaseOne = isMush
+    ? `Phase 1: Entry + check-in. Approach quietly, confirm ground moisture level, then tap Check In when you reach ${firstTitle}.`
+    : `Phase 1: Entry + check-in. Approach from the downwind side, confirm wind with milkweed or powder, then tap Check In when you reach ${firstTitle}.`;
+  const phaseTwo = isMush
+    ? 'Phase 2: Forage sweep. Work each search shape in 10-20 yard lanes. Focus on downed logs, leaf litter edges, and the base of host trees. Scan at ankle level and pause often. Track tree species as you go.'
+    : `Phase 2: Sweep. Walk each search shape in 30-60 yard lanes. Work leeward edges, trail crossings, and benches that keep your wind off likely beds. Stay 20-40 yards downwind of doe trails to follow how a mature buck checks them.`;
+  const phaseThree = isMush
+    ? 'Phase 3: Reset + adjust. If you find morels, stop and grid a tight 20-foot circle — they rarely grow alone. If cold, move to the next closest priority pin to keep distance low.'
+    : `Phase 3: Exit + adjust. If sign is hot, tighten to micro-grids around the last find. If cold, move to the next closest priority pin to keep distance low.`;
   const logo = getHuntechLogoMarkup('ht-huntech-logo ht-huntech-logo--sm');
   const missionLogo = getHuntechLogoMarkup('ht-huntech-logo ht-mission-brief-logo');
   const cardLogo = getHuntechLogoMarkup('ht-card-logo');
@@ -10912,7 +11416,7 @@ function showStrategyPanel(hotspots, temp, windSpeed, windDir, options = {}) {
   const missionBriefHtml = showMissionBrief ? `
     <div class="ht-mission-brief">
       <div class="ht-mission-brief-header">
-        <div class="ht-mission-brief-title">${missionLogo}<span>Huntech AI Shed Strategy</span></div>
+        <div class="ht-mission-brief-title">${missionLogo}<span>${isMush ? 'Huntech AI Mushroom Foraging Brief' : 'Huntech AI Shed Strategy'}</span></div>
         <button class="ht-mission-brief-close" type="button" onclick="closeStrategyPanel(); stopSpeech();" aria-label="Close mission brief">Close</button>
         <div class="ht-mission-brief-actions">
           <button class="ht-mission-brief-pill" id="missionBriefAudioBtn" type="button" onclick="toggleMissionBriefAudio()" aria-pressed="${speechActive ? 'true' : 'false'}">${speechActive ? 'Stop Audio' : 'Read to Me'}</button>
@@ -10922,7 +11426,7 @@ function showStrategyPanel(hotspots, temp, windSpeed, windDir, options = {}) {
       <div class="ht-mission-brief-statement">
         ${logo}
         <div class="ht-mission-brief-statement-body">
-          <div class="ht-mission-brief-statement-title">Huntech Shed Strategy</div>
+          <div class="ht-mission-brief-statement-title">${isMush ? 'Huntech Mushroom Strategy' : 'Huntech Shed Strategy'}</div>
           <span>${missionText}</span>
         </div>
       </div>
@@ -11252,7 +11756,7 @@ function loadSavedHuntPlan(id) {
     ...h,
     education: buildCustomHotspotEducation({
       habitat: h.habitat,
-      base: SHED_EDUCATION[h.habitat] || SHED_EDUCATION.transition,
+      base: (isMushroomModule() ? MUSHROOM_EDUCATION : SHED_EDUCATION)[h.habitat] || (isMushroomModule() ? MUSHROOM_EDUCATION : SHED_EDUCATION).transition,
       latlng: Array.isArray(h.coords) ? L.latLng(h.coords[0], h.coords[1]) : null,
       bounds: plan.bounds
         ? L.latLngBounds([plan.bounds.south, plan.bounds.west], [plan.bounds.north, plan.bounds.east])
@@ -11289,7 +11793,8 @@ function loadSavedHuntPinsOnly(plan) {
       if (!h || !Array.isArray(h.coords) || h.coords.length < 2) return null;
       const latlng = L.latLng(h.coords[0], h.coords[1]);
       const habitat = h.habitat || 'transition';
-      const base = SHED_EDUCATION[habitat] || SHED_EDUCATION.transition;
+      const eduSetRestore = isMushroomModule() ? MUSHROOM_EDUCATION : SHED_EDUCATION;
+      const base = eduSetRestore[habitat] || eduSetRestore.transition;
       const education = buildCustomHotspotEducation({
         habitat,
         base,
@@ -13156,6 +13661,57 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Update weather every 2 minutes
   setInterval(updateWeather, 120000);
+
+  // ════════════ STREAM PANEL NAV ════════════
+  window.showStreamPanel = function showStreamPanel(panelId) {
+    const panelIds = ['fishNowPanel', 'mySpotsPanel', 'tripPlannerPanel', 'flyBoxPanel'];
+    // Toggle panels
+    panelIds.forEach(id => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.style.display = id === panelId ? '' : 'none';
+    });
+    // Toggle pill active states
+    document.querySelectorAll('.ht-stream-pill').forEach(pill => {
+      pill.classList.toggle('ht-stream-pill--active', pill.getAttribute('data-panel') === panelId);
+    });
+    // Activate map + fade hero away + center on GPS
+    if (!document.body.classList.contains('ht-map-active')) {
+      activateFlyMap();
+    }
+    // Always re-center on user location when switching to FISH NOW
+    if (panelId === 'fishNowPanel' && map) {
+      setTimeout(() => centerOnMyLocationInternal(), 600);
+    }
+  };
+
+  window.fishNowCheckIn = function fishNowCheckIn() {
+    const waterSelect = document.getElementById('flyWaterSelect');
+    const waterName = waterSelect ? waterSelect.options[waterSelect.selectedIndex]?.text : '';
+    if (!waterSelect || !waterSelect.value) {
+      showNotice('Select a water first — pick from the dropdown above.', 'error', 3500);
+      return;
+    }
+    // Show live session, hide strategy
+    const strategy = document.getElementById('fishNowStrategy');
+    const live = document.getElementById('fishNowLive');
+    if (strategy) strategy.style.display = 'none';
+    if (live) live.style.display = '';
+    // Set live water name
+    const liveNameEl = document.getElementById('liveWaterName');
+    if (liveNameEl) liveNameEl.textContent = waterName;
+    // Start session timer
+    let seconds = 0;
+    const timerEl = document.getElementById('liveTimer');
+    if (window._fishSessionTimer) clearInterval(window._fishSessionTimer);
+    window._fishSessionTimer = setInterval(() => {
+      seconds++;
+      const m = Math.floor(seconds / 60);
+      const s = seconds % 60;
+      if (timerEl) timerEl.textContent = m + ':' + String(s).padStart(2, '0');
+    }, 1000);
+    showNotice('🐟 Session started — tight lines!', 'success', 3000);
+  };
 
   // Add visible labels to drawing controls
   setTimeout(() => {
