@@ -24,7 +24,9 @@ body.module-fly {
   font-size: 200%;
   font-weight: 900;
   font-family: 'Space Grotesk', 'Sora', system-ui, sans-serif;
-  background: radial-gradient(circle at top left, rgba(12, 43, 55, 0.9), #07141c 45%, #050a0f 100%);
+  background:
+    linear-gradient(180deg, rgba(7, 20, 28, 0.55) 0%, rgba(5, 10, 15, 0.78) 40%, rgba(7, 20, 28, 0.92) 100%),
+    url('assets/trout-logo.png') center 30% / cover no-repeat fixed;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
@@ -36,7 +38,7 @@ body.module-fly * {
 body.module-fly {
   text-shadow:
     0 1px 1px rgba(0, 0, 0, 0.55),
-    0 0 4px rgba(255, 193, 7, 0.2);
+    0 0 4px rgba(43, 212, 255, 0.2);
 }
 
 body.module-fly .ht-toolbar-tab-label,
@@ -44,7 +46,7 @@ body.module-fly .ht-toolbar-mini-btn,
 body.module-fly .ht-define-title {
   text-shadow:
     0 1px 1px rgba(0, 0, 0, 0.7),
-    0 0 6px rgba(255, 193, 7, 0.35);
+    0 0 6px rgba(43, 212, 255, 0.35);
 }
 
 body.module-fly .ht-pill-btn--tray,
@@ -52,7 +54,7 @@ body.module-fly .ht-gold-btn,
 body.module-fly .ht-map-fab-btn {
   text-shadow:
     0 1px 1px rgba(0, 0, 0, 0.75),
-    0 0 6px rgba(255, 193, 7, 0.4);
+    0 0 6px rgba(43, 212, 255, 0.4);
 }
 
 body.module-mushroom {
@@ -103,8 +105,8 @@ body.module-fly .ht-pill-btn--tray {
 }
 
 body.module-fly .ht-brand-mark {
-  color: #ffc107;
-  text-shadow: 0 0 16px rgba(255, 193, 7, 0.55);
+  color: #2bd4ff;
+  text-shadow: 0 0 16px rgba(43, 212, 255, 0.55);
 }
 
 body.module-fly .ht-strategy-panel {
@@ -782,23 +784,21 @@ body.module-fly .ht-strategy-panel {
 /* ────── Pill Navigation Strip ────── */
 .ht-stream-pills {
   display: flex;
-  gap: 6px;
-  padding: 4px 0 8px;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;
+  gap: 4px;
+  padding: 4px 0 6px;
 }
-.ht-stream-pills::-webkit-scrollbar { display: none; }
 
 .ht-stream-pill {
-  flex: 0 0 auto;
+  flex: 1 1 0;
+  min-width: 0;
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  padding: 8px 12px;
-  font-size: 11px;
+  justify-content: center;
+  gap: 4px;
+  padding: 7px 4px;
+  font-size: 10px;
   font-weight: 800;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.4px;
   text-transform: uppercase;
   border-radius: 999px;
   border: 1px solid rgba(43, 212, 255, 0.3);
@@ -820,24 +820,24 @@ body.module-fly .ht-strategy-panel {
 
 /* ────── Favorites Quick Access ────── */
 .ht-stream-favorites {
-  padding: 0 0 8px;
+  padding: 0 0 4px;
 }
 .ht-favorites-label {
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   color: #8db1be;
-  margin-bottom: 6px;
+  margin-bottom: 3px;
 }
 .ht-favorites-grid {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 4px;
 }
 .ht-favorite-chip {
-  padding: 6px 12px;
-  font-size: 11px;
+  padding: 4px 10px;
+  font-size: 10px;
   font-weight: 800;
   border-radius: 999px;
   border: 1px solid rgba(124, 255, 199, 0.3);
