@@ -7,34 +7,20 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="HUNTECH">
-  <meta name="theme-color" content="#ffc107">
-  <meta name="description" content="AI-powered shed hunting and scouting system with GPS tracking">
-  <link rel="manifest" href="manifest.json?v=20260216-153035">
+  <meta name="theme-color" content="#ffd86b">
+  <meta name="description" content="AI-powered mushroom hunting scouting system with GPS tracking">
+  <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" href="assets/app-icon-180.png">
-  <title>HUNTECH - Field Command System</title>
-  <script>
-    window.__htLoadStylesheetFallback = function(el, fallbackUrl) {
-      if (!el || !fallbackUrl || el.dataset.htFallbackApplied) return;
-      el.dataset.htFallbackApplied = 'true';
-      el.href = fallbackUrl;
-    };
-    window.__htLoadScriptFallback = function(fallbackUrl) {
-      if (!fallbackUrl) return;
-      var script = document.createElement('script');
-      script.src = fallbackUrl;
-      script.defer = true;
-      document.head.appendChild(script);
-    };
-  </script>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" onerror="window.__htLoadStylesheetFallback && window.__htLoadStylesheetFallback(this, 'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css')" />
-  <link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css" onerror="window.__htLoadStylesheetFallback && window.__htLoadStylesheetFallback(this, 'https://cdn.jsdelivr.net/npm/leaflet-draw@1.0.4/dist/leaflet.draw.css')" />
-  <link rel="stylesheet" href="app.css?v=20260209">
+  <title>HUNTECH - Mushroom Module</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css" />
+  <link rel="stylesheet" href="app.css?v=20260210">
 
   <!-- AWS Backend Configuration -->
-  <script src="config.js?v=20260209c"></script>
-  <script src="api.js?v=20260209c"></script>
+  <script src="config.js?v=20260210a"></script>
+  <script src="api.js?v=20260210a"></script>
 </head>
-<body class="module-shed">
+<body class="module-mushroom">
   <header class="ht-topbar">
     <div class="ht-header-left">
       <div class="ht-brand">
@@ -47,9 +33,9 @@
       <div class="ht-module-switch" aria-label="Select module">
         <span class="ht-module-label">Module</span>
         <select class="ht-module-select" onchange="window.location.href=this.value">
-          <option value="index.html" selected>Shed</option>
+          <option value="index.html">Shed</option>
           <option value="fly-fishing.html">Trout Fishing</option>
-          <option value="mushroom.html">Mushroom</option>
+          <option value="mushroom.html" selected>Mushroom</option>
           <option value="turkey.html">Turkey</option>
         </select>
       </div>
@@ -81,7 +67,7 @@
         <svg width="20" height="20" viewBox="0 0 24 24" fill="#ffc107">
           <path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
         </svg>
-        <input type="text" placeholder="Search town, landmark, or coords (lat,lng)â€¦" class="ht-search-input" id="searchInput" autocomplete="off" spellcheck="false">
+        <input type="text" placeholder="Search town, landmark, or coords (lat,lng)…" class="ht-search-input" id="searchInput" autocomplete="off" spellcheck="false">
         <button class="ht-search-btn" type="button">Search</button>
         <div class="ht-search-results" id="searchResults"></div>
       </div>
@@ -113,18 +99,12 @@
     <div id="map"></div>
   </main>
 
-  <button class="ht-map-locate-btn" type="button" onclick="centerOnMyLocation()" title="Center on my location" aria-label="Center on my location">
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-      <path d="M12 2a1 1 0 0 1 1 1v1.06a8.01 8.01 0 0 1 6.94 6.94H21a1 1 0 1 1 0 2h-1.06a8.01 8.01 0 0 1-6.94 6.94V21a1 1 0 1 1-2 0v-1.06a8.01 8.01 0 0 1-6.94-6.94H3a1 1 0 1 1 0-2h1.06A8.01 8.01 0 0 1 11 4.06V3a1 1 0 0 1 1-1zm0 4a6 6 0 1 0 0 12a6 6 0 0 0 0-12zm0 3a3 3 0 1 1 0 6a3 3 0 0 1 0-6z"/>
-    </svg>
-  </button>
-
   <div class="ht-toolbar" id="toolbar">
     <div class="ht-toolbar-tab">
       <div class="ht-toolbar-tab-row">
-        <button class="ht-toolbar-mini-btn ht-toolbar-mini-btn-startover" type="button" onclick="startOver()" data-full-label="START OVER" data-short-label="START OVER">START OVER</button>
+        <button class="ht-toolbar-mini-btn" type="button" onclick="window.startOver()" data-full-label="START OVER" data-short-label="START OVER">START OVER</button>
         <button class="ht-toolbar-tab-btn ht-toolbar-toggle-btn ht-field-command-btn" type="button" aria-label="Toggle Field Command">
-          <span class="ht-toolbar-tab-label" data-full-label="FIELD COMMAND" data-short-label="FIELD COMMAND">FIELD COMMAND</span>
+          <span class="ht-toolbar-tab-label" data-full-label="FIELD COMMAND" data-short-label="FIELD">FIELD COMMAND</span>
         </button>
         <button class="ht-toolbar-mini-btn" type="button" onclick="showAdvancedToolsTray()" data-full-label="TOOLS" data-short-label="TOOLS">TOOLS</button>
       </div>
@@ -160,96 +140,84 @@
             </div>
           </div>
           <div class="ht-form-row">
-            <div class="ht-form-label">Saved Hunts</div>
+            <div class="ht-form-label">Saved Areas</div>
             <select id="savedPropertySelect" class="ht-select">
-              <option value="">Select hunt</option>
+              <option value="">Select area</option>
             </select>
-          </div>
-          <div class="ht-form-row">
-            <div class="ht-toolbar-btns ht-toolbar-btns-stack">
-              <div class="ht-pill-stack">
-                <button class="ht-gold-btn" type="button" onclick="loadSavedSelectionFromTray()">Load Hunt</button>
-              </div>
-              <div class="ht-pill-stack">
-                <button class="ht-gold-btn" type="button" onclick="deleteSelectedSavedHunt()">Delete Hunt</button>
-              </div>
-            </div>
-          </div>
-          <div class="ht-form-row">
-            <div class="ht-toolbar-btns ht-toolbar-btns-stack">
-              <div class="ht-pill-stack">
-                <button class="ht-gold-btn" type="button" onclick="logPinOnMap()">Drop Pin</button>
-              </div>
-              <div class="ht-pill-stack">
-                <button class="ht-gold-btn" type="button" onclick="logSignVoice()">Log Sign</button>
-              </div>
-            </div>
-          </div>
-          <div class="ht-form-row">
-            <button class="ht-gold-btn" type="button" onclick="clearAllSavedHuntsAndAreas()">CLEAR ALL SAVED HUNTS + AREAS</button>
           </div>
         </div>
       </div>
 
       <div class="ht-accordion ht-accordion-static ht-route-panel" id="planRoutePanel">
         <div class="ht-accordion-header ht-accordion-header-center">
-          <span class="ht-route-title">Define Route</span>
+          <span class="ht-route-title">Build Route</span>
         </div>
         <div class="ht-form-grid">
           <div class="ht-form-row">
             <div class="ht-toolbar-btns ht-toolbar-btns-stack ht-route-actions">
               <div class="ht-pill-stack">
-                <button class="ht-gold-btn" id="routeMapSelectBtn" onclick="beginRouteMapSelection()">Pick Start + End</button>
+                <button class="ht-gold-btn" id="routeMapSelectBtn" onclick="beginRouteMapSelection()">Select Starting Point On Map</button>
               </div>
               <div class="ht-pill-stack">
-                <button class="ht-gold-btn" id="routeGpsBtn" onclick="startRouteFromMyLocation()">Start From My Location</button>
+                <button class="ht-gold-btn" onclick="startRouteFromMyLocation()">Start From My Location</button>
               </div>
             </div>
           </div>
           <div class="ht-form-row">
-            <div class="ht-route-status" id="routePinStatus">Start -- â€¢ Loop back</div>
-          </div>
-          <div class="ht-form-row">
-            <div class="ht-pill-stack ht-route-actions">
-              <button class="ht-gold-btn ht-go-btn" onclick="letsGoFollowRoute()">LET'S GO</button>
+            <div class="ht-toolbar-btns ht-toolbar-btns-stack ht-route-actions">
+              <div class="ht-pill-stack">
+                <button class="ht-gold-btn" type="button" onclick="backToDefineArea()">Go Back</button>
+              </div>
+              <div class="ht-pill-stack">
+                <button class="ht-gold-btn" type="button" onclick="clearRouteOnly()">Clear Route</button>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      <div class="ht-hunt-live-panel" id="huntLivePanel">
-        <div class="ht-pill-row ht-pill-row-actions">
-          <button class="ht-pill-btn" onclick="showMissionSummary()">Mission Summary</button>
-          <button class="ht-pill-btn" onclick="logPinOnMap()">Drop Pin</button>
-          <button class="ht-pill-btn" onclick="centerOnMyLocation()">Locate Me</button>
-          <button class="ht-pill-btn" onclick="logSignVoice()">Log Sign</button>
-          <button class="ht-pill-btn" onclick="startOver()">Start Over</button>
-          <button class="ht-pill-btn" onclick="exitHunt()">Exit Hunt</button>
-          <button class="ht-pill-btn" onclick="toggleToolbar()">Close</button>
+      <div class="ht-accordion ht-accordion-static ht-go-panel" id="goPanel">
+        <div class="ht-accordion-header ht-accordion-header-center">
+          <span class="ht-go-title">Lets Go</span>
         </div>
+        <div class="ht-form-grid">
+          <div class="ht-form-row">
+            <button class="ht-gold-btn ht-go-btn" onclick="letsGoFollowRoute()">LET'S GO</button>
+          </div>
+          <div class="ht-form-row">
+            <div class="ht-toolbar-btns ht-toolbar-btns-stack ht-go-actions">
+              <div class="ht-pill-stack">
+                <button class="ht-gold-btn" onclick="backToPlanRoute()">Back</button>
+              </div>
+              <div class="ht-pill-stack">
+                <button class="ht-gold-btn" onclick="clearRouteOnly()">Clear Route</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
       </div>
 
     </div>
   </div>
 
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" onerror="window.__htLoadScriptFallback && window.__htLoadScriptFallback('https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js')"></script>
-  <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js" onerror="window.__htLoadScriptFallback && window.__htLoadScriptFallback('https://cdn.jsdelivr.net/npm/leaflet-draw@1.0.4/dist/leaflet.draw.js')"></script>
-  <script src="https://unpkg.com/esri-leaflet@3.0.12/dist/esri-leaflet.js" onerror="window.__htLoadScriptFallback && window.__htLoadScriptFallback('https://cdn.jsdelivr.net/npm/esri-leaflet@3.0.12/dist/esri-leaflet.js')"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
+  <script src="https://unpkg.com/esri-leaflet@3.0.12/dist/esri-leaflet.js"></script>
 
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         const isLocal = ['localhost', '127.0.0.1'].includes(location.hostname);
         if (!isLocal) return;
-        navigator.serviceWorker.register('/sw.js?v=20260216-153035')
+        navigator.serviceWorker.register('/sw.js')
           .then(() => console.log('HUNTECH: Service Worker registered'))
           .catch(err => console.log('Service Worker registration failed:', err));
       });
     }
   </script>
 
-  <script src="regulations.js?v=20260209c"></script>
-  <script src="main.js?v=20260209c"></script>
+  <script src="regulations.js?v=20260210a"></script>
+  <script src="main.js?v=20260210a"></script>
 </body>
 </html>
-
