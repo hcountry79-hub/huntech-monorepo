@@ -5406,9 +5406,9 @@ body.module-mushroom .ht-map-hero-meta {
 
 .ht-compass {
   position: fixed;
-  left: calc(12px + env(safe-area-inset-left));
-  right: auto;
-  top: calc(var(--topbar-height) + 10px);
+  right: calc(12px + env(safe-area-inset-right));
+  left: auto;
+  top: calc(var(--topbar-height) + 8px);
   z-index: 1002;
   display: grid;
   justify-items: center;
@@ -5438,16 +5438,14 @@ body.module-mushroom .ht-map-hero-meta {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 6px 14px;
+  padding: 3px 8px;
   border-radius: 999px;
-  border: 1.5px solid rgba(255, 212, 0, 0.7);
-  background: rgba(8, 8, 8, 0.92);
+  border: 1px solid rgba(255, 212, 0, 0.5);
+  background: rgba(8, 8, 8, 0.85);
   color: #ffd400;
   cursor: pointer;
   font-size: 0;
-  box-shadow:
-    0 4px 14px rgba(0, 0, 0, 0.5),
-    0 0 12px rgba(255, 193, 7, 0.12);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
   transition: border-color 0.3s ease, box-shadow 0.3s ease, background 0.3s ease;
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
@@ -5458,9 +5456,9 @@ body.module-mushroom .ht-map-hero-meta {
 }
 
 .ht-compass-lock-text {
-  font-size: 10px;
-  font-weight: 900;
-  letter-spacing: 0.8px;
+  font-size: 7px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
   line-height: 1;
   text-align: center;
   text-transform: uppercase;
@@ -5471,11 +5469,9 @@ body.module-mushroom .ht-map-hero-meta {
 
 /* Locked state: gold border, steady glow */
 .ht-compass-lock.is-locked {
-  border-color: rgba(255, 212, 0, 0.8);
-  background: rgba(8, 8, 8, 0.92);
-  box-shadow:
-    0 4px 14px rgba(0, 0, 0, 0.5),
-    0 0 16px rgba(255, 193, 7, 0.2);
+  border-color: rgba(255, 212, 0, 0.6);
+  background: rgba(8, 8, 8, 0.85);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
 }
 
 .ht-compass-lock.is-locked .ht-compass-lock-text {
@@ -5484,11 +5480,9 @@ body.module-mushroom .ht-map-hero-meta {
 
 /* Unlocked state: amber glow + pulse */
 .ht-compass-lock:not(.is-locked) {
-  border-color: rgba(255, 140, 0, 0.85);
-  background: rgba(18, 12, 4, 0.92);
-  box-shadow:
-    0 4px 14px rgba(0, 0, 0, 0.5),
-    0 0 20px rgba(255, 140, 0, 0.3);
+  border-color: rgba(255, 140, 0, 0.7);
+  background: rgba(18, 12, 4, 0.85);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
   animation: htFollowPulse 2.2s ease-in-out infinite;
 }
 
@@ -5497,8 +5491,8 @@ body.module-mushroom .ht-map-hero-meta {
 }
 
 @keyframes htFollowPulse {
-  0%, 100% { box-shadow: 0 4px 14px rgba(0,0,0,0.5), 0 0 16px rgba(255,140,0,0.25); }
-  50% { box-shadow: 0 4px 14px rgba(0,0,0,0.5), 0 0 28px rgba(255,140,0,0.45); }
+  0%, 100% { box-shadow: 0 2px 8px rgba(0,0,0,0.4); }
+  50% { box-shadow: 0 2px 8px rgba(0,0,0,0.4), 0 0 12px rgba(255,140,0,0.3); }
 }
 
 .ht-compass-lock-svg {
