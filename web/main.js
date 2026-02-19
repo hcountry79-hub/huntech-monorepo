@@ -287,7 +287,7 @@ const HOTSPOT_RESIDENTIAL_BUFFER_SAMPLES = Number(window.HUNTECH_RESIDENTIAL_BUF
 const DRAFT_HANDLE_MIN_METERS = 20;
 const DRAFT_START_RADIUS_METERS = 45.72;
 const DRAFT_START_RECT_HALF_METERS = 45.72;
-const USER_LOCATION_FOCUS_ZOOM = Number(window.HUNTECH_USER_LOCATION_FOCUS_ZOOM || 15);
+const USER_LOCATION_FOCUS_ZOOM = Number(window.HUNTECH_USER_LOCATION_FOCUS_ZOOM || 13);
 const MAP_FOLLOW_THROTTLE_MS = Number(window.HUNTECH_MAP_FOLLOW_THROTTLE_MS || 450);
 const MAP_FOLLOW_MIN_MOVE_METERS = Number(window.HUNTECH_MAP_FOLLOW_MIN_MOVE_METERS || 7);
 const MAP_FOLLOW_SAFE_BOUNDS_PAD = Number(window.HUNTECH_MAP_FOLLOW_SAFE_BOUNDS_PAD || 0.18);
@@ -1943,7 +1943,7 @@ function initializeMap() {
   mapInitialized = true;
   map = L.map('map', {
     center: [38.26, -90.55],
-    zoom: 10,
+    zoom: 13,
     maxZoom: 20,
     zoomControl: false,
     zoomSnap: 0.5,
@@ -7649,6 +7649,8 @@ function showDrawHelper(mode, message) {
     anchorDrawHelperAboveToolbar();
   }
   updateDrawHelperPosition();
+  // ── Guardrail: push locate button above this bar ──
+  requestAnimationFrame(() => updateLocateMeOffset());
 }
 
 function hideDrawHelper() {
@@ -7657,6 +7659,8 @@ function hideDrawHelper() {
   activeDrawMode = null;
   drawHelperPinnedBottom = false;
   resetDrawHelperPosition();
+  // ── Guardrail: recalc locate button position after bar hides ──
+  requestAnimationFrame(() => updateLocateMeOffset());
   if (drawHelperFollowHandler && map) {
     try { map.off('move', drawHelperFollowHandler); } catch {}
     try { map.off('zoom', drawHelperFollowHandler); } catch {}
@@ -9411,7 +9415,7 @@ function centerOnMyLocationInternal() {
   navigator.geolocation.getCurrentPosition(
     (pos) => {
       const latlng = L.latLng(pos.coords.latitude, pos.coords.longitude);
-      const zoom = map && typeof map.getZoom === 'function' ? Math.max(map.getZoom(), 14) : 14;
+      const zoom = map && typeof map.getZoom === 'function' ? Math.max(map.getZoom(), 13) : 13;
       mapAutoCentering = true;
       updateUserLocationMarker(latlng);
       map.setView(latlng, zoom, { animate: true });
@@ -9452,7 +9456,7 @@ function setDefaultAreaFromLocation() {
       circle.addTo(map);
       setSelectedArea(circle, 'radius', { suppressTray: true });
 
-      const zoom = map && typeof map.getZoom === 'function' ? Math.max(map.getZoom(), 14) : 14;
+      const zoom = map && typeof map.getZoom === 'function' ? Math.max(map.getZoom(), 13) : 13;
       map.setView(latlng, zoom, { animate: true });
       defaultLocationAreaSet = true;
     },
@@ -10259,27 +10263,61 @@ window.exitHunt = function() {
 };
 
 function updateLocateMeOffset() {
+  // ── STRICT GUARDRAIL: Locate button must NEVER overlap any bottom bar/tray ──
+  // Scan every fixed bottom element and push locate button above the highest one.
+  const vh = window.innerHeight || document.documentElement.clientHeight;
+  let highestTop = vh; // track the topmost edge (smallest y) of any visible bar
+
+  // 1. Toolbar (always present)
   const toolbar = document.getElementById('toolbar');
-  if (!toolbar) return;
-  const isCollapsed = toolbar.classList.contains('collapsed');
-  if (isCollapsed) {
-    // Tab row is visible when collapsed — measure it for accurate positioning
-    const tabRow = toolbar.querySelector('.ht-toolbar-tab-row');
-    if (tabRow) {
-      const rect = tabRow.getBoundingClientRect();
-      if (rect.height > 0) {
-        const vh = window.innerHeight || document.documentElement.clientHeight;
-        const distFromBottom = vh - rect.top;
-        // Clamp: never push button beyond 120px from bottom (sanity guard)
-        const offset = Math.max(68, Math.min(120, Math.round(distFromBottom + 10)));
-        document.documentElement.style.setProperty('--toolbar-offset', `${offset}px`);
-        return;
-      }
+  if (toolbar) {
+    const tRect = toolbar.getBoundingClientRect();
+    if (tRect.height > 0 && tRect.top < vh) {
+      highestTop = Math.min(highestTop, tRect.top);
     }
   }
-  // Expanded tray or fallback: hard-clamp above collapsed-strip height
-  // Collapsed strip ≈ 56px + 2px bottom gap = 58px; +10px breathing room = 68px
-  document.documentElement.style.setProperty('--toolbar-offset', '68px');
+
+  // 2. Draw helper bar (Lock In / Reset / Cancel)
+  const drawHelper = document.getElementById('htDrawHelper');
+  if (drawHelper && drawHelper.classList.contains('active')) {
+    const dRect = drawHelper.getBoundingClientRect();
+    if (dRect.height > 0 && dRect.top < vh) {
+      highestTop = Math.min(highestTop, dRect.top);
+    }
+  }
+
+  // 3. Fly live tray
+  const flyTray = document.querySelector('.ht-fly-live-tray');
+  if (flyTray && getComputedStyle(flyTray).display !== 'none') {
+    const fRect = flyTray.getBoundingClientRect();
+    if (fRect.height > 0 && fRect.top < vh) {
+      highestTop = Math.min(highestTop, fRect.top);
+    }
+  }
+
+  // 4. Quick hint toast bar
+  const quickHint = document.querySelector('.ht-quick-hint.active');
+  if (quickHint) {
+    const qRect = quickHint.getBoundingClientRect();
+    if (qRect.height > 0 && qRect.top < vh) {
+      highestTop = Math.min(highestTop, qRect.top);
+    }
+  }
+
+  // 5. Saved hunt bar
+  const savedHuntBar = document.getElementById('htSavedHuntBar');
+  if (savedHuntBar && savedHuntBar.classList.contains('active')) {
+    const sRect = savedHuntBar.getBoundingClientRect();
+    if (sRect.height > 0 && sRect.top < vh) {
+      highestTop = Math.min(highestTop, sRect.top);
+    }
+  }
+
+  // Compute offset: distance from viewport bottom to highest bar top + 12px breathing room
+  const distFromBottom = vh - highestTop;
+  // Clamp: minimum 68px (above collapsed strip), maximum 200px (sanity)
+  const offset = Math.max(68, Math.min(200, Math.round(distFromBottom + 12)));
+  document.documentElement.style.setProperty('--toolbar-offset', `${offset}px`);
 }
 
 window.toggleToolbar = function() {
@@ -10496,7 +10534,7 @@ window.startLocationFromGPS = function() {
   navigator.geolocation.getCurrentPosition(
     (pos) => {
       const latlng = L.latLng(pos.coords.latitude, pos.coords.longitude);
-      const zoom = map && typeof map.getZoom === 'function' ? Math.max(map.getZoom(), 14) : 14;
+      const zoom = map && typeof map.getZoom === 'function' ? Math.max(map.getZoom(), 13) : 13;
       updateUserLocationMarker(latlng);
       map.setView(latlng, zoom, { animate: true });
       setFieldCommandStep(1);
@@ -10544,7 +10582,7 @@ window.startRouteFromMyLocation = function() {
       const latlng = L.latLng(pos.coords.latitude, pos.coords.longitude);
       updateUserLocationMarker(latlng);
       try {
-        const zoom = map && typeof map.getZoom === 'function' ? Math.max(map.getZoom(), 14) : 14;
+        const zoom = map && typeof map.getZoom === 'function' ? Math.max(map.getZoom(), 13) : 13;
         map.setView(latlng, zoom, { animate: true });
       } catch {}
       setStartPoint(latlng);
@@ -10740,18 +10778,8 @@ function logShedFind() {
 }
 
 function showVoicePopup(message, duration = 3800) {
-  let popup = document.getElementById('voice-popup');
-  if (!popup) {
-    popup = document.createElement('div');
-    popup.id = 'voice-popup';
-    popup.className = 'ht-voice-popup';
-    document.body.appendChild(popup);
-  }
-  popup.textContent = message;
-  popup.classList.add('open');
-  if (duration > 0) {
-    setTimeout(() => popup.classList.remove('open'), duration);
-  }
+  // Voice popups suppressed per user request
+  return;
 }
 
 function getVoiceKindLabel(kind) {
