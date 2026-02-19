@@ -774,6 +774,7 @@ let toolbarSkipClick = false;
 let toolbarSkipTimer = null;
 let fieldCommandStep = 1;
 let fieldCommandFlowActive = false;
+let _suppressDefaultArea = false; // Set true when user explicitly picks a define-area tool
 let pendingFieldCommandAdvance = false;
 const ROUTE_STYLE = String(window.HUNTECH_ROUTE_STYLE || 'trail').toLowerCase();
 const ROUTE_AVOID_ROADS = window.HUNTECH_ROUTE_AVOID_ROADS !== undefined
@@ -2200,20 +2201,13 @@ function initializeMap() {
   });
 
   if (publicLandLayer) {
-    const isFlyModuleActive = Boolean(document.body && document.body.classList.contains('module-fly'));
-    if (!isFlyModuleActive) {
-      map.addLayer(publicLandLayer);
-      publicLandEnabled = true;
-      const publicToggle = document.getElementById('publicLandToggle');
-      if (publicToggle) publicToggle.checked = true;
-      if (!mdcLandEnabled) setMdcLandEnabled(true);
-      updateFilterChips();
-      updateMapToggleButtons();
-    } else {
-      publicLandEnabled = false;
-      const publicToggle = document.getElementById('publicLandToggle');
-      if (publicToggle) publicToggle.checked = false;
-    }
+    map.addLayer(publicLandLayer);
+    publicLandEnabled = true;
+    const publicToggle = document.getElementById('publicLandToggle');
+    if (publicToggle) publicToggle.checked = true;
+    if (!mdcLandEnabled) setMdcLandEnabled(true);
+    updateFilterChips();
+    updateMapToggleButtons();
   }
 
   if (document.body && document.body.classList.contains('module-fly')) {
@@ -9242,7 +9236,7 @@ async function tryAutoCenterWithoutPrompt() {
 }
 
 function setDefaultAreaFromLocation() {
-  if (defaultLocationAreaSet || !navigator.geolocation) return;
+  if (defaultLocationAreaSet || !navigator.geolocation || _suppressDefaultArea) return;
 
   navigator.geolocation.getCurrentPosition(
     (pos) => {
@@ -13489,6 +13483,12 @@ window.openHuntJournalPanel = function() {
    then resolves so the caller can start its drawing tool. */
 function activateMapForDefineArea() {
   return new Promise((resolve) => {
+    // Suppress auto-area so the user can draw their own
+    _suppressDefaultArea = true;
+    // If there's already a selected area, clear it so user starts fresh
+    if (selectedAreaLayer) {
+      try { clearSelectedArea(); } catch (e) { /* ignore */ }
+    }
     // 1. Activate map (dismiss hero) for mushroom / turkey / shed modules
     if (!document.body.classList.contains('ht-map-active')) {
       if (isMushroomModule()) { activateMushroomMap(); }
@@ -15109,14 +15109,19 @@ window.showStreamPanel = function showStreamPanel(panelId) {
       activateFlyMap();
     }
 
-    // If Fish Now → start the multi-step workflow
+    // If Fish Now → start the multi-step workflow, unless a quick-jump asked us to skip once
     if (panelId === 'fishNowPanel' && isFlyModule()) {
-      console.log('HUNTECH: Starting fishNowInit...');
-      if (typeof window._fishNowInitFn === 'function') {
-        window._fishNowInitFn();
+      const shouldSkipInit = window._fishNowSkipInitOnce === true;
+      if (shouldSkipInit) {
+        window._fishNowSkipInitOnce = false;
       } else {
-        console.warn('HUNTECH: fishNowInit not ready yet');
-        showNotice('Loading Fish Now… try again in a moment.', 'info', 2000);
+        console.log('HUNTECH: Starting fishNowInit...');
+        if (typeof window._fishNowInitFn === 'function') {
+          window._fishNowInitFn();
+        } else {
+          console.warn('HUNTECH: fishNowInit not ready yet');
+          showNotice('Loading Fish Now… try again in a moment.', 'info', 2000);
+        }
       }
     } else if (panelId !== 'fishNowPanel') {
       centerOnMyLocationInternal();
@@ -15425,7 +15430,7 @@ document.addEventListener('DOMContentLoaded', () => {
           // Show step 1 after a short delay for map animation
           setTimeout(() => fishShowStep(1), 800);
         } else {
-          showNotice('No trout water found near your location. Try the SPOTS panel.', 'error', 4000);
+          showNotice('No trout water found near your location. Try My Saved Spots or Trip Planner.', 'error', 4000);
         }
       }, function() {
         // GPS error — try last known
@@ -15438,6 +15443,57 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   // Expose on window so top-level showStreamPanel can call it
   window._fishNowInitFn = fishNowInit;
+
+  // Allow quick-jump favorites (e.g., Montauk) to enter the Fish Now flow directly
+  window.loadFavoriteWater = function(waterId) {
+    try {
+      if (!waterId || !window.TROUT_WATERS || !Array.isArray(window.TROUT_WATERS)) {
+        showNotice('Trout waters data not loaded yet.', 'error', 3500);
+        return;
+      }
+
+      const water = window.TROUT_WATERS.find(function(w) { return w.id === waterId; });
+      if (!water) {
+        showNotice('That trout water is not available yet.', 'error', 3500);
+        return;
+      }
+
+      // Ensure map is active and hero is faded
+      if (!document.body.classList.contains('ht-map-active') && typeof activateFlyMap === 'function') {
+        activateFlyMap();
+      }
+
+      // Show the Fish Now panel but skip GPS-based init once
+      window._fishNowSkipInitOnce = true;
+      if (typeof window.showStreamPanel === 'function') {
+        window.showStreamPanel('fishNowPanel');
+      }
+
+      // Center map on this water
+      if (typeof map !== 'undefined' && map && water.lat && water.lng) {
+        map.setView([water.lat, water.lng], 16, { animate: true, duration: 1.2 });
+      }
+
+      // Wire into Fish Now state and UI
+      fishFlow.area = water;
+      placeAreaPin(water);
+      const titleEl = document.getElementById('fishAreaTitle');
+      const descEl = document.getElementById('fishAreaDesc');
+      if (titleEl) titleEl.textContent = '🎣 Welcome to ' + water.name;
+      if (descEl) {
+        const miles = water.streamMiles ? water.streamMiles + ' mi' : '';
+        const species = (water.species || []).join(', ');
+        const bits = [water.ribbon || water.category, miles, species].filter(Boolean);
+        descEl.textContent = bits.join(' • ');
+      }
+
+      fishShowStep(1);
+      showNotice('📍 Jumped to ' + water.name, 'success', 2500);
+    } catch (e) {
+      console.error('HUNTECH: loadFavoriteWater error', e);
+      showNotice('Error loading water: ' + e.message, 'error', 4000);
+    }
+  };
 
   /* ═══ Step 1 actions ═══ */
   window.fishStepCheckIn = function() {
