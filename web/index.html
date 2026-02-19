@@ -28,11 +28,11 @@
   </script>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" onerror="window.__htLoadStylesheetFallback && window.__htLoadStylesheetFallback(this, 'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css')" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css" onerror="window.__htLoadStylesheetFallback && window.__htLoadStylesheetFallback(this, 'https://cdn.jsdelivr.net/npm/leaflet-draw@1.0.4/dist/leaflet.draw.css')" />
-  <link rel="stylesheet" href="app.css?v=20260219b">
+  <link rel="stylesheet" href="app.css?v=20260219c">
 
   <!-- AWS Backend Configuration -->
-  <script src="config.js?v=20260219b"></script>
-  <script src="api.js?v=20260219b"></script>
+  <script src="config.js?v=20260219c"></script>
+  <script src="api.js?v=20260219c"></script>
 </head>
 <body class="module-shed ht-toolbar-collapsed">
   <header class="ht-topbar">
@@ -113,7 +113,8 @@
     <div id="map"></div>
 
     <!-- ═══ HERO SPLASH — antler photos for shed module (mobile-first backgrounds) ═══ -->
-    <div class="ht-map-hero" id="mapHero">
+    <!-- inline opacity prevents map flash before CSS loads -->
+    <div class="ht-map-hero" id="mapHero" style="opacity:0.96">
       <div class="ht-hero-slide ht-hero-slide--active ht-shed-slide-1" style="background-image:url('assets/shed-antler-1.jpeg')"></div>
       <div class="ht-hero-slide ht-shed-slide-2" style="background-image:url('assets/shed-antler-2.jpeg')"></div>
       <div class="ht-hero-slide ht-shed-slide-3" style="background-image:url('assets/shed-antler-3.jpeg')"></div>
@@ -148,55 +149,31 @@
           <span class="ht-header-spacer" aria-hidden="true"></span>
           <span class="ht-define-title">Define Hunt Area</span>
         </div>
-        <div class="ht-form-grid">
+        <div class="ht-form-grid ht-form-grid-tight">
           <div class="ht-form-row">
-            <div class="ht-toolbar-btns ht-toolbar-btns-stack">
-              <div class="ht-pill-stack">
-                <button class="ht-gold-btn" onclick="drawHuntArea()">Draw Area</button>
-              </div>
-              <div class="ht-pill-stack">
-                <button class="ht-gold-btn" onclick="selectLocationRadius()">Define Radius</button>
-              </div>
+            <div class="ht-toolbar-btns ht-toolbar-btns-quad">
+              <button class="ht-gold-btn ht-btn-sm" onclick="drawHuntArea()">Draw Area</button>
+              <button class="ht-gold-btn ht-btn-sm" onclick="selectLocationRadius()">Radius</button>
+              <button class="ht-gold-btn ht-btn-sm" onclick="selectLocationRectangle()">Draw Box</button>
+              <button class="ht-gold-btn ht-btn-sm" onclick="startOver()">Start Over</button>
             </div>
           </div>
-          <div class="ht-form-row">
-            <div class="ht-toolbar-btns ht-toolbar-btns-stack">
-              <div class="ht-pill-stack">
-                <button class="ht-gold-btn" onclick="selectLocationRectangle()">Draw Box</button>
-              </div>
-              <div class="ht-pill-stack">
-                <button class="ht-gold-btn" onclick="startOver()">Start Over</button>
-              </div>
-            </div>
-          </div>
-          <div class="ht-form-row">
-            <div class="ht-form-label">Saved Hunts</div>
-            <select id="savedPropertySelect" class="ht-select">
+          <div class="ht-form-row ht-form-row-inline">
+            <label class="ht-form-label">Saved Hunts</label>
+            <select id="savedPropertySelect" class="ht-select ht-select-sm">
               <option value="">Select hunt</option>
             </select>
           </div>
           <div class="ht-form-row">
-            <div class="ht-toolbar-btns ht-toolbar-btns-stack">
-              <div class="ht-pill-stack">
-                <button class="ht-gold-btn" type="button" onclick="loadSavedSelectionFromTray()">Load Hunt</button>
-              </div>
-              <div class="ht-pill-stack">
-                <button class="ht-gold-btn" type="button" onclick="deleteSelectedSavedHunt()">Delete Hunt</button>
-              </div>
+            <div class="ht-toolbar-btns ht-toolbar-btns-quad">
+              <button class="ht-gold-btn ht-btn-sm" type="button" onclick="loadSavedSelectionFromTray()">Load</button>
+              <button class="ht-gold-btn ht-btn-sm" type="button" onclick="deleteSelectedSavedHunt()">Delete</button>
+              <button class="ht-gold-btn ht-btn-sm" type="button" onclick="logPinOnMap()">Drop Pin</button>
+              <button class="ht-gold-btn ht-btn-sm" type="button" onclick="logSignVoice()">Log Sign</button>
             </div>
           </div>
           <div class="ht-form-row">
-            <div class="ht-toolbar-btns ht-toolbar-btns-stack">
-              <div class="ht-pill-stack">
-                <button class="ht-gold-btn" type="button" onclick="logPinOnMap()">Drop Pin</button>
-              </div>
-              <div class="ht-pill-stack">
-                <button class="ht-gold-btn" type="button" onclick="logSignVoice()">Log Sign</button>
-              </div>
-            </div>
-          </div>
-          <div class="ht-form-row">
-            <button class="ht-gold-btn" type="button" onclick="if(confirm('Delete all saved hunts and areas? This cannot be undone.')) clearAllSavedHuntsAndAreas()">CLEAR ALL SAVED HUNTS + AREAS</button>
+            <button class="ht-gold-btn ht-btn-sm ht-btn-danger" type="button" onclick="if(confirm('Delete all saved hunts and areas? This cannot be undone.')) clearAllSavedHuntsAndAreas()">CLEAR ALL SAVED</button>
           </div>
         </div>
       </div>
@@ -247,7 +224,7 @@
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js?v=20260219b')
+        navigator.serviceWorker.register('sw.js?v=20260219c')
           .then(() => console.log('HUNTECH: Service Worker registered'))
           .catch(err => console.log('Service Worker registration failed:', err));
       });
@@ -255,14 +232,14 @@
   </script>
 
   <!-- Core modules (load before main.js) -->
-  <script src="ht-errors.js?v=20260219b"></script>
-  <script src="ht-cloud.js?v=20260219b"></script>
-  <script src="regulations.js?v=20260219b"></script>
+  <script src="ht-errors.js?v=20260219c"></script>
+  <script src="ht-cloud.js?v=20260219c"></script>
+  <script src="regulations.js?v=20260219c"></script>
 
   <!-- Main app + extracted modules -->
-  <script src="main.js?v=20260219b"></script>
-  <script src="ht-fly-fishing.js?v=20260219b"></script>
-  <script src="ht-tracking.js?v=20260219b"></script>
+  <script src="main.js?v=20260219c"></script>
+  <script src="ht-fly-fishing.js?v=20260219c"></script>
+  <script src="ht-tracking.js?v=20260219c"></script>
 </body>
 </html>
 

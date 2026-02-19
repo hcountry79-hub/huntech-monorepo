@@ -1842,12 +1842,12 @@ html, body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  padding: 6px 12px;
+  gap: 6px;
+  padding: 4px 10px;
   border-radius: 999px;
   background: rgba(255, 193, 7, 0.16);
   border: 1px solid rgba(255, 193, 7, 0.35);
-  font-size: 14px;
+  font-size: 11px;
   font-weight: 900;
   letter-spacing: 0.6px;
   color: var(--gold);
@@ -1870,14 +1870,14 @@ body.ht-field-step-1 #defineAreaPanel,
 body.ht-field-step-2 #defineAreaPanel {
   background: rgba(10, 10, 10, 0.7);
   border: 1px solid rgba(255, 193, 7, 0.35);
-  border-radius: 18px;
-  padding: 14px 16px 16px;
-  margin-top: -16px;
+  border-radius: 14px;
+  padding: 8px 10px 10px;
+  margin-top: -12px;
   margin-left: auto;
   margin-right: auto;
-  width: min(560px, 100%);
+  width: min(480px, 100%);
   transform: translateY(-2px);
-  box-shadow: 0 16px 34px rgba(0, 0, 0, 0.45);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.45);
 }
 
 body.module-fly.ht-field-step-1 #defineAreaPanel,
@@ -5408,152 +5408,46 @@ body.module-mushroom .ht-map-hero-meta {
   position: fixed;
   left: calc(12px + env(safe-area-inset-left));
   right: auto;
-  top: calc(var(--topbar-height) + 46px);
+  top: calc(var(--topbar-height) + 10px);
   z-index: 1002;
   display: grid;
   justify-items: center;
-  gap: 0;
   pointer-events: auto;
-  margin-top: 0;
   padding: 0;
-  border-radius: 0;
   background: transparent;
   border: none;
   box-shadow: none;
 }
 
-.ht-compass-face {
-  display: none;
+/* Hide old compass visuals — replaced by simple pill */
+.ht-compass-face,
+.ht-compass-star,
+.ht-compass-ring,
+.ht-compass-needle,
+.ht-compass-north,
+.ht-compass-wind-arrow,
+.ht-compass-windreadout,
+.ht-compass-lock-ring,
+.ht-compass-lock-icon,
+.ht-compass-lock-svg {
+  display: none !important;
 }
 
-.ht-compass-star {
-  position: absolute;
-  inset: 3px;
-  display: grid;
-  place-items: center;
-  opacity: 1;
-}
-
-.ht-compass-star svg {
-  width: 100%;
-  height: 100%;
-  fill: none;
-  stroke: rgba(255, 215, 120, 0.98);
-  stroke-width: 3.2;
-  filter: drop-shadow(0 0 6px rgba(0, 0, 0, 0.95)) drop-shadow(0 0 10px rgba(255, 193, 7, 0.6));
-}
-
-.ht-compass-ring {
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
-  border: 2px solid rgba(255, 193, 7, 0.7);
-  background: radial-gradient(circle at 35% 35%, rgba(255, 215, 64, 0.32), rgba(6, 6, 6, 0.98));
-  position: relative;
-  box-shadow: inset 0 0 12px rgba(0, 0, 0, 0.65), 0 0 10px rgba(255, 193, 7, 0.65);
-}
-
-.ht-compass-ring::after {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 4px;
-  height: 4px;
-  transform: translate(-50%, -50%);
-  border-radius: 50%;
-  background: #ffcc4d;
-  box-shadow: 0 0 10px rgba(255, 193, 7, 0.8);
-}
-
-.ht-compass-north {
-  position: absolute;
-  top: 4px;
-  left: 50%;
-  transform: translateX(-50%);
-  font-size: 7px;
-  font-weight: 900;
-  letter-spacing: 1px;
-  color: #ffe8a3;
-  text-shadow: 0 0 6px rgba(0, 0, 0, 0.85);
-}
-
-.ht-compass-needle {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 3px;
-  height: 12px;
-  transform: translate(-50%, -50%) rotate(0deg);
-  transform-origin: 50% 70%;
-  background: linear-gradient(180deg, #ffe17a, #b06a00);
-  border-radius: 999px;
-  box-shadow: 0 0 6px rgba(0, 0, 0, 0.9), 0 0 12px rgba(255, 193, 7, 0.8);
-}
-
-.ht-compass-windreadout {
+/* ── Map Lock / Unlock Pill Toggle ── */
+.ht-compass-lock {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  font-size: 9px;
-  font-weight: 900;
-  letter-spacing: 0.6px;
-  color: #fff1b8;
-  text-transform: uppercase;
-  padding: 4px 8px;
+  justify-content: center;
+  padding: 6px 14px;
   border-radius: 999px;
-  background: rgba(6, 6, 6, 0.95);
-  border: 1px solid rgba(255, 193, 7, 0.85);
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.6);
-}
-
-body.ht-layers-open .ht-compass-windreadout {
-  opacity: 0;
-  pointer-events: none;
-  transform: scale(0.96);
-}
-
-.ht-compass-wind-label {
-  color: #ffd86b;
-}
-
-.ht-compass-wind-value {
-  color: #fff4c2;
-}
-
-.ht-compass-wind-arrow {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 6px;
-  height: 16px;
-  background: #080808;
-  clip-path: polygon(50% 0%, 92% 38%, 66% 38%, 66% 100%, 34% 100%, 34% 38%, 8% 38%);
-  transform-origin: 50% 70%;
-  box-shadow: 0 0 8px rgba(0, 0, 0, 0.85);
-  border: 1px solid rgba(255, 193, 7, 0.7);
-}
-
-/* ── Premium Follow / North-Up Toggle ── */
-.ht-compass-lock {
-  position: fixed;
-  top: calc(var(--topbar-height) + 10px);
-  right: calc(12px + env(safe-area-inset-right));
-  z-index: 1300;
-  width: 52px;
-  height: 52px;
-  border-radius: 50%;
-  border: 2px solid rgba(255, 212, 0, 0.7);
-  background: radial-gradient(circle at 35% 35%, rgba(28, 24, 12, 0.98), rgba(8, 8, 8, 0.98));
+  border: 1.5px solid rgba(255, 212, 0, 0.7);
+  background: rgba(8, 8, 8, 0.92);
   color: #ffd400;
   cursor: pointer;
-  display: grid;
-  place-items: center;
-  padding: 0;
+  font-size: 0;
   box-shadow:
-    0 0 0 1px rgba(0, 0, 0, 0.6),
-    0 6px 20px rgba(0, 0, 0, 0.55),
-    0 0 18px rgba(255, 193, 7, 0.15);
+    0 4px 14px rgba(0, 0, 0, 0.5),
+    0 0 12px rgba(255, 193, 7, 0.12);
   transition: border-color 0.3s ease, box-shadow 0.3s ease, background 0.3s ease;
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
@@ -5563,47 +5457,38 @@ body.ht-layers-open .ht-compass-windreadout {
   transform: scale(0.94);
 }
 
-.ht-compass-lock-ring {
-  display: none;
-}
-
-.ht-compass-lock-icon {
-  display: none;
-}
-
 .ht-compass-lock-text {
-  font-size: 8px;
+  font-size: 10px;
   font-weight: 900;
   letter-spacing: 0.8px;
-  line-height: 1.15;
+  line-height: 1;
   text-align: center;
   text-transform: uppercase;
   color: #ffd400;
   pointer-events: none;
+  white-space: nowrap;
 }
 
-/* Locked state: gold border, compass-north indicator */
+/* Locked state: gold border, steady glow */
 .ht-compass-lock.is-locked {
   border-color: rgba(255, 212, 0, 0.8);
-  background: radial-gradient(circle at 35% 35%, rgba(255, 212, 0, 0.12), rgba(8, 8, 8, 0.98));
+  background: rgba(8, 8, 8, 0.92);
   box-shadow:
-    0 0 0 1px rgba(0, 0, 0, 0.6),
-    0 6px 20px rgba(0, 0, 0, 0.55),
-    0 0 22px rgba(255, 193, 7, 0.25);
+    0 4px 14px rgba(0, 0, 0, 0.5),
+    0 0 16px rgba(255, 193, 7, 0.2);
 }
 
 .ht-compass-lock.is-locked .ht-compass-lock-text {
   color: #ffd400;
 }
 
-/* Unlocked / heading-follow state: pulsing amber glow */
+/* Unlocked state: amber glow + pulse */
 .ht-compass-lock:not(.is-locked) {
   border-color: rgba(255, 140, 0, 0.85);
-  background: radial-gradient(circle at 35% 35%, rgba(255, 160, 20, 0.18), rgba(8, 8, 8, 0.98));
+  background: rgba(18, 12, 4, 0.92);
   box-shadow:
-    0 0 0 1px rgba(0, 0, 0, 0.6),
-    0 6px 20px rgba(0, 0, 0, 0.55),
-    0 0 28px rgba(255, 140, 0, 0.35);
+    0 4px 14px rgba(0, 0, 0, 0.5),
+    0 0 20px rgba(255, 140, 0, 0.3);
   animation: htFollowPulse 2.2s ease-in-out infinite;
 }
 
@@ -5612,8 +5497,8 @@ body.ht-layers-open .ht-compass-windreadout {
 }
 
 @keyframes htFollowPulse {
-  0%, 100% { box-shadow: 0 0 0 1px rgba(0,0,0,0.6), 0 6px 20px rgba(0,0,0,0.55), 0 0 22px rgba(255,140,0,0.3); }
-  50% { box-shadow: 0 0 0 1px rgba(0,0,0,0.6), 0 6px 20px rgba(0,0,0,0.55), 0 0 36px rgba(255,140,0,0.5); }
+  0%, 100% { box-shadow: 0 4px 14px rgba(0,0,0,0.5), 0 0 16px rgba(255,140,0,0.25); }
+  50% { box-shadow: 0 4px 14px rgba(0,0,0,0.5), 0 0 28px rgba(255,140,0,0.45); }
 }
 
 .ht-compass-lock-svg {
@@ -6773,48 +6658,48 @@ body.ht-saved-hunt-preview #planRoutePanel {
 }
 
 .ht-user-heading {
-  width: 40px;
-  height: 80px;
+  width: 24px;
+  height: 48px;
   display: grid;
   place-items: center;
   position: relative;
   transform: rotate(var(--heading, 0deg));
-  transform-origin: 50% 62.5%;  /* anchor at core dot position (50/80) */
+  transform-origin: 50% 62.5%;
 }
 
-/* SVG arrow — long, thin, crisp with bold black outline */
+/* SVG arrow — compact, crisp with bold outline */
 .ht-user-arrow-svg {
   position: absolute;
   top: 0;
   left: 0;
-  width: 40px;
-  height: 80px;
+  width: 24px;
+  height: 48px;
   pointer-events: none;
 }
 
 /* Core dot — compact bright gold orb */
 .ht-user-heading-core {
   position: absolute;
-  top: 42px;  /* vertically centered on the arrow notch */
+  top: 25px;
   left: 50%;
   transform: translateX(-50%);
-  width: 12px;
-  height: 12px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
   background: radial-gradient(circle at 35% 35%, #fff6cf 0%, #ffd463 40%, #c88a2b 100%);
-  border: 2px solid #000;
+  border: 1.5px solid #000;
   box-shadow:
-    0 0 0 2px rgba(255, 212, 0, 0.35),
-    0 0 10px rgba(255, 199, 92, 0.7);
+    0 0 0 1.5px rgba(255, 212, 0, 0.35),
+    0 0 6px rgba(255, 199, 92, 0.7);
 }
 
 /* Outer halo ring for visibility at any zoom */
 .ht-user-heading-core::after {
   content: '';
   position: absolute;
-  inset: -6px;
+  inset: -4px;
   border-radius: 50%;
-  border: 1.5px solid rgba(255, 212, 0, 0.3);
+  border: 1px solid rgba(255, 212, 0, 0.3);
   animation: htCoreRing 3s ease-in-out infinite;
 }
 
@@ -8151,6 +8036,52 @@ body.ht-hunt-active .ht-hunt-only {
   margin-top: 4px;
 }
 
+/* Compact tray layout */
+.ht-form-grid-tight {
+  gap: 4px !important;
+  margin-top: 2px !important;
+}
+
+.ht-toolbar-btns-quad {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+}
+
+.ht-btn-sm {
+  padding: 5px 6px !important;
+  font-size: 10px !important;
+  border-radius: 8px !important;
+  letter-spacing: 0.3px;
+  text-align: center;
+}
+
+.ht-btn-danger {
+  opacity: 0.7;
+  font-size: 9px !important;
+}
+
+.ht-select-sm {
+  padding: 4px 6px !important;
+  font-size: 12px !important;
+}
+
+.ht-form-row-inline {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 6px !important;
+  align-items: center;
+}
+
+.ht-form-row-inline .ht-form-label {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: #ccc;
+  white-space: nowrap;
+}
+
 .ht-toolbar-actions {
   display: grid;
   gap: 8px;
@@ -8256,10 +8187,11 @@ body.ht-hunt-active .ht-hunt-only {
   background: rgba(255, 193, 7, 0.12);
   border: 1px solid rgba(255, 193, 7, 0.5);
   color: #fff;
-  padding: 8px 10px;
-  border-radius: 10px;
+  padding: 6px 8px;
+  border-radius: 8px;
   cursor: pointer;
   font-weight: 600;
+  font-size: 12px;
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
 }

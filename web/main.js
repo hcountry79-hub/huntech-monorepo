@@ -9243,14 +9243,14 @@ function getUserHeadingIcon(headingDeg) {
       <div class="ht-user-heading ${hasHeading ? '' : 'is-unknown'}" style="--heading:${rotation}deg">
         <svg class="ht-user-arrow-svg" viewBox="0 0 40 80" xmlns="http://www.w3.org/2000/svg">
           <path d="M20 2 L32 60 L20 50 L8 60 Z"
-                fill="#ffd400" stroke="#000" stroke-width="3"
+                fill="#ffd400" stroke="#000" stroke-width="2.5"
                 stroke-linejoin="round" />
         </svg>
         <div class="ht-user-heading-core"></div>
       </div>
     `,
-    iconSize: [40, 80],
-    iconAnchor: [20, 50]
+    iconSize: [24, 48],
+    iconAnchor: [12, 30]
   });
 }
 
@@ -11707,31 +11707,12 @@ function ensureCompassControl() {
 
   const compass = document.createElement('div');
   compass.className = 'ht-compass leaflet-control';
+
+  // Simple solid pill toggle — no complex SVG compass
   compass.innerHTML = `
-    <div class="ht-compass-face">
-      <div class="ht-compass-star" aria-hidden="true">
-        <svg viewBox="0 0 120 120" role="img" aria-hidden="true" focusable="false">
-          <polygon points="60,6 68,46 114,60 68,74 60,114 52,74 6,60 52,46" />
-          <polygon points="60,20 64,50 96,60 64,70 60,100 56,70 24,60 56,50" />
-        </svg>
-      </div>
-      <div class="ht-compass-ring">
-        <div class="ht-compass-needle" aria-hidden="true"></div>
-        <div class="ht-compass-wind-arrow" aria-hidden="true"></div>
-        <div class="ht-compass-north">N</div>
-      </div>
-    </div>
-    <button class="ht-compass-lock" type="button" aria-pressed="true"
+    <button class="ht-compass-lock is-locked" type="button" aria-pressed="true"
       aria-label="North locked. Tap to unlock.">
-      <svg class="ht-compass-lock-svg" viewBox="0 0 24 24" width="22" height="22" fill="none" aria-hidden="true">
-        <path d="M12 2L14.5 9H12V2Z" fill="#ffd400"/>
-        <path d="M12 2L9.5 9H12V2Z" fill="#b38600"/>
-        <path d="M12 22L14.5 15H12V22Z" fill="#444"/>
-        <path d="M12 22L9.5 15H12V22Z" fill="#333"/>
-        <circle cx="12" cy="12" r="3.5" fill="none" stroke="#ffd400" stroke-width="1.5"/>
-        <circle cx="12" cy="12" r="1.2" fill="#ffd400"/>
-      </svg>
-      <span class="ht-compass-lock-text">NORTH<br>UP</span>
+      <span class="ht-compass-lock-text">LOCK MAP</span>
     </button>
   `;
 
@@ -11739,56 +11720,16 @@ function ensureCompassControl() {
     compass.addEventListener(evt, (event) => event.stopPropagation());
   });
 
-  compassNeedle = compass.querySelector('.ht-compass-needle');
+  compassNeedle = null;
   compassLockBtn = compass.querySelector('.ht-compass-lock');
-  compassWindArrow = compass.querySelector('.ht-compass-wind-arrow');
-  const compassFace = compass.querySelector('.ht-compass-face');
+  compassWindArrow = null;
   if (compassLockBtn) {
     compassLockBtn.addEventListener('click', () => {
       setCompassLock(!compassLocked);
     });
   }
 
-  if (compassFace) {
-    let rotating = false;
-    let startAngle = 0;
-    let startBearing = 0;
-    const getAngle = (event) => {
-      const rect = compassFace.getBoundingClientRect();
-      const cx = rect.left + rect.width / 2;
-      const cy = rect.top + rect.height / 2;
-      const dx = event.clientX - cx;
-      const dy = event.clientY - cy;
-      return Math.atan2(dy, dx) * (180 / Math.PI);
-    };
-
-    compassFace.addEventListener('pointerdown', (event) => {
-      if (compassLocked) return;
-      rotating = true;
-      startAngle = getAngle(event);
-      startBearing = mapBearingDeg;
-      compassFace.setPointerCapture(event.pointerId);
-    });
-
-    compassFace.addEventListener('pointermove', (event) => {
-      if (!rotating) return;
-      const angle = getAngle(event);
-      mapBearingDeg = startBearing + (angle - startAngle);
-      applyMapRotation();
-    });
-
-    const stopRotate = (event) => {
-      if (!rotating) return;
-      rotating = false;
-      try { compassFace.releasePointerCapture(event.pointerId); } catch {}
-    };
-
-    compassFace.addEventListener('pointerup', stopRotate);
-    compassFace.addEventListener('pointercancel', stopRotate);
-  }
-
-  // Place compass on .ht-map-container (the static parent),
-  // NOT inside #map which rotates via CSS transform.
+  // Place on .ht-map-container (the static parent)
   const staticHost = document.querySelector('.ht-map-container') || mapEl.parentElement || mapEl;
   staticHost.appendChild(compass);
   compassControl = compass;
@@ -12072,19 +12013,13 @@ function setCompassLock(nextState, notify = true) {
   compassLocked = Boolean(nextState);
   if (compassLockBtn) {
     const lockText = compassLockBtn.querySelector('.ht-compass-lock-text');
-    const lockSvg = compassLockBtn.querySelector('.ht-compass-lock-svg');
     if (lockText) {
-      lockText.innerHTML = compassLocked ? 'NORTH<br>UP' : 'FOLLOW<br>HDG';
-    }
-    // Rotate the compass SVG needle to show current bearing
-    if (lockSvg) {
-      lockSvg.style.transition = 'transform 0.4s ease';
-      lockSvg.style.transform = compassLocked ? '' : `rotate(${mapBearingDeg}deg)`;
+      lockText.textContent = compassLocked ? 'LOCK MAP' : 'UNLOCK MAP';
     }
     compassLockBtn.setAttribute('aria-pressed', compassLocked ? 'true' : 'false');
     compassLockBtn.setAttribute(
       'aria-label',
-      compassLocked ? 'North locked. Tap to unlock.' : 'Following heading. Tap to lock north.'
+      compassLocked ? 'Map locked north-up. Tap to unlock.' : 'Map unlocked. Tap to lock.'
     );
     compassLockBtn.classList.toggle('is-locked', compassLocked);
   }
