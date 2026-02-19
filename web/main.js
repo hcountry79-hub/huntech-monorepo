@@ -2084,9 +2084,8 @@ function initializeMap() {
     map.getPane('hybridLabelsPane').style.pointerEvents = 'none';
   }
 
-  const tileErrorNotice = (key, message) => () => {
-    showNoticeThrottled(key, message, 'warning', 4200);
-  };
+  // Tile error popups suppressed — silent fail for tile loading issues
+  const tileErrorNotice = (key, message) => () => {};
 
   // Tile loading strategy:
   // - updateWhenIdle:false  → load tiles DURING panning (no grey dead zones)
@@ -2158,9 +2157,6 @@ function initializeMap() {
     const lidarUrl = (window.LIDAR_TILE_URL || '').trim();
     if (lidarUrl) {
       lidarHillshadeLayer = L.tileLayer(lidarUrl, { opacity: 0.55, maxNativeZoom: 16, zIndex: 350, ..._tileOpts });
-      lidarHillshadeLayer.on('tileerror', () => {
-        showNoticeThrottled('lidar-tiles', 'LiDAR/Hillshade overlay failed to load tiles.', 'warning', 4200);
-      });
     }
   }
 
@@ -2173,9 +2169,6 @@ function initializeMap() {
     const tileUrl = (window.PUBLIC_LAND_TILE_URL || DEFAULT_PUBLIC_LAND_TILE_URL || '').trim();
     if (tileUrl) {
       publicLandLayer = L.tileLayer(tileUrl, { opacity: 0.7, maxNativeZoom: 19, zIndex: 450, ..._tileOpts });
-      publicLandLayer.on('tileerror', () => {
-        showNoticeThrottled('public-land-tiles', 'Public land overlay failed to load tiles.', 'warning', 4200);
-      });
       overlays['Public Land'] = publicLandLayer;
     }
   } catch {
@@ -2187,9 +2180,6 @@ function initializeMap() {
     const privateUrl = (window.PRIVATE_PARCELS_TILE_URL || '').trim();
     if (privateUrl) {
       privateParcelsLayer = L.tileLayer(privateUrl, { opacity: 0.65, maxNativeZoom: 19, zIndex: 460, ..._tileOpts });
-      privateParcelsLayer.on('tileerror', () => {
-        showNoticeThrottled('private-parcels-tiles', 'Private parcels overlay failed to load tiles.', 'warning', 4200);
-      });
       overlays['Private Parcels'] = privateParcelsLayer;
     }
   } catch {
@@ -9534,9 +9524,6 @@ function enablePrivateParcelsLayer() {
 
   if (!privateParcelsLayer) {
     privateParcelsLayer = L.tileLayer(tileUrl, { opacity: 0.65, maxZoom: 19, zIndex: 460, keepBuffer: 6, updateWhenZooming: false, updateWhenIdle: true });
-    privateParcelsLayer.on('tileerror', () => {
-      showNotice('Private parcels overlay failed to load tiles.', 'warning', 4200);
-    });
     if (baseLayersControl) {
       try { baseLayersControl.addOverlay(privateParcelsLayer, 'Private Parcels'); } catch {}
     }
@@ -9577,9 +9564,6 @@ function enablePublicLandLayer() {
 
   const tileUrl = window.PUBLIC_LAND_TILE_URL || DEFAULT_PUBLIC_LAND_TILE_URL;
   publicLandLayer = L.tileLayer(tileUrl, { opacity: 0.7, maxZoom: 19, zIndex: 450, keepBuffer: 6, updateWhenZooming: false, updateWhenIdle: true });
-  publicLandLayer.on('tileerror', () => {
-    showNotice('Public land overlay failed to load tiles.', 'warning', 4200);
-  });
   if (baseLayersControl) {
     try { baseLayersControl.addOverlay(publicLandLayer, 'Public Land'); } catch {}
   }
