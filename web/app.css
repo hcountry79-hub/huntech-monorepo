@@ -4843,10 +4843,11 @@ body.module-mushroom .ht-map-hero-meta {
 }
 .ht-tree-chip {
   display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 5px 10px 5px 6px;
-  border-radius: 999px;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+  padding: 6px 8px;
+  border-radius: 10px;
   border: 1px solid rgba(200, 160, 96, 0.35);
   background: rgba(200, 160, 96, 0.1);
   color: #e8d8c0;
@@ -4854,6 +4855,26 @@ body.module-mushroom .ht-map-hero-meta {
   font-weight: 700;
   cursor: default;
   transition: border-color 0.2s, background 0.2s;
+  min-width: 100px;
+  max-width: 140px;
+}
+.ht-tree-chip-top {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.ht-tree-chip-thumbs {
+  display: flex;
+  gap: 3px;
+  width: 100%;
+}
+.ht-tree-chip-thumb {
+  flex: 1;
+  height: 36px;
+  object-fit: cover;
+  border-radius: 4px;
+  border: 1px solid rgba(200, 160, 96, 0.2);
+  background: rgba(0,0,0,0.3);
 }
 .ht-tree-chip--clickable {
   cursor: pointer;
@@ -4940,7 +4961,7 @@ body.module-mushroom .ht-map-hero-meta {
 .ht-tree-detail-popup-overlay {
   position: fixed;
   inset: 0;
-  z-index: 12000;
+  z-index: 25000;
   background: rgba(0, 0, 0, 0.7);
   display: flex;
   align-items: center;

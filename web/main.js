@@ -6605,9 +6605,12 @@ function showEducationTile(hotspot, reason) {
       const svg = getTreeIdSvg(treeName);
       const onclick = treeKey ? `onclick="window.showTreeDetailPopup('${treeKey}')"` : '';
       const clickClass = treeKey ? 'ht-tree-chip--clickable' : '';
+      const photoKey = getTreePhotoKey(treeName);
+      const photos = photoKey ? TREE_REFERENCE_PHOTOS[photoKey] : null;
+      const thumbHtml = photos ? `<span class="ht-tree-chip-thumbs">${photos.whole ? `<img class="ht-tree-chip-thumb" src="${photos.whole}" alt="Tree" loading="lazy" onerror="this.style.display='none'">` : ''}${photos.leaves ? `<img class="ht-tree-chip-thumb" src="${photos.leaves}" alt="Leaf" loading="lazy" onerror="this.style.display='none'">` : ''}</span>` : '';
       return `<button class="ht-tree-chip ${clickClass}" ${onclick} type="button">
-        <span class="ht-tree-chip-svg">${svg}</span>
-        <span class="ht-tree-chip-name">${escapeHtml(treeName)}</span>
+        <span class="ht-tree-chip-top"><span class="ht-tree-chip-svg">${svg}</span><span class="ht-tree-chip-name">${escapeHtml(treeName)}</span></span>
+        ${thumbHtml}
       </button>`;
     }).join('');
     treeChipsHtml = `<div class="ht-tree-chip-row">${treeChips}</div>`;
