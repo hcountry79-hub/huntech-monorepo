@@ -366,6 +366,43 @@ async function prefetchNLCDForArea(bounds) {
   }
 }
 
+/* ═══ POLYGON DRAW SENSITIVITY FIX ═══
+   Monkey-patch Leaflet.draw's addVertex to prevent accidental vertex drops
+   on mobile. Uses pixel-distance + time debounce so finger drags don't
+   create dozens of vertices. */
+(function patchDrawVertexDebounce() {
+  if (!L || !L.Draw || !L.Draw.Polyline) return;
+  const _origAddVertex = L.Draw.Polyline.prototype.addVertex;
+  let _pvTime = 0;
+  let _pvPoint = null; // L.Point (screen px)
+
+  L.Draw.Polyline.prototype.addVertex = function(latlng) {
+    const MIN_PX   = 30;   // minimum screen-pixels between vertices
+    const MIN_MS   = 350;  // minimum milliseconds between vertices
+    const now = Date.now();
+
+    if (_pvPoint && this._map) {
+      const pt = this._map.latLngToContainerPoint(latlng);
+      const pxDist = pt.distanceTo(_pvPoint);
+      if (pxDist < MIN_PX || (now - _pvTime) < MIN_MS) {
+        return; // too close or too fast — skip vertex
+      }
+    }
+
+    _pvTime = now;
+    if (this._map) _pvPoint = this._map.latLngToContainerPoint(latlng);
+    return _origAddVertex.call(this, latlng);
+  };
+
+  // Reset debounce state each time a new draw starts
+  const _origEnable = L.Draw.Polyline.prototype.enable;
+  L.Draw.Polyline.prototype.enable = function() {
+    _pvTime = 0;
+    _pvPoint = null;
+    return _origEnable.apply(this, arguments);
+  };
+})();
+
 /**
  * Get NLCD land cover code for a point from the pre-fetched grid (INSTANT).
  * Falls back to individual WMS request only if grid isn't available.
@@ -2287,8 +2324,8 @@ function initializeMap() {
     if (last && typeof last.getLatLng === 'function') {
       const now = Date.now();
       const ll = last.getLatLng();
-      const tooFast = lastDrawVertexAt && (now - lastDrawVertexAt) < 250;
-      const tooClose = lastDrawVertexLatLng && ll && L.latLng(ll).distanceTo(lastDrawVertexLatLng) < 6;
+      const tooFast = lastDrawVertexAt && (now - lastDrawVertexAt) < 350;
+      const tooClose = lastDrawVertexLatLng && ll && L.latLng(ll).distanceTo(lastDrawVertexLatLng) < 40;
       if ((tooFast || tooClose) && typeof event.layers.removeLayer === 'function') {
         event.layers.removeLayer(last);
         return;
