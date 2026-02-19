@@ -9651,6 +9651,10 @@ window.toggleToolbar = function() {
       icon.textContent = 'v';
     });
     try { localStorage.setItem('htToolbarCollapsed', '0'); } catch {}
+    // Auto-activate map when toolbar opens on hero-pending modules
+    if (isShedModule() && !document.body.classList.contains('ht-map-active')) {
+      activateShedMap();
+    }
   } else {
     toolbar.classList.add('collapsed');
     document.body.classList.add('ht-toolbar-collapsed');
