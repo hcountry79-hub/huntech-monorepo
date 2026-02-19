@@ -13495,14 +13495,14 @@ function activateMapForDefineArea() {
       else if (isTurkeyModule()) { activateTurkeyMap(); }
       else { activateShedMap(); }
     }
-    // 2. Centre on user at zoom 15 (~4000 ft)
-    const ZOOM_100FT = 15;
+    // 2. Centre on user at zoom 16 (~1000 ft)
+    const ZOOM_1000FT = 16;
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (pos) => {
           const latlng = L.latLng(pos.coords.latitude, pos.coords.longitude);
           updateUserLocationMarker(latlng);
-          map.setView(latlng, ZOOM_100FT, { animate: true });
+          map.setView(latlng, ZOOM_1000FT, { animate: true });
           setTimeout(resolve, 400);
         },
         () => { resolve(); },
