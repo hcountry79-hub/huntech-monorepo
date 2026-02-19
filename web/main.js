@@ -13495,8 +13495,8 @@ function activateMapForDefineArea() {
       else if (isTurkeyModule()) { activateTurkeyMap(); }
       else { activateShedMap(); }
     }
-    // 2. Centre on user at zoom 16 (~1000 ft)
-    const ZOOM_1000FT = 16;
+    // 2. Centre on user at zoom 12 (~1 mile view)
+    const ZOOM_1000FT = 12;
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (pos) => {
