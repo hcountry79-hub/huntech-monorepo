@@ -15727,22 +15727,11 @@ document.addEventListener('DOMContentLoaded', () => {
       }, 6000);
     })();
   } else {
-    /* Shed module: map initialises immediately, hero is a cosmetic overlay */
+    /* Shed module: map initialises immediately, no hero overlay */
     document.body.classList.remove('ht-map-pending');
     document.body.classList.add('ht-map-active');
+    document.body.classList.add('ht-hero-dismissed');
     initializeMap();
-    // Start hero slideshow for the shed overlay images
-    (function initHeroSlideshow() {
-      const slides = document.querySelectorAll('.ht-hero-slide');
-      if (slides.length < 2) return;
-      let current = 0;
-      setInterval(() => {
-        if (document.body.classList.contains('ht-hero-dismissed')) return;
-        slides[current].classList.remove('ht-hero-slide--active');
-        current = (current + 1) % slides.length;
-        slides[current].classList.add('ht-hero-slide--active');
-      }, 6000);
-    })();
   }
 
   startLocationWatch();

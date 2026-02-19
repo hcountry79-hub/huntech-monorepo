@@ -112,16 +112,8 @@
   <main class="ht-map-container">
     <div id="map"></div>
 
-    <!-- ═══ HERO SPLASH — antler photos for shed module (mobile-first backgrounds) ═══ -->
-    <!-- inline opacity prevents map flash before CSS loads -->
-    <div class="ht-map-hero" id="mapHero" style="opacity:0.96">
-      <div class="ht-hero-slide ht-hero-slide--active ht-shed-slide-1" style="background-image:url('assets/shed-antler-1.jpeg')"></div>
-      <div class="ht-hero-slide ht-shed-slide-2" style="background-image:url('assets/shed-antler-2.jpeg')"></div>
-      <div class="ht-hero-slide ht-shed-slide-3" style="background-image:url('assets/shed-antler-3.jpeg')"></div>
-      <div class="ht-hero-slide ht-shed-slide-4" style="background-image:url('assets/shed-antler-4.jpeg')"></div>
-      <div class="ht-hero-slide ht-shed-slide-5" style="background-image:url('assets/shed-antler-5.webp')"></div>
-      <div class="ht-hero-vignette"></div>
-    </div>
+    <!-- Hero overlay removed — map shows immediately -->
+    <div class="ht-map-hero" id="mapHero" style="display:none"></div>
   </main>
 
   <button class="ht-map-locate-btn" type="button" onclick="centerOnMyLocation()" title="Center on my location" aria-label="Center on my location">

@@ -2959,15 +2959,9 @@ body.module-fly.ht-map-active .ht-map-locate-btn {
   transform: translateY(0);
 }
 
-/* ═══ SHED MODULE - HERO OVERLAY ON LIVE MAP === */
+/* ═══ SHED MODULE — hero removed, map always visible ═══ */
 body.module-shed .ht-map-hero {
-  opacity: 0.96;
-  pointer-events: none;
-}
-body.module-shed.ht-hero-dismissed .ht-map-hero {
-  opacity: 0;
-  transform: scale(1.03) translateY(-8px);
-  pointer-events: none;
+  display: none !important;
 }
 body.module-shed #map {
   opacity: 1;
@@ -2981,27 +2975,6 @@ body.module-shed .ht-map-locate-btn {
   opacity: 1;
   pointer-events: auto;
   transform: translateY(0);
-}
-/* Shed hero backgrounds: brighten and bias framing so antlers sit above Field Command */
-body.module-shed .ht-hero-slide {
-  display: block;
-  background-position: center 10%;
-  filter: brightness(1.25) saturate(1.18) contrast(1.06);
-  transform: scale(1.35);
-  transition: opacity 1.2s ease, transform 4s ease;
-}
-body.module-shed .ht-hero-slide--active {
-  display: block;
-  opacity: 1;
-  transform: scale(1);
-}
-body.module-shed .ht-shed-slide-1,
-body.module-shed .ht-shed-slide-2,
-body.module-shed .ht-shed-slide-3,
-body.module-shed .ht-shed-slide-4,
-body.module-shed .ht-shed-slide-5 {
-  background-size: cover;
-  background-position: center 10%;
 }
 
 /* ═══ MUSHROOM MODULE HERO SPLASH ═══ */
