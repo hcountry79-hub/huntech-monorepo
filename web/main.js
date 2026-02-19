@@ -264,6 +264,182 @@ const HOTSPOT_ROAD_AVOID_SAMPLE_M = Number(window.HUNTECH_ROAD_AVOID_SAMPLE_M ||
 const HOTSPOT_BUILDING_AVOID_SAMPLE_M = Number(window.HUNTECH_BUILDING_AVOID_SAMPLE_M || 22);
 const HOTSPOT_ROAD_AVOID_MAX_CHECKS = Number(window.HUNTECH_ROAD_AVOID_MAX_CHECKS || 140);
 const HOTSPOT_ROAD_AVOID_ENDPOINT = String(window.HUNTECH_ROAD_AVOID_ENDPOINT || 'https://nominatim.openstreetmap.org/reverse').trim();
+
+// ═══════════════════════════════════════════════════════════════════
+//   LAND COVER VERIFICATION — Satellite Imagery Guardrails
+//   Uses USGS NLCD (National Land Cover Database) via MRLC ArcGIS
+//   MapServer to validate EVERY pin against real ground cover before
+//   placement. Pins that claim "creek bottom" must actually be near
+//   water/forest, not in the middle of a crop field.
+//
+//   NLCD Land Cover Classes (30m resolution, updated ~every 2-3 yr):
+//     11 = Open Water           12 = Ice/Snow
+//     21 = Developed Open       22 = Developed Low
+//     23 = Developed Medium     24 = Developed High
+//     31 = Barren               41 = Deciduous Forest
+//     42 = Evergreen Forest     43 = Mixed Forest
+//     51 = Dwarf Scrub          52 = Shrub/Scrub
+//     71 = Grassland/Herbaceous 72 = Sedge/Herbaceous
+//     81 = Pasture/Hay          82 = Cultivated Crops
+//     90 = Woody Wetlands       95 = Emergent Herbaceous Wetlands
+// ═══════════════════════════════════════════════════════════════════
+const NLCD_LANDCOVER_URL = String(window.HUNTECH_NLCD_URL || 'https://www.mrlc.gov/geoserver/mrlc_display/NLCD_2021_Land_Cover_L48/wms').trim();
+const NLCD_ENABLED = window.HUNTECH_NLCD_ENABLED !== undefined ? Boolean(window.HUNTECH_NLCD_ENABLED) : true;
+const NLCD_MAX_CHECKS = Number(window.HUNTECH_NLCD_MAX_CHECKS || 200);
+const NLCD_STRICT = true; // Hard reject — never place a bad pin
+let nlcdCheckCount = 0;
+const nlcdCache = new Map();
+
+// Which NLCD codes are OK for each habitat type
+const NLCD_HABITAT_RULES = {
+  // Forested habitats — MUST be on forest, wetland, or shrub. NOT crop/hay/open.
+  bedding:    { allow: new Set([41,42,43,51,52,90]), label: 'forest/shrub cover' },
+  transition: { allow: new Set([41,42,43,51,52,71,90,95]), label: 'tree line or edge cover' },
+  feeding:    { allow: new Set([41,42,43,51,52,71,81,90,95]), label: 'browse or edge habitat' },
+  water:      { allow: new Set([11,41,42,43,52,90,95]), label: 'water or riparian corridor' },
+  open:       { allow: new Set([41,42,43,51,52,71,81,90,95,21]), label: 'cover with open edges' },
+  terrain:    { allow: new Set([41,42,43,51,52,71,81,90,95,21,31]), label: 'natural terrain' },
+  // Mushroom-specific overrides — morels need trees
+  mushroom_bedding:    { allow: new Set([41,42,43,90]), label: 'hardwood forest' },
+  mushroom_transition: { allow: new Set([41,42,43,52,90,95]), label: 'forest edge' },
+  mushroom_feeding:    { allow: new Set([41,42,43,90,95,11]), label: 'creek bottom / floodplain' },
+  mushroom_water:      { allow: new Set([11,41,42,43,90,95]), label: 'drainage or seep' },
+  mushroom_open:       { allow: new Set([41,42,43,52,71,81,90,95,21]), label: 'old orchard or disturbed ground' },
+  // Turkey overrides
+  turkey_roostZone:    { allow: new Set([41,42,43,90]), label: 'mature timber roost' },
+  turkey_strutZone:    { allow: new Set([41,42,43,52,71,81,21]), label: 'open strutting area' },
+  turkey_travelCorridor: { allow: new Set([41,42,43,52,71,90]), label: 'travel corridor' },
+};
+
+// BLOCKED list — pins are NEVER placed on these, regardless of habitat
+const NLCD_ALWAYS_BLOCKED = new Set([
+  12,  // Ice/Snow
+  22,  // Developed Low Intensity
+  23,  // Developed Medium Intensity
+  24,  // Developed High Intensity
+  82,  // Cultivated Crops (active row-crop field)
+]);
+
+/**
+ * Fetch NLCD land cover class for a lat/lng point.
+ * Uses WMS GetFeatureInfo on the MRLC NLCD 2021 layer.
+ * Returns the numeric NLCD class code (11-95) or null on failure.
+ */
+async function fetchNLCDLandCover(latlng) {
+  const ll = L.latLng(latlng);
+  const cacheKey = `${ll.lat.toFixed(4)},${ll.lng.toFixed(4)}`;
+  if (nlcdCache.has(cacheKey)) return nlcdCache.get(cacheKey);
+  if (nlcdCheckCount >= NLCD_MAX_CHECKS) return null;
+  nlcdCheckCount++;
+
+  try {
+    // Build a tiny 1-pixel WMS GetFeatureInfo request
+    // The bbox is a ~30m box centred on the point (matches NLCD pixel size)
+    const delta = 0.00015; // ~15m in each direction ≈ 30m box
+    const bbox = `${ll.lng - delta},${ll.lat - delta},${ll.lng + delta},${ll.lat + delta}`;
+    const url = `${NLCD_LANDCOVER_URL}`
+      + `?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetFeatureInfo`
+      + `&LAYERS=NLCD_2021_Land_Cover_L48`
+      + `&QUERY_LAYERS=NLCD_2021_Land_Cover_L48`
+      + `&INFO_FORMAT=application/json`
+      + `&SRS=EPSG:4326`
+      + `&WIDTH=1&HEIGHT=1`
+      + `&BBOX=${bbox}`
+      + `&X=0&Y=0`;
+
+    const res = await fetchWithTimeout(url, { headers: { 'Accept': 'application/json' } }, 6000);
+    if (!res.ok) { nlcdCache.set(cacheKey, null); return null; }
+    const data = await res.json();
+
+    // Parse response — MRLC returns features with property containing the pixel value
+    let code = null;
+    if (data?.features?.length > 0) {
+      const props = data.features[0].properties || {};
+      // The property name varies; look for the first numeric value
+      for (const key of Object.keys(props)) {
+        const v = Number(props[key]);
+        if (Number.isInteger(v) && v >= 11 && v <= 95) { code = v; break; }
+      }
+    } else if (data?.value !== undefined) {
+      code = Number(data.value);
+    } else if (typeof data === 'string') {
+      // Some WMS servers return plain text like "GRAY_INDEX = 41"
+      const m = data.match(/(\d{2})/);
+      if (m) code = Number(m[1]);
+    }
+
+    if (code && Number.isInteger(code) && code >= 11 && code <= 95) {
+      nlcdCache.set(cacheKey, code);
+      return code;
+    }
+    nlcdCache.set(cacheKey, null);
+    return null;
+  } catch (e) {
+    console.warn('NLCD lookup failed:', e.message);
+    nlcdCache.set(cacheKey, null);
+    return null;
+  }
+}
+
+/**
+ * Human-readable label for an NLCD code
+ */
+function nlcdLabel(code) {
+  const labels = {
+    11: 'Open Water', 12: 'Ice/Snow',
+    21: 'Developed Open Space', 22: 'Developed Low',
+    23: 'Developed Medium', 24: 'Developed High',
+    31: 'Barren Land', 41: 'Deciduous Forest',
+    42: 'Evergreen Forest', 43: 'Mixed Forest',
+    51: 'Dwarf Scrub', 52: 'Shrub/Scrub',
+    71: 'Grassland', 72: 'Sedge/Herbaceous',
+    81: 'Pasture/Hay', 82: 'Cultivated Crops',
+    90: 'Woody Wetlands', 95: 'Emergent Wetlands'
+  };
+  return labels[code] || `Class ${code}`;
+}
+
+/**
+ * Validate a candidate pin location against NLCD satellite land cover.
+ * Returns { valid: true/false, code, label, reason }.
+ * HARD REJECTS pins on crop fields, developed areas, or mismatched habitat.
+ */
+async function validatePinLandCover(latlng, habitatType) {
+  if (!NLCD_ENABLED) return { valid: true, code: null, label: 'skipped', reason: 'NLCD disabled' };
+
+  const code = await fetchNLCDLandCover(latlng);
+  if (code === null) {
+    // If we can't verify, reject in strict mode
+    if (NLCD_STRICT && nlcdCheckCount < NLCD_MAX_CHECKS) {
+      return { valid: false, code: null, label: 'unknown', reason: 'Could not verify land cover — rejecting for safety' };
+    }
+    return { valid: true, code: null, label: 'unverified', reason: 'NLCD lookup failed, allowing fallback' };
+  }
+
+  const label = nlcdLabel(code);
+
+  // 1. HARD BLOCK: Always-blocked land cover (crops, developed, ice)
+  if (NLCD_ALWAYS_BLOCKED.has(code)) {
+    return { valid: false, code, label, reason: `Blocked: ${label} — pins never placed on ${label}` };
+  }
+
+  // 2. HABITAT MATCH: Check if this land cover is appropriate for the habitat type
+  const isMush = isMushroomModule();
+  const isTurk = isTurkeyModule();
+  const ruleKey = isMush ? `mushroom_${habitatType}` :
+                  isTurk ? `turkey_${habitatType}` : habitatType;
+  const rule = NLCD_HABITAT_RULES[ruleKey] || NLCD_HABITAT_RULES[habitatType];
+
+  if (rule && !rule.allow.has(code)) {
+    return {
+      valid: false, code, label,
+      reason: `Mismatch: "${habitatType}" requires ${rule.label}, but satellite shows ${label} (NLCD ${code})`
+    };
+  }
+
+  return { valid: true, code, label, reason: `Verified: ${label} matches ${habitatType}` };
+}
+
 const MICRO_FEATURE_TEMPLATES = [
   {
     type: 'micro_pinch',
@@ -10709,6 +10885,11 @@ window.startShedHunt = async function(options = {}) {
       }
     };
 
+    // Reset NLCD check counter for this hunt plan
+    nlcdCheckCount = 0;
+    nlcdCache.clear();
+    let nlcdRejectCount = 0;
+
     for (let i = 0; i < seedLimit; i++) {
       const feature = seeded[i];
       const latlng = feature?.latlng ? L.latLng(feature.latlng) : null;
@@ -10722,6 +10903,14 @@ window.startShedHunt = async function(options = {}) {
         if (blocked) continue;
       }
 
+      // ═══ NLCD LAND COVER GUARDRAIL — NEVER BYPASSED ═══
+      const lcCheck = await validatePinLandCover(latlng, 'terrain');
+      if (!lcCheck.valid) {
+        nlcdRejectCount++;
+        console.log(`[NLCD REJECT] terrain pin: ${lcCheck.reason}`);
+        continue;
+      }
+
       chosen.push(latlng);
       const edu = buildFeatureHotspotEducation(feature, criteria, windDir, bounds);
       hotspots.push({
@@ -10733,17 +10922,18 @@ window.startShedHunt = async function(options = {}) {
       });
     }
 
-    updatePlanLoadingStatus('Placing pins...', 'Scattering hotspots in your area.');
+    updatePlanLoadingStatus('Verifying with satellite imagery...', 'Checking land cover for each pin location.');
     const remainingCount = strictMode
       ? 0
       : Math.max(0, desiredCount - hotspots.length);
-    const attemptLimit = criteria?.depth === 'deep' ? 60 : 35;
+    const attemptLimit = criteria?.depth === 'deep' ? 80 : 50;
     for (let i = 0; i < remainingCount; i++) {
       const habitat = habitatPool[i % habitatPool.length];
       const eduSet = getActiveEducationSet();
       const baseEdu = eduSet[habitat];
       let latlng = null;
       let flatRejects = 0;
+      let nlcdHabitatRejects = 0;
       for (let attempt = 0; attempt < attemptLimit; attempt++) {
         const lat = bounds.getSouth() + Math.random() * (bounds.getNorth() - bounds.getSouth());
         const lng = bounds.getWest() + Math.random() * (bounds.getEast() - bounds.getWest());
@@ -10764,6 +10954,16 @@ window.startShedHunt = async function(options = {}) {
               continue;
             }
           }
+
+          // ═══ NLCD LAND COVER GUARDRAIL — NEVER BYPASSED ═══
+          const lcCheck = await validatePinLandCover(candidate, habitat);
+          if (!lcCheck.valid) {
+            nlcdHabitatRejects++;
+            nlcdRejectCount++;
+            console.log(`[NLCD REJECT] ${habitat} pin: ${lcCheck.reason}`);
+            continue; // Keep trying — find a valid spot
+          }
+
           latlng = candidate;
           break;
         }
@@ -10800,6 +11000,12 @@ window.startShedHunt = async function(options = {}) {
       const ll = L.latLng(h.coords[0], h.coords[1]);
       return isPointInAreaLayer(ll, areaLayer, areaType);
     });
+
+    // ═══ NLCD SUMMARY LOG ═══
+    if (nlcdRejectCount > 0) {
+      console.log(`[NLCD] Satellite imagery rejected ${nlcdRejectCount} pin locations (crop fields, mismatched habitat, developed areas)`);
+    }
+    console.log(`[NLCD] ${hotspots.length} pins passed land cover verification. ${nlcdCheckCount} total NLCD lookups.`);
 
     if (!hotspots.length) {
       handleLockInAreaFailure('No safe pins found. Try a larger area.');
@@ -13401,7 +13607,7 @@ function getRandomPointInArea(areaLayer, areaType, bounds, existing) {
   return null;
 }
 
-function dropMicroFeaturesForActiveSearchArea() {
+async function dropMicroFeaturesForActiveSearchArea() {
   if (!activeSearchArea?.layer || !map) return;
   clearMicroFeatures();
 
@@ -13412,9 +13618,26 @@ function dropMicroFeaturesForActiveSearchArea() {
   if (!layer || !bounds) return;
 
   const placed = [];
-  getMicroFeatureTemplates().forEach((template, idx) => {
-    const point = getRandomPointInArea(areaLayer, areaType, bounds, placed);
-    if (!point) return;
+  const templates = getMicroFeatureTemplates();
+  for (let idx = 0; idx < templates.length; idx++) {
+    const template = templates[idx];
+    // Try multiple random points — NLCD may reject some
+    let point = null;
+    for (let attempt = 0; attempt < 8; attempt++) {
+      const candidate = getRandomPointInArea(areaLayer, areaType, bounds, placed);
+      if (!candidate) break;
+      // ═══ NLCD LAND COVER GUARDRAIL — micro pins verified too ═══
+      if (NLCD_ENABLED) {
+        const lcCheck = await validatePinLandCover(candidate, 'terrain');
+        if (!lcCheck.valid) {
+          console.log(`[NLCD REJECT] micro pin ${template.type}: ${lcCheck.reason}`);
+          continue;
+        }
+      }
+      point = candidate;
+      break;
+    }
+    if (!point) continue;
     const feature = {
       ...template,
       id: `${template.type}_${Date.now()}_${idx}`,
@@ -13429,7 +13652,7 @@ function dropMicroFeaturesForActiveSearchArea() {
     });
     placed.push(feature);
     microFeatureMarkers.push(marker);
-  });
+  }
 
   microFeaturesActive = placed;
   if (placed.length) {
@@ -14988,6 +15211,9 @@ document.addEventListener('DOMContentLoaded', () => {
     method: 'fly',
     wade: 'waders',
     experience: 'learning',
+    mode: 'standard',      // 'standard' | 'backcountry'
+    startFrom: 'current',  // 'current' | 'map'
+    routeMode: 'build',    // 'build' | 'none'
     sessionTimer: null,
     sessionSeconds: 0,
     areaMarker: null,  // Leaflet marker for area pill pin
@@ -15063,7 +15289,7 @@ document.addEventListener('DOMContentLoaded', () => {
           // Populate step 1
           const titleEl = document.getElementById('fishAreaTitle');
           const descEl = document.getElementById('fishAreaDesc');
-          if (titleEl) titleEl.textContent = '📍 ' + water.name;
+          if (titleEl) titleEl.textContent = '🎣 Welcome to ' + water.name;
           if (descEl) descEl.textContent = (water.ribbon || water.category) + ' • ' + (water.streamMiles ? water.streamMiles + ' mi' : '') + ' • ' + (water.species || []).join(', ');
           // Show step 1 after a short delay for map animation
           setTimeout(() => fishShowStep(1), 800);
@@ -15110,6 +15336,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     fishFlow.area = null;
     fishFlow.step = 0;
+    fishFlow.method = 'fly';
+    fishFlow.wade = 'waders';
+    fishFlow.experience = 'learning';
+    fishFlow.mode = 'standard';
+    fishFlow.startFrom = 'current';
+    fishFlow.routeMode = 'build';
     fishShowStep(0);
     fishNowInit(); // re-start
   };
@@ -15131,13 +15363,40 @@ document.addEventListener('DOMContentLoaded', () => {
     btn.classList.add('ht-method-btn--active');
   };
 
+  window.pickFishMode = function(btn, val) {
+    fishFlow.mode = val;
+    btn.closest('.ht-method-row').querySelectorAll('.ht-method-btn').forEach(b => b.classList.remove('ht-method-btn--active'));
+    btn.classList.add('ht-method-btn--active');
+  };
+
+  window.pickFishStart = function(btn, val) {
+    fishFlow.startFrom = val;
+    btn.closest('.ht-method-row').querySelectorAll('.ht-method-btn').forEach(b => b.classList.remove('ht-method-btn--active'));
+    btn.classList.add('ht-method-btn--active');
+  };
+
+  window.pickFishRouteMode = function(btn, val) {
+    fishFlow.routeMode = val;
+    btn.closest('.ht-method-row').querySelectorAll('.ht-method-btn').forEach(b => b.classList.remove('ht-method-btn--active'));
+    btn.classList.add('ht-method-btn--active');
+  };
+
   window.fishStepLetsGo = function() {
     if (!fishFlow.area) return;
     showNotice('🎯 Locking in your plan…', 'success', 2000);
-    fishShowStep(3);
     // Zoom to water area
     if (typeof map !== 'undefined' && map && fishFlow.area.lat) {
       map.setView([fishFlow.area.lat, fishFlow.area.lng], 16, { animate: true });
+    }
+
+    // If user chose to skip route-building, jump straight to briefing
+    if (fishFlow.routeMode === 'none') {
+      setTimeout(() => {
+        fishShowStep(4);
+        generateFishBriefing();
+      }, 600);
+    } else {
+      fishShowStep(3);
     }
   };
 
@@ -15223,7 +15482,10 @@ document.addEventListener('DOMContentLoaded', () => {
     html += '<div class="ht-brief-section"><strong>🎣 Your Setup</strong>';
     html += '<br>Method: ' + method.charAt(0).toUpperCase() + method.slice(1);
     html += ' • ' + (fishFlow.wade === 'waders' ? 'Wading in' : 'Streamside');
-    html += ' • ' + fishFlow.experience + ' level</div>';
+    html += ' • ' + fishFlow.experience + ' level';
+    html += '<br>Mode: ' + (fishFlow.mode === 'backcountry' ? 'Backcountry — focusing on quieter, harder-to-reach water.' : 'Standard access — focusing on known parking and easy entries.');
+    html += '<br>Start: ' + (fishFlow.startFrom === 'map' ? 'You picked a starting point on the map.' : 'Starting from your current GPS location.');
+    html += '<br>Route: ' + (fishFlow.routeMode === 'none' ? 'No route — you will work the water freely.' : 'Route-guided — parking to turnaround with hotspots in between.') + '</div>';
 
     if (hatches) {
       html += '<div class="ht-brief-section"><strong>🦟 Hatch Report (' + season + ')</strong>';
@@ -15254,6 +15516,29 @@ document.addEventListener('DOMContentLoaded', () => {
     html += ' • Solitude: ' + (w.solitude || 'moderate');
     if (w.familyFriendly) html += ' • Family friendly ✅';
     html += '</div>';
+
+    // Habitat education: show two high-priority habitat types from TROUT_EDUCATION
+    const edu = window.TROUT_EDUCATION || {};
+    const habitatKeys = Object.keys(edu);
+    if (habitatKeys.length) {
+      const sorted = habitatKeys.slice().sort((a, b) => {
+        const pa = edu[a] && typeof edu[a].priority === 'number' ? edu[a].priority : 999;
+        const pb = edu[b] && typeof edu[b].priority === 'number' ? edu[b].priority : 999;
+        return pa - pb;
+      });
+      const topKeys = sorted.slice(0, 2);
+      topKeys.forEach((key) => {
+        const block = edu[key];
+        if (!block) return;
+        html += '<div class="ht-brief-section"><strong>🎓 Habitat Focus: ' + (block.title || key) + '</strong>';
+        if (block.description) html += '<br>' + block.description;
+        if (Array.isArray(block.tips) && block.tips.length) {
+          const subset = block.tips.slice(0, 3);
+          subset.forEach((tip) => { html += '<br>• ' + tip; });
+        }
+        html += '</div>';
+      });
+    }
 
     bodyEl.innerHTML = html;
   }

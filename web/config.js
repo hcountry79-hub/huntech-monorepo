@@ -50,3 +50,13 @@ window.PLANTNET_API_KEY = window.PLANTNET_API_KEY || '';
 // Option 2: Custom tree ID API endpoint (must accept { image: base64, api_key: string })
 window.TREE_ID_API_URL = window.TREE_ID_API_URL || '';
 window.TREE_ID_API_KEY = window.TREE_ID_API_KEY || '';
+
+// ===================================================================
+//   Satellite Land Cover Verification (NLCD)
+// ===================================================================
+// USGS National Land Cover Database — validates pin locations against
+// actual satellite imagery to prevent pins on crop fields, bare ground, etc.
+// Default: MRLC GeoServer WMS for NLCD 2021 (30m resolution, free/public).
+window.HUNTECH_NLCD_URL = window.HUNTECH_NLCD_URL || 'https://www.mrlc.gov/geoserver/mrlc_display/NLCD_2021_Land_Cover_L48/wms';
+window.HUNTECH_NLCD_ENABLED = window.HUNTECH_NLCD_ENABLED ?? true;
+window.HUNTECH_NLCD_MAX_CHECKS = window.HUNTECH_NLCD_MAX_CHECKS || 200;
