@@ -2816,30 +2816,18 @@ body.module-fly #map {
   background: rgba(43, 212, 255, 0.15) !important;
 }
 
-/* ── Rotating hero slide images ── */
+/* Hero slides disabled - clean interface for Field Command */
 .ht-hero-slide {
-  position: absolute;
-  inset: 0;
-  background-size: cover;
-  background-repeat: no-repeat;
-  background-position: center center;
-  background-color: #040c12;
-  opacity: 0;
-  transform: scale(1.03);
-  transition: opacity 2.5s ease-in-out, transform 10s ease-out;
-  will-change: opacity, transform;
-  filter: brightness(1.35) saturate(1.3) contrast(1.08);
+  display: none;
 }
 .ht-hero-slide--active {
-  opacity: 1;
-  transform: scale(1.0);
+  display: none;
 }
 
-/* Per-slide centering — 12-image fly fishing slideshow */
-/* All fly-module slides: zoomed out, centered in clear zone above tray */
+/* Per-slide centering disabled - fly heroes removed for clean interface */
+/* All fly-module slides: disabled to prevent bleeding */
 body.module-fly .ht-hero-slide {
-  background-size: auto 48vh;
-  background-position: center 15%;
+  display: none;
 }
 /* Per-slide fine-tuning */
 .ht-fly-slide-1  { background-position: center 15%; }
@@ -2855,21 +2843,9 @@ body.module-fly .ht-hero-slide {
 .ht-fly-slide-11 { background-position: center 15%; filter: brightness(1.3) saturate(1.4) contrast(1.1); }
 .ht-fly-slide-12 { background-position: center 15%; filter: brightness(1.45) saturate(1.35) contrast(1.05); }
 
-/* Vignette: strong fade from image bottom into dark tray zone */
+/* All vignettes disabled for clean Field Command interface */
 .ht-hero-vignette {
-  position: absolute;
-  inset: 0;
-  background:
-    radial-gradient(ellipse at 50% 25%, rgba(255, 255, 255, 0.04), transparent 50%),
-    linear-gradient(180deg,
-      rgba(4, 12, 18, 0.0) 0%,
-      rgba(4, 12, 18, 0.0) 30%,
-      rgba(4, 12, 18, 0.25) 45%,
-      rgba(4, 12, 18, 0.7) 55%,
-      rgba(4, 12, 18, 0.95) 65%,
-      rgba(4, 12, 18, 1.0) 72%);
-  pointer-events: none;
-  z-index: 1;
+  display: none;
 }
 
 .ht-map-hero-content {
@@ -2975,22 +2951,14 @@ body.module-fly.ht-map-active .ht-map-locate-btn {
   transform: translateY(0);
 }
 
-/* ═══ SHED MODULE HERO — full-screen background, map live underneath ═══ */
+/* ═══ SHED MODULE - CLEAN MAP INTERFACE === */
 body.module-shed .ht-map-hero {
-  opacity: 1;
-  pointer-events: none;
-  inset: 0;
-  transition: opacity 1.6s ease-out, transform 1.6s ease-out;
+  display: none;
 }
 body.module-shed #map {
   opacity: 1;
   filter: none;
   pointer-events: auto;
-}
-body.module-shed.ht-hero-dismissed .ht-map-hero {
-  opacity: 0;
-  transform: scale(1.03) translateY(-8px);
-  pointer-events: none;
 }
 body.module-shed .ht-toolbar {
   z-index: 1400;
@@ -3000,29 +2968,12 @@ body.module-shed .ht-map-locate-btn {
   pointer-events: auto;
   transform: translateY(0);
 }
-/* Shed hero slides — brightened, full-screen, antlers focused in top 2/3 */
+/* Shed hero backgrounds removed for clean Field Command interface */
 body.module-shed .ht-hero-slide {
-  background-size: cover;
-  background-repeat: no-repeat;
-  background-position: center 30%;
-  background-color: #1a1510;
-  filter: brightness(1.55) saturate(1.45) contrast(1.08);
+  display: none;
 }
-/* Per-slide position fine-tuning — antlers in top 2/3 */
-.ht-shed-slide-1 { background-position: center 25%; }
-.ht-shed-slide-2 { background-position: center 32%; }
-/* Shed vignette — warm amber tint, smooth full-height fade */
 body.module-shed .ht-hero-vignette {
-  background:
-    radial-gradient(ellipse at 50% 25%, rgba(255, 193, 7, 0.04), transparent 55%),
-    linear-gradient(180deg,
-      rgba(26, 21, 16, 0.0) 0%,
-      rgba(26, 21, 16, 0.0) 40%,
-      rgba(26, 21, 16, 0.15) 55%,
-      rgba(26, 21, 16, 0.45) 68%,
-      rgba(26, 21, 16, 0.75) 80%,
-      rgba(26, 21, 16, 0.95) 92%,
-      rgba(26, 21, 16, 1.0) 100%);
+  display: none;
 }
 
 /* ═══ MUSHROOM MODULE HERO SPLASH ═══ */
@@ -3188,20 +3139,12 @@ body.module-turkey .ht-map-hero-sub strong {
 body.module-turkey .ht-map-hero-meta {
   color: rgba(200, 169, 110, 0.8);
 }
+/* Turkey module vignettes disabled for consistent clean interface */
 body.module-turkey .ht-hero-vignette {
-  background:
-    /* warm spotlight on center-upper turkey zone */
-    radial-gradient(ellipse 70% 50% at 50% 38%, rgba(26,22,18,0) 0%, rgba(26,22,18,0.6) 80%, rgba(26,22,18,0.92) 100%),
-    /* bottom fade into tray */
-    linear-gradient(180deg,
-      rgba(26,22,18,0.0) 0%,
-      rgba(26,22,18,0.0) 28%,
-      rgba(26,22,18,0.35) 42%,
-      rgba(26,22,18,0.75) 54%,
-      rgba(26,22,18,0.95) 64%,
-      rgba(26,22,18,1.0) 72%),
-    /* top subtle gradient for text readability */
-    linear-gradient(0deg, transparent 60%, rgba(26,22,18,0.25) 100%);
+  display: none;
+}
+body.module-turkey .ht-hero-slide {
+  display: none;
 }
 body.module-turkey .ht-map-hero-content {
   text-align: center;
@@ -3229,21 +3172,12 @@ body.module-mushroom .ht-map-hero-sub strong {
 body.module-mushroom .ht-map-hero-meta {
   color: rgba(245, 200, 66, 0.8);
 }
+/* Mushroom module vignettes disabled for consistent clean interface */
 body.module-mushroom .ht-hero-vignette {
-  background:
-    /* warm spotlight on center-upper mushroom zone */
-    radial-gradient(ellipse 70% 50% at 50% 36%, rgba(45,24,16,0) 0%, rgba(45,24,16,0.55) 75%, rgba(45,24,16,0.88) 100%),
-    /* bottom fade — deep melt into page bg */
-    linear-gradient(180deg,
-      rgba(45,24,16,0.0) 0%,
-      rgba(45,24,16,0.0) 25%,
-      rgba(45,24,16,0.25) 38%,
-      rgba(45,24,16,0.6) 48%,
-      rgba(45,24,16,0.88) 56%,
-      rgba(26,14,8,0.97) 65%,
-      rgba(26,14,8,1.0) 72%),
-    /* top gradient for text readability */
-    linear-gradient(0deg, transparent 55%, rgba(45,24,16,0.3) 100%);
+  display: none;
+}
+body.module-mushroom .ht-hero-slide {
+  display: none;
 }
 
 /* ── Per-slide HD tuning — mushroom module ──
@@ -9507,4 +9441,470 @@ body.module-turkey .ht-search-btn {
   height: 12px;
   background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 12'%3E%3Cpath d='M0 6 Q50 0 100 6 Q150 12 200 6' fill='none' stroke='rgba(200,169,110,0.2)' stroke-width='1'/%3E%3C/svg%3E") center/200px 12px repeat-x;
   margin: 4px 0;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════ */
+/*   Loading Animations & Polish                                           */
+/* ═══════════════════════════════════════════════════════════════════════ */
+
+@keyframes htLoadingProgress {
+  0% { width: 0%; }
+  30% { width: 45%; }
+  70% { width: 75%; }
+  100% { width: 100%; }
+}
+
+@keyframes htToastIn {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-30px) scale(0.85);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0) scale(1);
+  }
+}
+
+@keyframes htToastOut {
+  from {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-30px) scale(0.9);
+  }
+}
+
+@keyframes htFadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Offline indicator */
+.ht-offline-banner {
+  position: fixed;
+  top: 60px;
+  left: 0;
+  right: 0;
+  background: #f59e0b;
+  color: #000;
+  text-align: center;
+  padding: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  z-index: 9000;
+  transform: translateY(-100%);
+  transition: transform 0.3s ease;
+}
+
+.ht-offline-banner.visible {
+  transform: translateY(0);
+}
+
+/* Navigation panels */
+.ht-nav-panel {
+  position: fixed;
+  top: 60px;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--panel);
+  backdrop-filter: blur(16px);
+  z-index: 8000;
+  transform: translateY(-100%);
+  transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.ht-nav-panel.visible {
+  transform: translateY(0);
+}
+
+.ht-nav-panel-header {
+  padding: 20px;
+  border-bottom: 1px solid rgba(255, 193, 7, 0.2);
+}
+
+.ht-nav-panel-title {
+  font-size: 24px;
+  font-weight: 600;
+  color: var(--gold);
+  margin: 0;
+}
+
+.ht-nav-panel-subtitle {
+  font-size: 14px;
+  color: #999;
+  margin: 4px 0 0 0;
+}
+
+.ht-nav-panel-content {
+  flex: 1;
+  padding: 20px;
+}
+
+.ht-nav-panel-close {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  background: none;
+  border: none;
+  color: #999;
+  font-size: 20px;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 4px;
+  transition: color 0.2s ease;
+}
+
+.ht-nav-panel-close:hover {
+  color: var(--gold);
+}
+
+.ht-property-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.ht-property-card {
+  background: rgba(255, 193, 7, 0.1);
+  border: 1px solid rgba(255, 193, 7, 0.3);
+  border-radius: 8px;
+  overflow: hidden;
+  transition: border-color 0.2s ease;
+}
+
+.ht-property-card:hover {
+  border-color: rgba(255, 193, 7, 0.5);
+}
+
+.ht-property-image {
+  height: 120px;
+  background: linear-gradient(135deg, #1a4a1a, #2d5a2d);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #7cffc7;
+  font-size: 24px;
+}
+
+.ht-property-info {
+  padding: 12px;
+}
+
+.ht-property-name {
+  font-weight: 600;
+  color: var(--gold);
+  margin: 0 0 4px;
+  font-size: 14px;
+}
+
+.ht-property-details {
+  font-size: 12px;
+  color: #999;
+  line-height: 1.4;
+}
+
+.ht-hunt-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.ht-hunt-item {
+  background: rgba(255, 193, 7, 0.1);
+  border: 1px solid rgba(255, 193, 7, 0.2);
+  border-radius: 6px;
+  padding: 16px;
+  transition: background-color 0.2s ease;
+}
+
+.ht-hunt-item:hover {
+  background: rgba(255, 193, 7, 0.15);
+}
+
+.ht-hunt-date {
+  font-size: 12px;
+  color: #999;
+  margin: 0 0 8px;
+}
+
+.ht-hunt-summary {
+  font-size: 14px;
+  color: #ccc;
+  margin: 0;
+}
+
+/* Improved drag handles for mobile */
+.ht-drag-handle {
+  transition: transform 0.15s ease;
+  cursor: grab;
+}
+
+.ht-drag-handle:active,
+.ht-drag-handle.dragging {
+  transform: scale(1.2);
+  cursor: grabbing;
+}
+
+.ht-drag-handle-core {
+  width: 100%;
+  height: 100%;
+  background: #ffc107;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+
+/* Mobile touch improvements */
+@media (hover: none) and (pointer: coarse) {
+  .ht-drag-handle {
+    transform: scale(1.15);
+  }
+  
+  .ht-drag-handle:active {
+    transform: scale(1.35);
+  }
+  
+  .ht-nav-panel {
+    top: 70px;
+  }
+}
+
+/* Weather Panel Styles */
+.ht-weather-panel {
+  position: fixed;
+  top: 60px;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--panel);
+  backdrop-filter: blur(16px);
+  z-index: 8500;
+  transform: translateY(-100%);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.ht-weather-panel.open {
+  transform: translateY(0);
+}
+
+.ht-weather-panel-header {
+  padding: 20px;
+  border-bottom: 1px solid rgba(255, 193, 7, 0.2);
+  position: relative;
+}
+
+.ht-weather-panel-title {
+  font-size: 24px;
+  font-weight: 600;
+  color: var(--gold);
+  margin: 0;
+}
+
+.ht-weather-panel-sub {
+  font-size: 12px;
+  color: #999;
+  margin: 4px 0 0;
+}
+
+.ht-weather-location {
+  font-size: 11px;
+  color: #666;
+  margin: 2px 0 0;
+  font-style: italic;
+}
+
+.ht-weather-panel-close {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  background: none;
+  border: none;
+  color: #999;
+  font-size: 20px;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 4px;
+  transition: color 0.2s ease;
+}
+
+.ht-weather-panel-close:hover {
+  color: var(--gold);
+}
+
+.ht-weather-controls {
+  padding: 12px 20px;
+  border-bottom: 1px solid rgba(255, 193, 7, 0.2);
+}
+
+.ht-weather-refresh {
+  background: rgba(255, 193, 7, 0.1);
+  border: 1px solid rgba(255, 193, 7, 0.3);
+  color: var(--gold);
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.ht-weather-refresh:hover:not(:disabled) {
+  background: rgba(255, 193, 7, 0.2);
+  border-color: rgba(255, 193, 7, 0.5);
+}
+
+.ht-weather-refresh:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.ht-weather-summary {
+  display: flex;
+  gap: 20px;
+  padding: 20px;
+  border-bottom: 1px solid rgba(255, 193, 7, 0.2);
+}
+
+.ht-weather-metric {
+  flex: 1;
+  text-align: center;
+}
+
+.ht-weather-metric-label {
+  font-size: 12px;
+  color: #999;
+  margin-bottom: 4px;
+}
+
+.ht-weather-metric-value {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--gold);
+}
+
+.ht-thermal-timeline {
+  padding: 20px;
+  border-bottom: 1px solid rgba(255, 193, 7, 0.2);
+  display: flex;
+  gap: 3px;
+  align-items: end;
+  overflow-x: auto;
+  min-height: 80px;
+}
+
+.ht-thermal-bar {
+  flex: 1;
+  min-width: 8px;
+  border-radius: 2px;
+  transition: opacity 0.2s ease;
+  cursor: pointer;
+}
+
+.ht-thermal-bar.rise {
+  background: linear-gradient(to top, #dc2626, #f59e0b);
+}
+
+.ht-thermal-bar.sink {
+  background: linear-gradient(to top, #1e40af, #3b82f6);
+}
+
+.ht-thermal-bar.is-now {
+  border: 2px solid var(--gold);
+  box-shadow: 0 0 8px rgba(255, 193, 7, 0.5);
+}
+
+.ht-weather-section {
+  padding: 20px;
+}
+
+.ht-weather-section-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--gold);
+  margin-bottom: 12px;
+}
+
+.ht-thermal-alerts {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.ht-thermal-alert {
+  background: rgba(255, 193, 7, 0.1);
+  border: 1px solid rgba(255, 193, 7, 0.2);
+  border-radius: 6px;
+  padding: 12px;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.ht-thermal-alert:hover {
+  background: rgba(255, 193, 7, 0.15);
+}
+
+.ht-thermal-alert-title {
+  font-size: 14px;
+  color: var(--gold);
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.ht-thermal-alert-sub {
+  font-size: 13px;
+  color: #ccc;
+  margin-bottom: 4px;
+}
+
+.ht-thermal-alert-meta {
+  font-size: 11px;
+  color: #999;
+}
+
+.ht-weather-tips {
+  color: #ccc;
+  font-size: 14px;
+  line-height: 1.5;
+  margin-bottom: 16px;
+}
+
+.ht-thermal-hub-toggle {
+  background: rgba(255, 193, 7, 0.1);
+  border: 1px solid rgba(255, 193, 7, 0.3);
+  color: var(--gold);
+  padding: 10px 16px;
+  border-radius: 6px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.ht-thermal-hub-toggle:hover {
+  background: rgba(255, 193, 7, 0.2);
+  border-color: rgba(255, 193, 7, 0.5);
+}
+
+.ht-weather-empty {
+  color: #666;
+  font-style: italic;
+  text-align: center;
+  padding: 20px;
 }

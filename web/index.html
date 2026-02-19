@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -81,7 +81,7 @@
         <svg width="20" height="20" viewBox="0 0 24 24" fill="#ffc107">
           <path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
         </svg>
-        <input type="text" placeholder="Search town, landmark, or coords (lat,lng)â€¦" class="ht-search-input" id="searchInput" autocomplete="off" spellcheck="false">
+        <input type="text" placeholder="Search town, landmark, or coords (lat,lng)…" class="ht-search-input" id="searchInput" autocomplete="off" spellcheck="false">
         <button class="ht-search-btn" type="button">Search</button>
         <div class="ht-search-results" id="searchResults"></div>
       </div>
@@ -193,7 +193,7 @@
             </div>
           </div>
           <div class="ht-form-row">
-            <button class="ht-gold-btn" type="button" onclick="clearAllSavedHuntsAndAreas()">CLEAR ALL SAVED HUNTS + AREAS</button>
+            <button class="ht-gold-btn" type="button" onclick="if(confirm('Delete all saved hunts and areas? This cannot be undone.')) clearAllSavedHuntsAndAreas()">CLEAR ALL SAVED HUNTS + AREAS</button>
           </div>
         </div>
       </div>
@@ -244,7 +244,7 @@
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js?v=20260218d')
+        navigator.serviceWorker.register('sw.js?v=20260218d')
           .then(() => console.log('HUNTECH: Service Worker registered'))
           .catch(err => console.log('Service Worker registration failed:', err));
       });

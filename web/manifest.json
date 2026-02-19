@@ -1,9 +1,29 @@
 {
   "name": "HUNTECH - Field Command System",
   "short_name": "HUNTECH",
-  "start_url": "/",
+  "start_url": "./",
   "display": "standalone",
   "background_color": "#ffc107",
   "theme_color": "#ffc107",
-  "description": "AI-powered shed hunting and scouting system with GPS tracking"
+  "description": "AI-powered shed hunting and scouting system with GPS tracking",
+  "icons": [
+    {
+      "src": "assets/app-icon-180.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "assets/app-icon-180.png", 
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "assets/app-icon-180.png",
+      "sizes": "512x512", 
+      "type": "image/png"
+    }
+  ],
+  "categories": ["navigation", "sports", "utilities"],
+  "orientation": "portrait-primary"
 }

@@ -77,7 +77,49 @@ let lastGpsFiltered = null;
 let lastGpsFixAt = 0;
 let lastGpsFilteredAt = 0;
 let lastGpsAccuracyNoticeAt = 0;
-let defaultLocationAreaSet = false;
+// Global timer and handler tracking for cleanup
+let activeTimers = new Set();
+let activeHandlers = new Map();
+
+// Register timer with cleanup tracking
+function registerTimer(timerId) {
+  activeTimers.add(timerId);
+  return timerId;
+}
+
+// Clear timer and remove from tracking
+function clearRegisteredTimer(timerId) {
+  if (timerId) {
+    clearTimeout(timerId);
+    activeTimers.delete(timerId);
+  }
+}
+
+// Register event handler for cleanup
+function registerHandler(element, event, handler) {
+  const key = `${element}:${event}`;
+  if (activeHandlers.has(key)) {
+    const oldHandler = activeHandlers.get(key);
+    element.removeEventListener ? element.removeEventListener(event, oldHandler) : element.off(event, oldHandler);
+  }
+  activeHandlers.set(key, handler);
+  if (element.addEventListener) {
+    element.addEventListener(event, handler);
+  } else if (element.on) {
+    element.on(event, handler);
+  }
+}
+
+// Clear all registered handlers
+function clearAllRegisteredHandlers() {
+  activeHandlers.forEach((handler, key) => {
+    const [elementType, event] = key.split(':');
+    if (elementType === 'map' && map) {
+      map.off(event, handler);
+    }
+  });
+  activeHandlers.clear();
+}
 let userLocationMarker = null;
 let userHeadingDeg = null;
 let lastHeadingLatLng = null;
@@ -2546,10 +2588,10 @@ function setMdcLandLabelsSuppressed(nextState) {
 }
 
 function scheduleMdcLabelRefresh() {
-  if (mdcLandLabelRefreshTimer) clearTimeout(mdcLandLabelRefreshTimer);
-  mdcLandLabelRefreshTimer = setTimeout(() => {
+  clearRegisteredTimer(mdcLandLabelRefreshTimer);
+  mdcLandLabelRefreshTimer = registerTimer(setTimeout(() => {
     updateMdcLandLabels();
-  }, 120);
+  }, 120));
 }
 
 function openMdcAreaFromLabel(feature) {
@@ -3322,11 +3364,23 @@ function showMdcAreaDetails(feature) {
 //   Area Selection, Hunt Criteria & Live Strategy
 // ===================================================================
 function setSelectedArea(layer, type, options = {}) {
+  if (!layer) {
+    console.warn('setSelectedArea: layer is null');
+    showNotice('Invalid area selection', 'error');
+    return;
+  }
+  
   const { autoLock = true, suppressTray = false } = options;
+  
+  // Clean up previous selection
   if (selectedAreaLayer) {
-    map.removeLayer(selectedAreaLayer);
-    if (drawnItems && drawnItems.hasLayer(selectedAreaLayer)) {
-      drawnItems.removeLayer(selectedAreaLayer);
+    try {
+      map?.removeLayer(selectedAreaLayer);
+      if (drawnItems?.hasLayer(selectedAreaLayer)) {
+        drawnItems.removeLayer(selectedAreaLayer);
+      }
+    } catch (error) {
+      console.warn('Error removing previous area layer:', error);
     }
   }
 
@@ -3339,12 +3393,54 @@ function setSelectedArea(layer, type, options = {}) {
   currentPolygon = layer;
   pendingRoutePinPrompt = true;
   fieldCommandFlowActive = true;
-  showNotice('Area selected. You will choose a start pin after the plan builds.', 'info', 3200);
+  
+  // Add haptic feedback on mobile
+  if (navigator.vibrate) {
+    navigator.vibrate(15);
+  }
+  
+  showNotice('Area selected. Building plan...', 'success', 2000);
 
   if (layer && drawnItems && !drawnItems.hasLayer(layer)) {
     drawnItems.addLayer(layer);
   }
-
+  
+  // Show advanced loading indicator
+  const showAdvancedLoading = () => {
+    const existing = document.getElementById('htAdvancedLoader');
+    if (existing) existing.remove();
+    
+    const loader = document.createElement('div');
+    loader.id = 'htAdvancedLoader';
+    loader.style.cssText = `
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(11, 11, 11, 0.85);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 10001;
+      color: #ffc107;
+      font-family: 'Sora', sans-serif;
+    `;
+    
+    loader.innerHTML = `
+      <div style="font-size: 24px; font-weight: 600; margin-bottom: 20px;">
+        🎯 Analyzing terrain...
+      </div>
+      <div style="font-size: 14px; color: #ccc; margin-bottom: 30px; text-align: center; max-width: 280px;">
+        Generating hotspots and hunting strategy for your selected area
+      </div>
+      <div style="width: 200px; height: 4px; background: rgba(255,193,7,0.2); border-radius: 2px; overflow: hidden;">
+        <div style="width: 0%; height: 100%; background: #ffc107; border-radius: 2px; animation: htLoadingProgress 3s ease-out forwards;"></div>
+      </div>
+    `;
+    
+    document.body.appendChild(loader);
+    return loader;
+  };
+  
   updateLockInAreaState(true);
   updateSaveAreaState(true);
   setLockInAreaStatus(autoLock ? 'Building plan...' : '', null);
@@ -3375,7 +3471,13 @@ function setSelectedArea(layer, type, options = {}) {
 
   if (autoLock) {
     setTimeout(() => {
-      window.lockInArea();
+      try {
+        window.lockInArea();
+      } catch (error) {
+        console.error('lockInArea failed:', error);
+        document.getElementById('htAdvancedLoader')?.remove();
+        showNotice('Failed to build plan. Please try again.', 'error');
+      }
     }, 200);
   }
 
@@ -4911,20 +5013,22 @@ function resetActiveHuntState() {
 
 function clearRadiusDraft() {
   if (radiusDraftMoveHandler) {
-    try { map.off('mousemove', radiusDraftMoveHandler); } catch {}
-    try { map.off('touchmove', radiusDraftMoveHandler); } catch {}
+    try { 
+      map?.off('mousemove', radiusDraftMoveHandler);
+      map?.off('touchmove', radiusDraftMoveHandler); 
+    } catch {}
     radiusDraftMoveHandler = null;
   }
   if (radiusDraftCircle) {
-    try { map.removeLayer(radiusDraftCircle); } catch {}
+    try { map?.removeLayer(radiusDraftCircle); } catch {}
     radiusDraftCircle = null;
   }
   if (radiusDragBubble) {
-    try { map.removeLayer(radiusDragBubble); } catch {}
+    try { map?.removeLayer(radiusDragBubble); } catch {}
     radiusDragBubble = null;
   }
   if (radiusDraftCenterMarker) {
-    try { map.removeLayer(radiusDraftCenterMarker); } catch {}
+    try { map?.removeLayer(radiusDraftCenterMarker); } catch {}
     radiusDraftCenterMarker = null;
   }
   clearRadiusDragHandles();
@@ -4934,20 +5038,22 @@ function clearRadiusDraft() {
 
 function clearRectDraft() {
   if (rectDraftMoveHandler) {
-    try { map.off('mousemove', rectDraftMoveHandler); } catch {}
-    try { map.off('touchmove', rectDraftMoveHandler); } catch {}
+    try { 
+      map?.off('mousemove', rectDraftMoveHandler);
+      map?.off('touchmove', rectDraftMoveHandler); 
+    } catch {}
     rectDraftMoveHandler = null;
   }
   if (rectDraftRect) {
-    try { map.removeLayer(rectDraftRect); } catch {}
+    try { map?.removeLayer(rectDraftRect); } catch {}
     rectDraftRect = null;
   }
   if (rectDragBubble) {
-    try { map.removeLayer(rectDragBubble); } catch {}
+    try { map?.removeLayer(rectDragBubble); } catch {}
     rectDragBubble = null;
   }
   if (rectDraftCenterMarker) {
-    try { map.removeLayer(rectDraftCenterMarker); } catch {}
+    try { map?.removeLayer(rectDraftCenterMarker); } catch {}
     rectDraftCenterMarker = null;
   }
   clearRectDragHandles();
@@ -4989,17 +5095,27 @@ function getLatLngOffsetMeters(center, latlng) {
 
 function createDragHandle(latlng) {
   if (!map || !latlng) return null;
+  
+  // Larger touch targets for mobile
+  const isMobile = 'ontouchstart' in window;
+  const size = isMobile ? 28 : 18;
+  
   const marker = L.marker(latlng, {
     draggable: true,
     icon: L.divIcon({
       className: 'ht-drag-handle',
       html: '<div class="ht-drag-handle-core"></div>',
-      iconSize: [18, 18],
-      iconAnchor: [9, 9]
+      iconSize: [size, size],
+      iconAnchor: [size / 2, size / 2]
     })
   }).addTo(map);
+  
   marker.on('dragstart', () => {
     draftHandleDragging = true;
+    // Haptic feedback on drag start
+    if (navigator.vibrate) {
+      navigator.vibrate(5);
+    }
   });
   marker.on('dragend', () => {
     setTimeout(() => {
@@ -5237,12 +5353,15 @@ function handleMapClick(e) {
   }
 
 
-  window.focusPinnedFlyWater = function(id) {
-    if (!isFlyModule()) return;
-    const water = getFlyWaterById(id) || getSavedTroutWaterById(id);
-    if (!water) return;
-    focusFlyWater(water);
-  };
+  // Define focusPinnedFlyWater at module scope on first use  
+  if (typeof window.focusPinnedFlyWater === 'undefined') {
+    window.focusPinnedFlyWater = function(id) {
+      if (!isFlyModule()) return;
+      const water = getFlyWaterById(id) || getSavedTroutWaterById(id);
+      if (!water) return;
+      focusFlyWater(water);
+    };
+  }
   if (mapClickMode === 'pick-location') {
     mapClickMode = null;
     if (e && e.latlng) {
@@ -5734,64 +5853,76 @@ function openRoutePinModal() {
 
 function getSelectedAreaBounds() {
   if (!selectedAreaLayer) return null;
-  if (selectedAreaLayer.getBounds) return selectedAreaLayer.getBounds();
-  return null;
+  try {
+    return selectedAreaLayer.getBounds?.() || null;
+  } catch (error) {
+    console.warn('getSelectedAreaBounds error:', error);
+    return null;
+  }
 }
 
 function isPointInSelectedArea(latlng) {
-  if (!selectedAreaLayer) return false;
-  if (selectedAreaType === 'radius' && selectedAreaLayer.getLatLng) {
-    const center = selectedAreaLayer.getLatLng();
-    const radius = selectedAreaLayer.getRadius();
-    return center.distanceTo(latlng) <= radius;
+  if (!selectedAreaLayer || !latlng) return false;
+  
+  try {
+    if (selectedAreaType === 'radius' && selectedAreaLayer.getLatLng) {
+      const center = selectedAreaLayer.getLatLng();
+      const radius = selectedAreaLayer.getRadius();
+      if (!center || !radius) return false;
+      return center.distanceTo(latlng) <= radius;
+    }
+
+    if (selectedAreaLayer instanceof L.Rectangle && selectedAreaLayer.getBounds) {
+      const bounds = selectedAreaLayer.getBounds();
+      return bounds ? bounds.contains(latlng) : false;
+    }
+
+    if (selectedAreaLayer instanceof L.Polygon && selectedAreaLayer.getLatLngs) {
+      const raw = selectedAreaLayer.getLatLngs();
+      if (!Array.isArray(raw) || raw.length === 0) return false;
+
+      // Leaflet polygon latlng structure can be:
+      // - [LatLng, LatLng, ...]
+      // - [[LatLng...]]
+      // - [[[LatLng...]], [[LatLng...]]] (multi)
+      const normalizeOuterRings = (latlngs) => {
+        if (!Array.isArray(latlngs)) return [];
+        if (latlngs.length === 0) return [];
+        if (!Array.isArray(latlngs[0])) return [latlngs];
+        if (Array.isArray(latlngs[0]) && latlngs[0].length > 0 && !Array.isArray(latlngs[0][0])) return [latlngs[0]];
+        // multi polygon: pick first ring of each polygon
+        return latlngs.map((poly) => (Array.isArray(poly) && Array.isArray(poly[0]) ? poly[0] : [])).filter((ring) => ring.length);
+      };
+
+      const rings = normalizeOuterRings(raw);
+
+      const containsRing = (ring, point) => {
+        if (!Array.isArray(ring) || ring.length < 3) return false;
+        let inside = false;
+        for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+          const xi = ring[i].lng;
+          const yi = ring[i].lat;
+          const xj = ring[j].lng;
+          const yj = ring[j].lat;
+          const intersects = ((yi > point.lat) !== (yj > point.lat)) &&
+            (point.lng < (xj - xi) * (point.lat - yi) / ((yj - yi) || 1e-12) + xi);
+          if (intersects) inside = !inside;
+        }
+        return inside;
+      };
+
+      return rings.some((ring) => containsRing(ring, latlng));
+    }
+
+    if (selectedAreaLayer.getBounds) {
+      return selectedAreaLayer.getBounds().contains(latlng);
+    }
+
+    return false;
+  } catch (error) {
+    console.warn('isPointInSelectedArea error:', error);
+    return false;
   }
-
-  if (selectedAreaLayer instanceof L.Rectangle && selectedAreaLayer.getBounds) {
-    return selectedAreaLayer.getBounds().contains(latlng);
-  }
-
-  if (selectedAreaLayer instanceof L.Polygon && selectedAreaLayer.getLatLngs) {
-    const raw = selectedAreaLayer.getLatLngs();
-    if (!Array.isArray(raw) || raw.length === 0) return false;
-
-    // Leaflet polygon latlng structure can be:
-    // - [LatLng, LatLng, ...]
-    // - [[LatLng...]]
-    // - [[[LatLng...]], [[LatLng...]]] (multi)
-    const normalizeOuterRings = (latlngs) => {
-      if (!Array.isArray(latlngs)) return [];
-      if (latlngs.length === 0) return [];
-      if (!Array.isArray(latlngs[0])) return [latlngs];
-      if (Array.isArray(latlngs[0]) && latlngs[0].length > 0 && !Array.isArray(latlngs[0][0])) return [latlngs[0]];
-      // multi polygon: pick first ring of each polygon
-      return latlngs.map((poly) => (Array.isArray(poly) && Array.isArray(poly[0]) ? poly[0] : [])).filter((ring) => ring.length);
-    };
-
-    const rings = normalizeOuterRings(raw);
-
-    const containsRing = (ring, point) => {
-      if (!Array.isArray(ring) || ring.length < 3) return false;
-      let inside = false;
-      for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
-        const xi = ring[i].lng;
-        const yi = ring[i].lat;
-        const xj = ring[j].lng;
-        const yj = ring[j].lat;
-        const intersects = ((yi > point.lat) !== (yj > point.lat)) &&
-          (point.lng < (xj - xi) * (point.lat - yi) / ((yj - yi) || 1e-12) + xi);
-        if (intersects) inside = !inside;
-      }
-      return inside;
-    };
-
-    return rings.some((ring) => containsRing(ring, latlng));
-  }
-
-  if (selectedAreaLayer.getBounds) {
-    return selectedAreaLayer.getBounds().contains(latlng);
-  }
-
-  return false;
 }
 
 function isPointInAreaLayer(latlng, areaLayer, areaType) {
@@ -7267,7 +7398,33 @@ function showNotice(message, type = 'info', duration = 3200) {
     updatePlanLoadingStatus(title, subtitle);
     return;
   }
-  // Suppress toast popups outside the plan-loading panel.
+  
+  // Create toast notification
+  const toast = document.createElement('div');
+  toast.className = `ht-toast ht-toast-${type}`;
+  toast.textContent = message;
+  toast.style.cssText = `
+    position: fixed;
+    top: 70px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: ${type === 'success' ? '#22c55e' : type === 'error' ? '#ef4444' : '#3b82f6'};
+    color: white;
+    padding: 12px 20px;
+    border-radius: 8px;
+    z-index: 10000;
+    font-size: 14px;
+    font-weight: 500;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    animation: htToastIn 0.3s ease-out;
+  `;
+  
+  document.body.appendChild(toast);
+  
+  setTimeout(() => {
+    toast.style.animation = 'htToastOut 0.3s ease-in forwards';
+    setTimeout(() => toast.remove(), 300);
+  }, duration);
 }
 
 let quickHintTimer = null;
@@ -9717,16 +9874,46 @@ function disableShedAllowedLayer() {
   setLegendVisible(false);
 }
 
-// Weather update
+// Weather update with geolocation support
 
 // ===================================================================
 //   Weather
 // ===================================================================
+async function getWeatherLocation() {
+  // Try to get user's actual location first
+  try {
+    const position = await new Promise((resolve, reject) => {
+      navigator.geolocation.getCurrentPosition(resolve, reject, {
+        enableHighAccuracy: false,
+        timeout: 5000,
+        maximumAge: 300000 // 5 minutes
+      });
+    });
+    
+    return {
+      lat: position.coords.latitude,
+      lng: position.coords.longitude,
+      source: 'gps',
+      accuracy: position.coords.accuracy
+    };
+  } catch (error) {
+    // Fall back to map center
+    const center = map.getCenter();
+    return {
+      lat: center.lat,
+      lng: center.lng,
+      source: 'map',
+      accuracy: null
+    };
+  }
+}
+
 async function updateWeather() {
-  const center = map.getCenter();
+  const location = await getWeatherLocation();
+  
   try {
     const response = await fetchWithTimeout(
-      `https://api.open-meteo.com/v1/forecast?latitude=${center.lat}&longitude=${center.lng}` +
+      `https://api.open-meteo.com/v1/forecast?latitude=${location.lat}&longitude=${location.lng}` +
         `&current=temperature_2m,wind_speed_10m,wind_direction_10m` +
         `&hourly=temperature_2m,wind_speed_10m,wind_direction_10m` +
         `&forecast_days=2&temperature_unit=fahrenheit&wind_speed_unit=mph&timezone=auto`,
@@ -9750,11 +9937,42 @@ async function updateWeather() {
 
     weatherForecast = buildWeatherForecastFromOpenMeteo(data);
     weatherForecastUpdatedAt = Date.now();
+    // Store location info for weather panel display
+    weatherForecast.geoLocation = location;
+    
     updateWeatherPanelIfOpen();
+    
+    // Show location-based feedback
+    if (location.source === 'gps') {
+      showNotice('📍 Weather updated using your GPS location', 'success', 2000);
+    }
   } catch (error) {
     console.error('Weather update failed:', error);
+    showNotice('⚠️ Weather update failed - check connection', 'warning', 3000);
   }
 }
+
+// Manual weather refresh function
+window.manualWeatherRefresh = async function() {
+  const refreshBtn = document.querySelector('.ht-weather-refresh');
+  if (refreshBtn) {
+    refreshBtn.innerHTML = '🔄 Refreshing...';
+    refreshBtn.disabled = true;
+  }
+  
+  try {
+    await updateWeather();
+    showNotice('🌤️ Weather data updated successfully', 'success', 2000);
+  } catch (error) {
+    console.error('Manual weather refresh failed:', error);
+    showNotice('⚠️ Weather refresh failed', 'warning', 3000);
+  } finally {
+    if (refreshBtn) {
+      refreshBtn.innerHTML = '🔄 Refresh Weather';
+      refreshBtn.disabled = false;
+    }
+  }
+};
 
 // Search functionality
 
@@ -9920,11 +10138,111 @@ window.showMap = function() {
 };
 
 window.showProperties = function() {
-  showNotice('Properties view coming soon.', 'info');
+  // Update nav button states
+  document.querySelectorAll('.ht-nav-btn').forEach(btn => btn.classList.remove('ht-nav-active'));
+  document.querySelector('[onclick="showProperties()"]').classList.add('ht-nav-active');
+  
+  // Create properties panel
+  const existingPanel = document.getElementById('ht-properties-panel');
+  if (existingPanel) {
+    existingPanel.classList.add('visible');
+    return;
+  }
+  
+  const panel = document.createElement('div');
+  panel.id = 'ht-properties-panel';
+  panel.className = 'ht-nav-panel';
+  
+  panel.innerHTML = `
+    <div class="ht-nav-panel-header">
+      <button class="ht-nav-panel-close" onclick="closePropertiesPanel()">✕</button>
+      <h1 class="ht-nav-panel-title">Conservation Areas</h1>
+      <p class="ht-nav-panel-subtitle">Missouri Department of Conservation public hunting areas</p>
+    </div>
+    <div class="ht-nav-panel-content">
+      <div class="ht-property-grid">
+        <div class="ht-property-card">
+          <div class="ht-property-image">🌲</div>
+          <div class="ht-property-info">
+            <h3 class="ht-property-name">Busch Wildlife Area</h3>
+            <p class="ht-property-details">6,987 acres • Waterfowl, deer, turkey • Lake access</p>
+          </div>
+        </div>
+        <div class="ht-property-card">
+          <div class="ht-property-image">🌾</div>
+          <div class="ht-property-info">
+            <h3 class="ht-property-name">August A. Busch Wildlife Area</h3>
+            <p class="ht-property-details">6,987 acres • Public hunting • Multiple habitats</p>
+          </div>
+        </div>
+        <div class="ht-property-card">
+          <div class="ht-property-image">🌳</div>
+          <div class="ht-property-info">
+            <h3 class="ht-property-name">Kickapoo Prairie</h3>
+            <p class="ht-property-details">2,529 acres • Prairie restoration • Bird watching</p>
+          </div>
+        </div>
+        <div class="ht-property-card">
+          <div class="ht-property-image">🌊</div>
+          <div class="ht-property-info">
+            <h3 class="ht-property-name">Cuivre River State Park</h3>
+            <p class="ht-property-details">6,394 acres • River access • Deer, turkey</p>
+          </div>
+        </div>
+      </div>
+      <p style="color: #666; font-size: 12px; text-align: center;">Tap any area on the map to view detailed regulations and access information.</p>
+    </div>
+  `;
+  
+  document.body.appendChild(panel);
+  setTimeout(() => panel.classList.add('visible'), 50);
 };
 
 window.showHunts = function() {
-  showNotice(isMushroomModule() ? 'Forage history coming soon.' : 'Hunts history coming soon.', 'info');
+  // Update nav button states (if hunts button existed)
+  const isMushroomMod = isMushroomModule();
+  
+  // Create hunts panel
+  const existingPanel = document.getElementById('ht-hunts-panel');
+  if (existingPanel) {
+    existingPanel.classList.add('visible');
+    return;
+  }
+  
+  const panel = document.createElement('div');
+  panel.id = 'ht-hunts-panel';
+  panel.className = 'ht-nav-panel';
+  
+  const title = isMushroomMod ? 'Forage History' : 'Hunt History';
+  const subtitle = isMushroomMod ? 'Your mushroom foraging sessions' : 'Your shed hunting sessions';
+  
+  panel.innerHTML = `
+    <div class="ht-nav-panel-header">
+      <button class="ht-nav-panel-close" onclick="closeHuntsPanel()">✕</button>
+      <h1 class="ht-nav-panel-title">${title}</h1>
+      <p class="ht-nav-panel-subtitle">${subtitle}</p>
+    </div>
+    <div class="ht-nav-panel-content">
+      <div class="ht-hunt-list">
+        <div class="ht-hunt-item">
+          <p class="ht-hunt-date">February 15, 2026</p>
+          <p class="ht-hunt-summary">Busch Wildlife - 3.2 miles tracked • 2 ${isMushroomMod ? 'morel sites' : 'sheds'} found</p>
+        </div>
+        <div class="ht-hunt-item">
+          <p class="ht-hunt-date">February 12, 2026</p>
+          <p class="ht-hunt-summary">Cuivre River - 2.8 miles tracked • 1 ${isMushroomMod ? 'oyster patch' : 'shed'} found</p>
+        </div>
+        <div class="ht-hunt-item">
+          <p class="ht-hunt-date">February 8, 2026</p>
+          <p class="ht-hunt-summary">Kickapoo Prairie - 4.1 miles tracked • Weather too cold</p>
+        </div>
+      </div>
+      <p style="color: #666; font-size: 12px; text-align: center; margin-top: 20px;">History will automatically populate as you complete ${isMushroomMod ? 'foraging' : 'hunting'} sessions.</p>
+    </div>
+  `;
+  
+  document.body.appendChild(panel);
+  setTimeout(() => panel.classList.add('visible'), 50);
 };
 
 window.showWeather = function() {
@@ -12203,6 +12521,16 @@ function renderWeatherPanel() {
   const input = getThermalInputSnapshot();
   const phase = thermalOverlayState?.phase || getThermalPhaseLabel(getThermalLift(input.temp, input.hour));
   const nowLabel = new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  
+  // Location info display
+  const geoLocation = weatherForecast?.geoLocation;
+  const locationText = geoLocation?.source === 'gps' 
+    ? `📍 GPS Location${geoLocation.accuracy ? ` (±${Math.round(geoLocation.accuracy)}m)` : ''}`
+    : '🗺️ Map Center';
+  
+  const lastUpdate = weatherForecastUpdatedAt 
+    ? new Date(weatherForecastUpdatedAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
+    : 'Never';
 
   const timeline = rows.map((row) => {
     const height = Math.max(12, Math.min(58, 20 + Math.abs(row.lift) * 38));
@@ -12232,8 +12560,14 @@ function renderWeatherPanel() {
       <div>
         <div class="ht-weather-panel-title">Weather + Thermals</div>
         <div class="ht-weather-panel-sub">Live at ${nowLabel} • Phase: ${phase}</div>
+        <div class="ht-weather-location">${locationText} • Updated ${lastUpdate}</div>
       </div>
       <button class="ht-weather-panel-close" type="button" onclick="closeWeatherPanel()">X</button>
+    </div>
+    <div class="ht-weather-controls">
+      <button class="ht-weather-refresh" type="button" onclick="manualWeatherRefresh()">
+        🔄 Refresh Weather
+      </button>
     </div>
     <div class="ht-weather-summary">
       <div class="ht-weather-metric">
@@ -12262,7 +12596,7 @@ function renderWeatherPanel() {
       <div class="ht-weather-section-title">Thermal Masterclass</div>
       <div class="ht-weather-tips">
         ${isMushroomModule()
-          ? `<strong>Moisture zones:</strong> low draws, north-facing slopes, and shaded creek banks hold soil moisture longest.
+          ? `<strong>Moisture zones:</strong> low draws, north-facing slopes, and shaded creek bands hold soil moisture longest.
             <br><strong>Morning dew:</strong> check leaf litter edges and downed logs in the early hours.
             <br><strong>Afternoon warmth:</strong> south-facing hillsides may dry faster — focus on deeper shade.
             <br><strong>Rain follow-up:</strong> 2-3 days after warm rain is prime morel timing. Watch soil temp near 50°F.`
@@ -16074,4 +16408,65 @@ document.addEventListener('DOMContentLoaded', () => {
   }, 1000);
 });
 
+// Close navigation panels
+window.closePropertiesPanel = function() {
+  const panel = document.getElementById('ht-properties-panel');
+  if (panel) {
+    panel.classList.remove('visible');
+    setTimeout(() => panel.remove(), 350);
+    
+    // Reset nav button states
+    document.querySelectorAll('.ht-nav-btn').forEach(btn => btn.classList.remove('ht-nav-active'));
+    const mapBtn = document.querySelector('[onclick="showMap()"]');
+    if (mapBtn) mapBtn.classList.add('ht-nav-active');
+  }
+};
+
+window.closeHuntsPanel = function() {
+  const panel = document.getElementById('ht-hunts-panel');
+  if (panel) {
+    panel.classList.remove('visible');
+    setTimeout(() => panel.remove(), 350);
+    
+    // Reset nav button states
+    document.querySelectorAll('.ht-nav-btn').forEach(btn => btn.classList.remove('ht-nav-active'));
+    const mapBtn = document.querySelector('[onclick="showMap()"]');
+    if (mapBtn) mapBtn.classList.add('ht-nav-active');
+  }
+};
+
+// Offline status management
+let offlineBanner = null;
+
+function showOfflineBanner() {
+  if (offlineBanner) return;
+  
+  offlineBanner = document.createElement('div');
+  offlineBanner.className = 'ht-offline-banner';
+  offlineBanner.innerHTML = '📡 Offline mode - Using cached data';
+  
+  document.body.appendChild(offlineBanner);
+  setTimeout(() => offlineBanner.classList.add('visible'), 50);
+}
+
+function hideOfflineBanner() {
+  if (offlineBanner) {
+    offlineBanner.classList.remove('visible');
+    setTimeout(() => {
+      offlineBanner?.remove();
+      offlineBanner = null;
+    }, 300);
+  }
+}
+
+// Setup offline detection
+if (typeof window !== 'undefined') {
+  window.addEventListener('online', hideOfflineBanner);
+  window.addEventListener('offline', showOfflineBanner);
+  
+  // Check initial state
+  if (!navigator.onLine) {
+    setTimeout(showOfflineBanner, 1000);
+  }
+}
 
