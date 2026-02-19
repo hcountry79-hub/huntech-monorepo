@@ -14795,9 +14795,23 @@ document.addEventListener('DOMContentLoaded', () => {
   const isMush = isMushroomModule();
   const isTurk = isTurkeyModule();
   const isShed = isShedModule();
-  if (isFly || isMush || isTurk || isShed) {
+  /* Mushroom: no hero splash — go straight to map */
+  if (isMush) {
+    mushroomMapPending = false;
+    document.body.classList.remove('ht-map-pending');
+    document.body.classList.add('ht-map-active');
+    initializeMap();
+    restoreLastKnownLocation();
+    setDefaultAreaFromLocation();
+    updateFilterChips();
+    updateWorkflowUI();
+    updateLocateMeOffset();
+    setTimeout(() => {
+      if (map && typeof map.invalidateSize === 'function') map.invalidateSize();
+    }, 320);
+    setTimeout(() => centerOnMyLocationInternal(), 500);
+  } else if (isFly || isTurk || isShed) {
     if (isFly) flyMapPending = true;
-    if (isMush) mushroomMapPending = true;
     if (isTurk) turkeyMapPending = true;
     if (isShed) shedMapPending = true;
     document.body.classList.add('ht-map-pending');
