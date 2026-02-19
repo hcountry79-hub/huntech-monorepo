@@ -15261,7 +15261,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // Always start Field Command collapsed.
+  // Always start Field Command collapsed — except in the fly module.
   try {
     const toolbar = document.getElementById('toolbar');
     const icons = document.querySelectorAll('.ht-toggle-icon');
@@ -15276,6 +15276,28 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   } catch {
     // Ignore storage failures
+  }
+
+  // Fly module: start with tray OPEN and auto-launch Fish Now
+  if (isFly) {
+    try {
+      const toolbar = document.getElementById('toolbar');
+      const icons = document.querySelectorAll('.ht-toggle-icon');
+      if (toolbar) {
+        toolbarOpen = true;
+        toolbar.classList.remove('collapsed');
+        document.body.classList.remove('ht-toolbar-collapsed');
+        icons.forEach(function(icon) { icon.textContent = '<'; });
+        localStorage.removeItem('htToolbarCollapsed');
+      }
+    } catch {}
+    setTimeout(function() {
+      try {
+        if (typeof window.showStreamPanel === 'function') {
+          window.showStreamPanel('fishNowPanel');
+        }
+      } catch(e) { console.warn('HUNTECH: auto Fish Now error', e); }
+    }, 450);
   }
 
   updateTrayMiniLabels();
@@ -15364,12 +15386,15 @@ document.addEventListener('DOMContentLoaded', () => {
     // Hide loading state whenever any real step (or reset) is shown
     const loadingEl = document.getElementById('fishStep0_loading');
     if (loadingEl) loadingEl.style.display = (stepNum === 0) ? '' : 'none';
-    const steps = ['fishStep1_areaAction','fishStep2_strategy','fishStep3_route','fishStep4_briefing','fishStep5_live'];
+    // Steps: 1=welcome, 2=strategy, 3=confirm, 4=route, 5=briefing, 6=live
+    const steps = ['fishStep1_areaAction','fishStep2_strategy','fishStep2b_summary','fishStep3_route','fishStep4_briefing','fishStep5_live'];
     steps.forEach((id, i) => {
       const el = document.getElementById(id);
       if (el) el.style.display = (i + 1 === stepNum) ? '' : 'none';
     });
   }
+  // Expose so inline onclick handlers in HTML can call it
+  window.fishShowStep = fishShowStep;
 
   /* ── Find nearest trout water from GPS ── */
   function findNearestWater(lat, lng) {
@@ -15422,11 +15447,16 @@ document.addEventListener('DOMContentLoaded', () => {
         if (water) {
           fishFlow.area = water;
           placeAreaPin(water);
-          // Populate step 1
+          // Populate step 1 welcome card
+          const ribbonEl = document.getElementById('fishAreaRibbon');
           const titleEl = document.getElementById('fishAreaTitle');
           const descEl = document.getElementById('fishAreaDesc');
-          if (titleEl) titleEl.textContent = '🎣 Welcome to ' + water.name;
-          if (descEl) descEl.textContent = (water.ribbon || water.category) + ' • ' + (water.streamMiles ? water.streamMiles + ' mi' : '') + ' • ' + (water.species || []).join(', ');
+          if (ribbonEl) ribbonEl.textContent = '🎣 ' + (water.ribbon || water.category || 'Trout Water');
+          if (titleEl) titleEl.textContent = 'Welcome to ' + water.name;
+          if (descEl) {
+            const parts = [(water.streamMiles ? water.streamMiles + ' mi' : ''), (water.species || []).join(', '), (water.waterType || '')].filter(Boolean);
+            descEl.textContent = parts.join(' · ');
+          }
           // Show step 1 after a short delay for map animation
           setTimeout(() => fishShowStep(1), 800);
         } else {
@@ -15477,14 +15507,14 @@ document.addEventListener('DOMContentLoaded', () => {
       // Wire into Fish Now state and UI
       fishFlow.area = water;
       placeAreaPin(water);
+      const ribbonEl = document.getElementById('fishAreaRibbon');
       const titleEl = document.getElementById('fishAreaTitle');
       const descEl = document.getElementById('fishAreaDesc');
-      if (titleEl) titleEl.textContent = '🎣 Welcome to ' + water.name;
+      if (ribbonEl) ribbonEl.textContent = '🎣 ' + (water.ribbon || water.category || 'Trout Water');
+      if (titleEl) titleEl.textContent = 'Welcome to ' + water.name;
       if (descEl) {
-        const miles = water.streamMiles ? water.streamMiles + ' mi' : '';
-        const species = (water.species || []).join(', ');
-        const bits = [water.ribbon || water.category, miles, species].filter(Boolean);
-        descEl.textContent = bits.join(' • ');
+        const parts = [(water.streamMiles ? water.streamMiles + ' mi' : ''), (water.species || []).join(', '), (water.waterType || '')].filter(Boolean);
+        descEl.textContent = parts.join(' · ');
       }
 
       fishShowStep(1);
@@ -15498,8 +15528,34 @@ document.addEventListener('DOMContentLoaded', () => {
   /* ═══ Step 1 actions ═══ */
   window.fishStepCheckIn = function() {
     if (!fishFlow.area) return;
-    showNotice('✅ Checked in at ' + fishFlow.area.name, 'success', 2500);
+    showNotice('✅ Checked in at ' + fishFlow.area.name + ' — set up your mission below', 'success', 2500);
     fishShowStep(2);
+  };
+
+  /* ═══ Step 2 → 3: Review Plan ═══ */
+  window.fishStepReview = function() {
+    if (!fishFlow.area) return;
+    const methodMap = { fly: '🪰 Fly Fishing', spin: '🎣 Lure Fishing', bait: '🪱 Bait Fishing' };
+    const wadeMap = { waders: '🥾 Wading', streamside: '🏖️ Bank Fishing' };
+    const expMap = { new: '🌱 New Angler', learning: '📈 Still Learning', confident: '💪 Confident', advanced: '🏆 Advanced' };
+    const modeMap = { standard: '🚗 Road Ready', backcountry: '🌲 Off the Grid' };
+    const startMap = { current: '📍 My Location', map: '🗺️ Custom Start' };
+    const routeMap = { build: '🔀 Build a Route', none: '🎯 No Route' };
+    const rows = [
+      { label: 'Water', value: fishFlow.area.name },
+      { label: 'Method', value: methodMap[fishFlow.method] || fishFlow.method },
+      { label: 'Access', value: wadeMap[fishFlow.wade] || fishFlow.wade },
+      { label: 'Skill', value: expMap[fishFlow.experience] || fishFlow.experience },
+      { label: 'Expedition', value: modeMap[fishFlow.mode] || fishFlow.mode },
+      { label: 'Start', value: startMap[fishFlow.startFrom] || fishFlow.startFrom },
+      { label: 'Route', value: routeMap[fishFlow.routeMode] || fishFlow.routeMode },
+    ];
+    const html = '<div class="ht-summary-rows">' +
+      rows.map(r => '<div class="ht-summary-row"><span class="ht-summary-label">' + r.label + '</span><span class="ht-summary-value">' + r.value + '</span></div>').join('') +
+      '</div>';
+    const card = document.getElementById('fishSummaryCard');
+    if (card) card.innerHTML = html;
+    fishShowStep(3);
   };
 
   window.fishStepSaveSpot = function() {
@@ -15579,11 +15635,11 @@ document.addEventListener('DOMContentLoaded', () => {
     // If user chose to skip route-building, jump straight to briefing
     if (fishFlow.routeMode === 'none') {
       setTimeout(() => {
-        fishShowStep(4);
+        fishShowStep(5);
         generateFishBriefing();
       }, 600);
     } else {
-      fishShowStep(3);
+      fishShowStep(4);
     }
   };
 
@@ -15620,7 +15676,7 @@ document.addEventListener('DOMContentLoaded', () => {
   window.fishLockRoute = function() {
     showNotice('🔒 Route locked — generating your briefing…', 'success', 2500);
     setTimeout(() => {
-      fishShowStep(4);
+      fishShowStep(5);
       generateFishBriefing();
     }, 600);
   };
@@ -15738,9 +15794,9 @@ document.addEventListener('DOMContentLoaded', () => {
     return 'winter';
   }
 
-  /* ═══ Step 5: Start Fishing Session ═══ */
+  /* ═══ Step 6: Start Fishing Session ═══ */
   window.fishStartSession = function() {
-    fishShowStep(5);
+    fishShowStep(6);
     const nameEl = document.getElementById('liveWaterName2');
     if (nameEl && fishFlow.area) nameEl.textContent = fishFlow.area.name;
 

@@ -167,63 +167,52 @@
       <!-- ═══════ FISH NOW PANEL — Multi-Step Workflow ═══════ -->
       <div class="ht-stream-panel" id="fishNowPanel">
 
-        <!-- ──── Loading State (shown before GPS resolves) ──── -->
+        <!-- ──── Step 0: GPS Locating ──── -->
         <div class="ht-fish-step" id="fishStep0_loading">
-          <div class="ht-accordion-header ht-accordion-header-center">
-            <span class="ht-define-title">📍 Finding your water…</span>
-          </div>
-          <div class="ht-form-grid">
-            <div class="ht-form-row">
-              <div class="ht-fly-note" style="text-align:center">Centering on your GPS location and identifying the nearest trout water…</div>
-            </div>
+          <div class="ht-fish-locate-card">
+            <div class="ht-fish-locate-pulse">📡</div>
+            <div class="ht-fish-locate-label">Finding your water…</div>
+            <div class="ht-fish-locate-sub">Scanning for nearby trout waters</div>
           </div>
         </div>
 
-        <!-- ──── Step 1: Area Discovery (shown after FISH NOW fades to map) ──── -->
+        <!-- ──── Step 1: Welcome / Check In ──── -->
         <div class="ht-fish-step" id="fishStep1_areaAction" style="display:none">
-          <div class="ht-accordion-header ht-accordion-header-center">
-            <span class="ht-define-title" id="fishAreaTitle">📍 Loading area…</span>
-          </div>
-          <div class="ht-form-grid">
-            <div class="ht-form-row">
-              <div class="ht-fly-note" id="fishAreaDesc">Locating your nearest trout water…</div>
-            </div>
-            <div class="ht-form-row">
-              <div class="ht-method-row ht-method-row--stack">
-                <button class="ht-gold-btn ht-go-btn" type="button" onclick="fishStepCheckIn()">✅ Check In</button>
-                <button class="ht-gold-btn ht-go-btn" type="button" onclick="fishStepSaveSpot()">📌 Save Spot</button>
-                <button class="ht-gold-btn ht-go-btn ht-go-btn--ghost" type="button" onclick="fishStepStartOver()">↩ Start Over</button>
-              </div>
-            </div>
+          <div class="ht-fish-welcome-card">
+            <div class="ht-fish-welcome-ribbon" id="fishAreaRibbon">🎣 Trout Water</div>
+            <div class="ht-fish-welcome-name" id="fishAreaTitle">Welcome to the Water</div>
+            <div class="ht-fish-welcome-detail" id="fishAreaDesc">Locating nearest trout water…</div>
+            <button class="ht-fish-checkin-btn" type="button" onclick="fishStepCheckIn()">✅ CHECK IN</button>
+            <button class="ht-fish-secondary-link" type="button" onclick="fishStepStartOver()">↩ Not my location — find again</button>
           </div>
         </div>
 
-        <!-- ──── Step 2: Build Strategy (method, waders, experience, let's go) ──── -->
+        <!-- ──── Step 2: Mission Setup ──── -->
         <div class="ht-fish-step" id="fishStep2_strategy" style="display:none">
           <div class="ht-accordion-header ht-accordion-header-center">
-            <span class="ht-define-title">🎣 Build Your Plan</span>
+            <span class="ht-define-title">🪐 MISSION SETUP</span>
           </div>
           <div class="ht-form-grid">
-            <!-- Method -->
+            <!-- Fishing Method -->
             <div class="ht-form-row">
-              <div class="ht-form-label">Method</div>
+              <div class="ht-form-label">Fishing Method</div>
               <div class="ht-method-row">
                 <button class="ht-method-btn ht-method-btn--active" data-fish-method="fly" onclick="pickFishMethod(this,'fly')">🪰 Fly</button>
-                <button class="ht-method-btn" data-fish-method="spin" onclick="pickFishMethod(this,'spin')">🎣 Spin</button>
+                <button class="ht-method-btn" data-fish-method="spin" onclick="pickFishMethod(this,'spin')">🎣 Lure</button>
                 <button class="ht-method-btn" data-fish-method="bait" onclick="pickFishMethod(this,'bait')">🪱 Bait</button>
               </div>
             </div>
-            <!-- Wading -->
+            <!-- Water Access -->
             <div class="ht-form-row">
-              <div class="ht-form-label">Wading</div>
+              <div class="ht-form-label">Water Access</div>
               <div class="ht-method-row">
-                <button class="ht-method-btn ht-method-btn--active" data-fish-wade="waders" onclick="pickFishWade(this,'waders')">🥾 Waders</button>
-                <button class="ht-method-btn" data-fish-wade="streamside" onclick="pickFishWade(this,'streamside')">🏖️ Streamside</button>
+                <button class="ht-method-btn ht-method-btn--active" data-fish-wade="waders" onclick="pickFishWade(this,'waders')">🥾 Wading</button>
+                <button class="ht-method-btn" data-fish-wade="streamside" onclick="pickFishWade(this,'streamside')">🏖️ Bank Fishing</button>
               </div>
             </div>
-            <!-- Experience -->
+            <!-- Skill Level -->
             <div class="ht-form-row">
-              <div class="ht-form-label">Experience</div>
+              <div class="ht-form-label">Skill Level</div>
               <div class="ht-method-row">
                 <button class="ht-method-btn" data-fish-exp="new" onclick="pickFishExp(this,'new')">🌱 New</button>
                 <button class="ht-method-btn ht-method-btn--active" data-fish-exp="learning" onclick="pickFishExp(this,'learning')">📈 Learning</button>
@@ -231,40 +220,61 @@
                 <button class="ht-method-btn" data-fish-exp="advanced" onclick="pickFishExp(this,'advanced')">🏆 Advanced</button>
               </div>
             </div>
-            <!-- Mode -->
+            <!-- Expedition Type -->
             <div class="ht-form-row">
-              <div class="ht-form-label">Mode</div>
+              <div class="ht-form-label">Expedition Type</div>
               <div class="ht-method-row">
-                <button class="ht-method-btn ht-method-btn--active" data-fish-mode="standard" onclick="pickFishMode(this,'standard')">🚗 Standard Access</button>
-                <button class="ht-method-btn" data-fish-mode="backcountry" onclick="pickFishMode(this,'backcountry')">🏕️ Backcountry</button>
+                <button class="ht-method-btn ht-method-btn--active" data-fish-mode="standard" onclick="pickFishMode(this,'standard')">🚗 Road Ready</button>
+                <button class="ht-method-btn" data-fish-mode="backcountry" onclick="pickFishMode(this,'backcountry')">🌲 Off the Grid</button>
               </div>
             </div>
-            <!-- Starting point -->
+            <!-- Start Point -->
             <div class="ht-form-row">
-              <div class="ht-form-label">Start From</div>
+              <div class="ht-form-label">Start Point</div>
               <div class="ht-method-row">
                 <button class="ht-method-btn ht-method-btn--active" data-fish-start="current" onclick="pickFishStart(this,'current')">📍 My Location</button>
                 <button class="ht-method-btn" data-fish-start="map" onclick="pickFishStart(this,'map')">🗺️ Pick on Map</button>
               </div>
             </div>
-            <!-- Route preference -->
+            <!-- Route Plan -->
             <div class="ht-form-row">
-              <div class="ht-form-label">Route</div>
+              <div class="ht-form-label">Route Plan</div>
               <div class="ht-method-row">
                 <button class="ht-method-btn ht-method-btn--active" data-fish-route="build" onclick="pickFishRouteMode(this,'build')">🔀 Build Route</button>
                 <button class="ht-method-btn" data-fish-route="none" onclick="pickFishRouteMode(this,'none')">🎯 No Route</button>
               </div>
             </div>
-            <!-- Let's Go! -->
+            <!-- Review -->
             <div class="ht-form-row">
-              <button class="ht-gold-btn ht-go-btn ht-lets-go-pulse" type="button" onclick="fishStepLetsGo()">
-                🎯 LET'S GO
+              <button class="ht-gold-btn ht-go-btn ht-lets-go-pulse" type="button" onclick="fishStepReview()">
+                📋 REVIEW MY PLAN
               </button>
             </div>
           </div>
         </div>
 
-        <!-- ──── Step 3: Define Route (pins + route) ──── -->
+        <!-- ──── Step 3: Confirm Mission ──── -->
+        <div class="ht-fish-step" id="fishStep2b_summary" style="display:none">
+          <div class="ht-accordion-header ht-accordion-header-center">
+            <span class="ht-define-title">📋 CONFIRM YOUR MISSION</span>
+          </div>
+          <div class="ht-form-grid">
+            <div class="ht-form-row">
+              <div class="ht-fish-summary-card" id="fishSummaryCard">
+                <!-- Populated by JS -->
+              </div>
+            </div>
+            <div class="ht-form-row">
+              <div class="ht-method-row ht-method-row--stack">
+                <button class="ht-gold-btn ht-go-btn ht-lets-go-pulse" type="button" onclick="fishStepLetsGo()">🎯 LET'S GO</button>
+                <button class="ht-gold-btn ht-go-btn ht-go-btn--ghost" type="button" onclick="fishShowStep(2)">← Edit Plan</button>
+                <button class="ht-gold-btn ht-go-btn ht-go-btn--ghost" type="button" onclick="fishStepStartOver()">✕ Start Over</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ──── Step 4: Define Route (Optional) ──── -->
         <div class="ht-fish-step" id="fishStep3_route" style="display:none">
           <div class="ht-accordion-header ht-accordion-header-center">
             <span class="ht-define-title">🗺️ Define Route</span>

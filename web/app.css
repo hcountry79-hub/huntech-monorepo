@@ -1061,7 +1061,131 @@ body.module-fly .ht-strategy-panel {
 }
 .ht-stream-pill svg { flex-shrink: 0; }
 
-/* ────── Favorites Quick Access ────── */
+/* ────── Fish Now — GPS Locating Card ────── */
+.ht-fish-locate-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 24px 12px 18px;
+  gap: 7px;
+}
+.ht-fish-locate-pulse {
+  font-size: 30px;
+  animation: htLocatePulse 1.5s ease-in-out infinite;
+}
+@keyframes htLocatePulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.35; transform: scale(0.82); }
+}
+.ht-fish-locate-label {
+  font-size: 12px;
+  font-weight: 800;
+  color: #e6fff5;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+.ht-fish-locate-sub {
+  font-size: 10px;
+  color: #6b9baa;
+  text-align: center;
+}
+
+/* ────── Fish Now — Welcome Card ────── */
+.ht-fish-welcome-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 16px 12px 14px;
+  gap: 8px;
+  background: rgba(10, 28, 38, 0.65);
+  border: 1px solid rgba(43, 212, 255, 0.22);
+  border-radius: 12px;
+  margin-bottom: 4px;
+}
+.ht-fish-welcome-ribbon {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: #2bd4ff;
+  background: rgba(43, 212, 255, 0.1);
+  border: 1px solid rgba(43, 212, 255, 0.3);
+  border-radius: 999px;
+  padding: 3px 12px;
+}
+.ht-fish-welcome-name {
+  font-size: 18px;
+  font-weight: 800;
+  color: #e6fff5;
+  text-align: center;
+  line-height: 1.2;
+  letter-spacing: 0.1px;
+}
+.ht-fish-welcome-detail {
+  font-size: 10px;
+  color: #7bbccc;
+  text-align: center;
+  margin-bottom: 2px;
+}
+.ht-fish-checkin-btn {
+  width: 100%;
+  padding: 15px 12px;
+  font-size: 15px;
+  font-weight: 900;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  border-radius: 10px;
+  border: 2px solid rgba(124, 255, 199, 0.85);
+  background: linear-gradient(140deg, rgba(43, 212, 255, 0.42), rgba(43, 212, 255, 0.16));
+  color: #e6fff5;
+  cursor: pointer;
+  box-shadow: 0 4px 20px rgba(43, 212, 255, 0.28);
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.18s, transform 0.1s;
+}
+.ht-fish-checkin-btn:active { transform: scale(0.97); }
+.ht-fish-secondary-link {
+  background: none;
+  border: none;
+  color: #4e7e8e;
+  font-size: 10px;
+  cursor: pointer;
+  padding: 2px 0;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  touch-action: manipulation;
+}
+
+/* ────── Fish Now — Summary / Confirm Card ────── */
+.ht-fish-summary-card {
+  background: rgba(10, 28, 38, 0.65);
+  border: 1px solid rgba(43, 212, 255, 0.2);
+  border-radius: 10px;
+  padding: 10px 14px;
+  width: 100%;
+}
+.ht-summary-rows { display: flex; flex-direction: column; gap: 0; }
+.ht-summary-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 7px 0;
+  border-bottom: 1px solid rgba(43, 212, 255, 0.07);
+}
+.ht-summary-row:last-child { border-bottom: none; }
+.ht-summary-label {
+  color: #4e7e8e;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-size: 9px;
+}
+.ht-summary-value {
+  color: #d4f0e8;
+  font-weight: 700;
+  font-size: 11px;
+}
 .ht-stream-favorites {
   padding: 0 0 4px;
 }
