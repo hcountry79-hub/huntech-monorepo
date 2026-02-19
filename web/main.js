@@ -9240,7 +9240,7 @@ function setDefaultAreaFromLocation() {
 
   navigator.geolocation.getCurrentPosition(
     (pos) => {
-      if (defaultLocationAreaSet || selectedAreaLayer) return;
+      if (defaultLocationAreaSet || selectedAreaLayer || _suppressDefaultArea) return;
       const latlng = L.latLng(pos.coords.latitude, pos.coords.longitude);
       updateUserLocationMarker(latlng);
       const radiusMiles = Number(window.HUNTECH_DEFAULT_RADIUS_MILES || 0.5);
