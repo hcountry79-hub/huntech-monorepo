@@ -11,7 +11,9 @@ function isTurkeyModule() {
 }
 
 function getFlyWaters() {
-  return Array.isArray(window.FLY_WATERS) ? window.FLY_WATERS : [];
+  return Array.isArray(window.FLY_WATERS) ? window.FLY_WATERS
+    : Array.isArray(window.TROUT_WATERS) ? window.TROUT_WATERS
+    : [];
 }
 
 function getFlyRegulations() {
