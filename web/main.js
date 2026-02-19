@@ -286,11 +286,191 @@ const HOTSPOT_ROAD_AVOID_ENDPOINT = String(window.HUNTECH_ROAD_AVOID_ENDPOINT ||
 const NLCD_LANDCOVER_URL = String(window.HUNTECH_NLCD_URL || 'https://www.mrlc.gov/geoserver/mrlc_display/NLCD_2021_Land_Cover_L48/wms').trim();
 const NLCD_ENABLED = window.HUNTECH_NLCD_ENABLED !== undefined ? Boolean(window.HUNTECH_NLCD_ENABLED) : true;
 const NLCD_MAX_CHECKS = Number(window.HUNTECH_NLCD_MAX_CHECKS || 200);
-const NLCD_STRICT = true; // Hard reject — never place a bad pin
+const NLCD_STRICT = false; // Graceful — allow pins if NLCD lookup fails
 let nlcdCheckCount = 0;
 const nlcdCache = new Map();
+let nlcdGridData = null; // Pre-fetched area-wide raster for instant lookups
 
-// Which NLCD codes are OK for each habitat type
+// NLCD standard color palette → code mapping (RGB hex → NLCD class)
+// Used to decode the WMS GetMap image tile
+const NLCD_COLOR_TO_CODE = {
+  '466b9f': 11, 'd1def8': 12,
+  'dec5c5': 21, 'd99282': 22, 'eb0000': 23, 'ab0000': 24,
+  'b3afa4': 31,
+  '68ab5f': 41, '1c5f2c': 42, 'b5c58f': 43,
+  'af963c': 51, 'ccb879': 52,
+  'dfdfc2': 71, 'd1d182': 72,
+  'dbd83d': 81, 'ab6c28': 82,
+  'b8d9eb': 90, '6c9fb8': 95
+};
+
+/**
+ * Pre-fetch NLCD land cover for an entire bounding box in ONE request.
+ * Downloads the NLCD raster as an image tile, paints it on a hidden canvas,
+ * and makes all future point lookups instant (no more network requests per pin).
+ * Call this ONCE before pin placement starts.
+ */
+async function prefetchNLCDForArea(bounds) {
+  if (!NLCD_ENABLED || !bounds) return false;
+  nlcdGridData = null;
+
+  try {
+    const sw = bounds.getSouthWest();
+    const ne = bounds.getNorthEast();
+    // Request a raster image from WMS GetMap — one image covers the whole area
+    // Use ~100px resolution (each pixel ≈ 30m NLCD cell)
+    const latSpan = ne.lat - sw.lat;
+    const lngSpan = ne.lng - sw.lng;
+    const pixelsPerDeg = 3600; // ~30m at mid-latitudes
+    const width = Math.min(512, Math.max(32, Math.round(lngSpan * pixelsPerDeg)));
+    const height = Math.min(512, Math.max(32, Math.round(latSpan * pixelsPerDeg)));
+
+    const bbox = `${sw.lng},${sw.lat},${ne.lng},${ne.lat}`;
+    const url = `${NLCD_LANDCOVER_URL}`
+      + `?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap`
+      + `&LAYERS=NLCD_2021_Land_Cover_L48`
+      + `&STYLES=`
+      + `&FORMAT=image/png`
+      + `&SRS=EPSG:4326`
+      + `&WIDTH=${width}&HEIGHT=${height}`
+      + `&BBOX=${bbox}`;
+
+    console.log(`[NLCD] Pre-fetching ${width}x${height} land cover tile for area...`);
+    const res = await fetchWithTimeout(url, {}, 10000);
+    if (!res.ok) {
+      console.warn(`[NLCD] Pre-fetch failed: HTTP ${res.status}`);
+      return false;
+    }
+    const blob = await res.blob();
+    const imgBitmap = await createImageBitmap(blob);
+
+    // Paint on hidden canvas to read pixel colors
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(imgBitmap, 0, 0);
+    const imageData = ctx.getImageData(0, 0, width, height);
+
+    nlcdGridData = {
+      sw, ne, width, height,
+      latSpan, lngSpan,
+      pixels: imageData.data // RGBA flat array
+    };
+
+    console.log(`[NLCD] Area land cover loaded: ${width}x${height} pixels (${width * height} cells)`);
+    return true;
+  } catch (e) {
+    console.warn('[NLCD] Pre-fetch failed:', e.message);
+    return false;
+  }
+}
+
+/**
+ * Get NLCD land cover code for a point from the pre-fetched grid (INSTANT).
+ * Falls back to individual WMS request only if grid isn't available.
+ */
+function getNLCDFromGrid(latlng) {
+  if (!nlcdGridData) return null;
+  const ll = L.latLng(latlng);
+  const { sw, ne, width, height, latSpan, lngSpan, pixels } = nlcdGridData;
+
+  // Convert lat/lng to pixel coordinates
+  const px = Math.floor(((ll.lng - sw.lng) / lngSpan) * width);
+  // Y is inverted (top of image = north)
+  const py = Math.floor(((ne.lat - ll.lat) / latSpan) * height);
+
+  if (px < 0 || px >= width || py < 0 || py >= height) return null;
+
+  const idx = (py * width + px) * 4;
+  const r = pixels[idx];
+  const g = pixels[idx + 1];
+  const b = pixels[idx + 2];
+  const a = pixels[idx + 3];
+
+  // Transparent = no data
+  if (a < 128) return null;
+
+  // Match pixel color to NLCD code
+  const hex = ((r << 16) | (g << 8) | b).toString(16).padStart(6, '0');
+  const code = NLCD_COLOR_TO_CODE[hex];
+  if (code) return code;
+
+  // Fuzzy match — find closest color (colors may have anti-aliasing artifacts)
+  let bestCode = null;
+  let bestDist = Infinity;
+  for (const [hexRef, refCode] of Object.entries(NLCD_COLOR_TO_CODE)) {
+    const rr = parseInt(hexRef.substring(0, 2), 16);
+    const gg = parseInt(hexRef.substring(2, 4), 16);
+    const bb = parseInt(hexRef.substring(4, 6), 16);
+    const dist = Math.abs(r - rr) + Math.abs(g - gg) + Math.abs(b - bb);
+    if (dist < bestDist) { bestDist = dist; bestCode = refCode; }
+  }
+  // Only accept if color is reasonably close (within ~30 RGB units)
+  return bestDist <= 45 ? bestCode : null;
+}
+
+/**
+ * Fetch NLCD land cover class for a lat/lng point.
+ * First checks the pre-fetched grid (instant), then falls back to
+ * individual WMS GetFeatureInfo (slow, only if grid unavailable).
+ */
+async function fetchNLCDLandCover(latlng) {
+  const ll = L.latLng(latlng);
+  const cacheKey = `${ll.lat.toFixed(4)},${ll.lng.toFixed(4)}`;
+  if (nlcdCache.has(cacheKey)) return nlcdCache.get(cacheKey);
+
+  // Try pre-fetched grid first (instant — no network)
+  const gridCode = getNLCDFromGrid(ll);
+  if (gridCode !== null) {
+    nlcdCache.set(cacheKey, gridCode);
+    return gridCode;
+  }
+
+  // Fallback: individual WMS request (slow, capped)
+  if (nlcdCheckCount >= NLCD_MAX_CHECKS) return null;
+  nlcdCheckCount++;
+
+  try {
+    const delta = 0.00015;
+    const bbox = `${ll.lng - delta},${ll.lat - delta},${ll.lng + delta},${ll.lat + delta}`;
+    const url = `${NLCD_LANDCOVER_URL}`
+      + `?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetFeatureInfo`
+      + `&LAYERS=NLCD_2021_Land_Cover_L48`
+      + `&QUERY_LAYERS=NLCD_2021_Land_Cover_L48`
+      + `&INFO_FORMAT=application/json`
+      + `&SRS=EPSG:4326`
+      + `&WIDTH=1&HEIGHT=1`
+      + `&BBOX=${bbox}`
+      + `&X=0&Y=0`;
+
+    const res = await fetchWithTimeout(url, { headers: { 'Accept': 'application/json' } }, 3000);
+    if (!res.ok) { nlcdCache.set(cacheKey, null); return null; }
+    const data = await res.json();
+
+    let code = null;
+    if (data?.features?.length > 0) {
+      const props = data.features[0].properties || {};
+      for (const key of Object.keys(props)) {
+        const v = Number(props[key]);
+        if (Number.isInteger(v) && v >= 11 && v <= 95) { code = v; break; }
+      }
+    } else if (data?.value !== undefined) {
+      code = Number(data.value);
+    }
+
+    if (code && Number.isInteger(code) && code >= 11 && code <= 95) {
+      nlcdCache.set(cacheKey, code);
+      return code;
+    }
+    nlcdCache.set(cacheKey, null);
+    return null;
+  } catch (e) {
+    nlcdCache.set(cacheKey, null);
+    return null;
+  }
+}
+
 const NLCD_HABITAT_RULES = {
   // Forested habitats — MUST be on forest, wetland, or shrub. NOT crop/hay/open.
   bedding:    { allow: new Set([41,42,43,51,52,90]), label: 'forest/shrub cover' },
@@ -319,67 +499,6 @@ const NLCD_ALWAYS_BLOCKED = new Set([
   24,  // Developed High Intensity
   82,  // Cultivated Crops (active row-crop field)
 ]);
-
-/**
- * Fetch NLCD land cover class for a lat/lng point.
- * Uses WMS GetFeatureInfo on the MRLC NLCD 2021 layer.
- * Returns the numeric NLCD class code (11-95) or null on failure.
- */
-async function fetchNLCDLandCover(latlng) {
-  const ll = L.latLng(latlng);
-  const cacheKey = `${ll.lat.toFixed(4)},${ll.lng.toFixed(4)}`;
-  if (nlcdCache.has(cacheKey)) return nlcdCache.get(cacheKey);
-  if (nlcdCheckCount >= NLCD_MAX_CHECKS) return null;
-  nlcdCheckCount++;
-
-  try {
-    // Build a tiny 1-pixel WMS GetFeatureInfo request
-    // The bbox is a ~30m box centred on the point (matches NLCD pixel size)
-    const delta = 0.00015; // ~15m in each direction ≈ 30m box
-    const bbox = `${ll.lng - delta},${ll.lat - delta},${ll.lng + delta},${ll.lat + delta}`;
-    const url = `${NLCD_LANDCOVER_URL}`
-      + `?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetFeatureInfo`
-      + `&LAYERS=NLCD_2021_Land_Cover_L48`
-      + `&QUERY_LAYERS=NLCD_2021_Land_Cover_L48`
-      + `&INFO_FORMAT=application/json`
-      + `&SRS=EPSG:4326`
-      + `&WIDTH=1&HEIGHT=1`
-      + `&BBOX=${bbox}`
-      + `&X=0&Y=0`;
-
-    const res = await fetchWithTimeout(url, { headers: { 'Accept': 'application/json' } }, 6000);
-    if (!res.ok) { nlcdCache.set(cacheKey, null); return null; }
-    const data = await res.json();
-
-    // Parse response — MRLC returns features with property containing the pixel value
-    let code = null;
-    if (data?.features?.length > 0) {
-      const props = data.features[0].properties || {};
-      // The property name varies; look for the first numeric value
-      for (const key of Object.keys(props)) {
-        const v = Number(props[key]);
-        if (Number.isInteger(v) && v >= 11 && v <= 95) { code = v; break; }
-      }
-    } else if (data?.value !== undefined) {
-      code = Number(data.value);
-    } else if (typeof data === 'string') {
-      // Some WMS servers return plain text like "GRAY_INDEX = 41"
-      const m = data.match(/(\d{2})/);
-      if (m) code = Number(m[1]);
-    }
-
-    if (code && Number.isInteger(code) && code >= 11 && code <= 95) {
-      nlcdCache.set(cacheKey, code);
-      return code;
-    }
-    nlcdCache.set(cacheKey, null);
-    return null;
-  } catch (e) {
-    console.warn('NLCD lookup failed:', e.message);
-    nlcdCache.set(cacheKey, null);
-    return null;
-  }
-}
 
 /**
  * Human-readable label for an NLCD code
@@ -10885,10 +11004,19 @@ window.startShedHunt = async function(options = {}) {
       }
     };
 
-    // Reset NLCD check counter for this hunt plan
+    // Reset NLCD check counter and pre-fetch land cover for entire area
     nlcdCheckCount = 0;
     nlcdCache.clear();
+    nlcdGridData = null;
     let nlcdRejectCount = 0;
+
+    if (NLCD_ENABLED) {
+      updatePlanLoadingStatus('Loading satellite imagery...', 'Downloading land cover data for your area.');
+      const nlcdOk = await prefetchNLCDForArea(bounds);
+      if (!nlcdOk) {
+        console.warn('[NLCD] Pre-fetch failed — pin validation will use fallback checks');
+      }
+    }
 
     for (let i = 0; i < seedLimit; i++) {
       const feature = seeded[i];
