@@ -1048,6 +1048,11 @@ body.module-fly .ht-strategy-panel {
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
 }
+.ht-stream-pill--primary {
+  flex: 1.6 1 0;
+  padding: 9px 6px;
+  font-size: 11px;
+}
 .ht-stream-pill--active {
   background: linear-gradient(140deg, rgba(43, 212, 255, 0.35), rgba(43, 212, 255, 0.1));
   border-color: rgba(124, 255, 199, 0.7);

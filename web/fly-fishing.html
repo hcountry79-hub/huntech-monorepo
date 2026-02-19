@@ -117,6 +117,20 @@
       <div class="ht-hero-slide ht-fly-slide-12" style="background-image:url('assets/OIP (5).webp')"></div>
       <div class="ht-hero-vignette"></div>
     </div>
+
+    <!-- ═══ MAP LAYER TOGGLES (Public Land + Trout) ═══ -->
+    <div class="ht-map-layer-stack">
+      <div class="ht-map-toggles">
+        <button class="ht-map-toggle" type="button" data-layer="public" onclick="toggleLayerButton('public')" aria-pressed="false">
+          <span class="ht-map-toggle-label">Public Land</span>
+          <span class="ht-map-toggle-state">OFF</span>
+        </button>
+        <button class="ht-map-toggle" type="button" data-layer="trout" onclick="toggleLayerButton('trout')" aria-pressed="false">
+          <span class="ht-map-toggle-label">Trout Waters</span>
+          <span class="ht-map-toggle-state">OFF</span>
+        </button>
+      </div>
+    </div>
   </main>
 
   <button class="ht-map-locate-btn" type="button" onclick="centerOnMyLocation()" title="Center on my location" aria-label="Center on my location">
@@ -146,16 +160,15 @@
 
       <!-- ────── PILL NAVIGATION ────── -->
       <div class="ht-stream-pills" id="streamPills">
-        <button class="ht-stream-pill ht-stream-pill--active" data-panel="fishNowPanel" onclick="showStreamPanel('fishNowPanel')">FISH NOW</button>
+        <button class="ht-stream-pill ht-stream-pill--active ht-stream-pill--primary" data-panel="fishNowPanel" onclick="showStreamPanel('fishNowPanel')">FISH NOW</button>
         <button class="ht-stream-pill" onclick="showMap()">MAP</button>
-        <button class="ht-stream-pill" data-panel="mySpotsPanel" onclick="showStreamPanel('mySpotsPanel')">SPOTS</button>
         <button class="ht-stream-pill" data-panel="tripPlannerPanel" onclick="showStreamPanel('tripPlannerPanel')">PLANNER</button>
         <button class="ht-stream-pill" data-panel="flyBoxPanel" onclick="showStreamPanel('flyBoxPanel')">FLY BOX</button>
       </div>
 
       <!-- ────── FAVORITES QUICK ACCESS ────── -->
       <div class="ht-stream-favorites" id="streamFavorites">
-        <div class="ht-favorites-label">⭐ Favorites</div>
+        <div class="ht-favorites-label">My Saved Spots</div>
         <div class="ht-favorites-grid" id="favoritesGrid">
           <button class="ht-favorite-chip" onclick="loadFavoriteWater('montauk')">Montauk</button>
           <button class="ht-favorite-chip" onclick="loadFavoriteWater('little-piney-blue')">Lane Springs</button>
@@ -229,6 +242,30 @@
                 <button class="ht-method-btn ht-method-btn--active" data-fish-exp="learning" onclick="pickFishExp(this,'learning')">📈 Learning</button>
                 <button class="ht-method-btn" data-fish-exp="confident" onclick="pickFishExp(this,'confident')">💪 Confident</button>
                 <button class="ht-method-btn" data-fish-exp="advanced" onclick="pickFishExp(this,'advanced')">🏆 Advanced</button>
+              </div>
+            </div>
+            <!-- Mode -->
+            <div class="ht-form-row">
+              <div class="ht-form-label">Mode</div>
+              <div class="ht-method-row">
+                <button class="ht-method-btn ht-method-btn--active" data-fish-mode="standard" onclick="pickFishMode(this,'standard')">🚗 Standard Access</button>
+                <button class="ht-method-btn" data-fish-mode="backcountry" onclick="pickFishMode(this,'backcountry')">🏕️ Backcountry</button>
+              </div>
+            </div>
+            <!-- Starting point -->
+            <div class="ht-form-row">
+              <div class="ht-form-label">Start From</div>
+              <div class="ht-method-row">
+                <button class="ht-method-btn ht-method-btn--active" data-fish-start="current" onclick="pickFishStart(this,'current')">📍 My Location</button>
+                <button class="ht-method-btn" data-fish-start="map" onclick="pickFishStart(this,'map')">🗺️ Pick on Map</button>
+              </div>
+            </div>
+            <!-- Route preference -->
+            <div class="ht-form-row">
+              <div class="ht-form-label">Route</div>
+              <div class="ht-method-row">
+                <button class="ht-method-btn ht-method-btn--active" data-fish-route="build" onclick="pickFishRouteMode(this,'build')">🔀 Build Route</button>
+                <button class="ht-method-btn" data-fish-route="none" onclick="pickFishRouteMode(this,'none')">🎯 No Route</button>
               </div>
             </div>
             <!-- Let's Go! -->
