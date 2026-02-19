@@ -14802,7 +14802,6 @@ document.addEventListener('DOMContentLoaded', () => {
     document.body.classList.add('ht-map-active');
     initializeMap();
     restoreLastKnownLocation();
-    setDefaultAreaFromLocation();
     updateFilterChips();
     updateWorkflowUI();
     updateLocateMeOffset();
