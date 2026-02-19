@@ -2964,6 +2964,11 @@ body.module-shed .ht-map-hero {
   opacity: 0.96;
   pointer-events: none;
 }
+body.module-shed.ht-hero-dismissed .ht-map-hero {
+  opacity: 0;
+  transform: scale(1.03) translateY(-8px);
+  pointer-events: none;
+}
 body.module-shed #map {
   opacity: 1;
   filter: none;

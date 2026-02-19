@@ -2430,7 +2430,8 @@ function setFieldCommandStep(step) {
   if (routePanel && routePanel.open !== undefined) routePanel.open = step === 2 || step === 3;
   document.body.classList.remove('ht-field-step-1', 'ht-field-step-2', 'ht-field-step-3');
   document.body.classList.add(`ht-field-step-${step}`);
-  openFieldCommandTray();
+  // Only open the tray if user has already interacted (not on first load)
+  if (toolbarOpen) openFieldCommandTray();
 }
 
 function focusPlanRoutePanel() {
