@@ -2975,12 +2975,11 @@ body.module-fly.ht-map-active .ht-map-locate-btn {
   transform: translateY(0);
 }
 
-/* ═══ SHED MODULE HERO — overlay in top portion, map always live ═══ */
+/* ═══ SHED MODULE HERO — full-screen background, map live underneath ═══ */
 body.module-shed .ht-map-hero {
   opacity: 1;
   pointer-events: none;
-  height: 38vh;
-  inset: 0 0 auto 0;
+  inset: 0;
   transition: opacity 1.6s ease-out, transform 1.6s ease-out;
 }
 body.module-shed #map {
@@ -3001,28 +3000,29 @@ body.module-shed .ht-map-locate-btn {
   pointer-events: auto;
   transform: translateY(0);
 }
-/* Shed hero slides — brightened, sized to fit top portion above tray */
+/* Shed hero slides — brightened, full-screen, antlers focused in top 2/3 */
 body.module-shed .ht-hero-slide {
   background-size: cover;
   background-repeat: no-repeat;
-  background-position: center 25%;
+  background-position: center 30%;
   background-color: #1a1510;
   filter: brightness(1.55) saturate(1.45) contrast(1.08);
 }
-/* Per-slide position fine-tuning (desktop/tablet) — two antler images only */
-.ht-shed-slide-1 { background-position: center 20%; }
-.ht-shed-slide-2 { background-position: center 28%; }
-/* Shed vignette — warm amber tint */
+/* Per-slide position fine-tuning — antlers in top 2/3 */
+.ht-shed-slide-1 { background-position: center 25%; }
+.ht-shed-slide-2 { background-position: center 32%; }
+/* Shed vignette — warm amber tint, smooth full-height fade */
 body.module-shed .ht-hero-vignette {
   background:
     radial-gradient(ellipse at 50% 25%, rgba(255, 193, 7, 0.04), transparent 55%),
     linear-gradient(180deg,
       rgba(26, 21, 16, 0.0) 0%,
-      rgba(26, 21, 16, 0.0) 30%,
-      rgba(26, 21, 16, 0.25) 45%,
-      rgba(26, 21, 16, 0.7) 55%,
-      rgba(26, 21, 16, 0.95) 65%,
-      rgba(26, 21, 16, 1.0) 72%);
+      rgba(26, 21, 16, 0.0) 40%,
+      rgba(26, 21, 16, 0.15) 55%,
+      rgba(26, 21, 16, 0.45) 68%,
+      rgba(26, 21, 16, 0.75) 80%,
+      rgba(26, 21, 16, 0.95) 92%,
+      rgba(26, 21, 16, 1.0) 100%);
 }
 
 /* ═══ MUSHROOM MODULE HERO SPLASH ═══ */
@@ -3405,28 +3405,26 @@ body.module-mushroom .ht-map-hero-meta {
         rgba(26, 14, 8, 1.0) 72%);
   }
 
-  /* ── Shed mobile: cover with subject-centred positions (iPhone-optimised) ── */
+  /* ── Shed mobile: full-screen hero, antlers in top 2/3 (iPhone-optimised) ── */
   body.module-shed .ht-hero-slide {
     background-size: cover;
-    background-position: center 22%;
+    background-position: center 28%;
   }
-  body.module-shed .ht-map-hero {
-    height: 34vh;
-  }
-  .ht-shed-slide-1 { background-position: center 18% !important; }
-  .ht-shed-slide-2 { background-position: center 25% !important; }
+  .ht-shed-slide-1 { background-position: center 22% !important; }
+  .ht-shed-slide-2 { background-position: center 30% !important; }
 
-  /* Warm shed vignette on mobile — deeper bottom blend */
+  /* Warm shed vignette on mobile — smooth full-height fade */
   body.module-shed .ht-hero-vignette {
     background:
       radial-gradient(ellipse at 50% 28%, rgba(255, 193, 7, 0.03), transparent 55%),
       linear-gradient(180deg,
         rgba(26, 21, 16, 0.0) 0%,
-        rgba(26, 21, 16, 0.05) 18%,
-        rgba(26, 21, 16, 0.35) 40%,
-        rgba(26, 21, 16, 0.75) 52%,
-        rgba(26, 21, 16, 0.95) 62%,
-        rgba(26, 21, 16, 1.0) 72%);
+        rgba(26, 21, 16, 0.0) 35%,
+        rgba(26, 21, 16, 0.15) 50%,
+        rgba(26, 21, 16, 0.45) 65%,
+        rgba(26, 21, 16, 0.75) 78%,
+        rgba(26, 21, 16, 0.95) 90%,
+        rgba(26, 21, 16, 1.0) 100%);
   }
 }
 
@@ -6907,25 +6905,30 @@ body.ht-saved-hunt-preview #planRoutePanel {
   100% { opacity: 0; transform: translateX(-50%) translateY(-6px); }
 }
 
+/* ═══ DRAW HELPER — slim bar matching collapsed field command tray ═══ */
 .ht-draw-helper {
   position: fixed;
   left: 50%;
-  transform: translateX(-50%) translateY(12px);
-  bottom: calc(env(safe-area-inset-bottom) + 86px);
-  background: #0b0b0b;
-  border: 2px solid var(--gold);
-  border-radius: 999px;
-  padding: 10px 18px;
+  transform: translateX(-50%) translateY(6px);
+  bottom: calc(env(safe-area-inset-bottom) + 64px);
+  background: rgba(11, 11, 11, 0.96);
+  border: 1.5px solid var(--gold);
+  border-radius: 14px;
+  padding: 6px 12px;
   color: var(--gold);
-  display: grid;
+  display: flex;
+  align-items: center;
   gap: 8px;
-  width: auto;
-  max-width: min(340px, calc(100vw - 32px));
+  width: min(560px, calc(100vw - 12px));
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.2s ease, transform 0.2s ease;
   z-index: 1200;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  height: 46px;
+  box-sizing: border-box;
 }
 
 .ht-draw-helper.ht-draw-helper-floating {
@@ -6939,31 +6942,36 @@ body.ht-saved-hunt-preview #planRoutePanel {
 }
 
 .ht-draw-helper-text {
-  font-size: 13px;
+  font-size: 11px;
   font-weight: 800;
   color: var(--gold);
-  text-align: center;
   letter-spacing: 0.4px;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .ht-draw-helper-actions {
   display: flex;
-  gap: 8px;
-  justify-content: center;
+  gap: 6px;
+  flex-shrink: 0;
 }
 
 .ht-draw-helper-btn {
-  border-radius: 999px;
+  border-radius: 8px;
   border: 1.5px solid var(--gold);
   background: #0b0b0b;
   color: var(--gold);
-  padding: 8px 16px;
-  font-size: 12px;
+  padding: 5px 12px;
+  font-size: 11px;
   font-weight: 800;
   letter-spacing: 0.4px;
   cursor: pointer;
-  min-height: 36px;
+  min-height: 30px;
   touch-action: manipulation;
+  line-height: 1;
 }
 
 .ht-draw-helper-btn.primary {

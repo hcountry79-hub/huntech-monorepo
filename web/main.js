@@ -3322,7 +3322,7 @@ function showMdcAreaDetails(feature) {
 //   Area Selection, Hunt Criteria & Live Strategy
 // ===================================================================
 function setSelectedArea(layer, type, options = {}) {
-  const { autoLock = true } = options;
+  const { autoLock = true, suppressTray = false } = options;
   if (selectedAreaLayer) {
     map.removeLayer(selectedAreaLayer);
     if (drawnItems && drawnItems.hasLayer(selectedAreaLayer)) {
@@ -3349,27 +3349,29 @@ function setSelectedArea(layer, type, options = {}) {
   updateSaveAreaState(true);
   setLockInAreaStatus(autoLock ? 'Building plan...' : '', null);
 
-  setTimeout(() => {
-    const toolbar = document.getElementById('toolbar');
-    if (!toolbar) return;
-    if (fieldCommandFlowActive) {
+  if (!suppressTray) {
+    setTimeout(() => {
+      const toolbar = document.getElementById('toolbar');
+      if (!toolbar) return;
+      if (fieldCommandFlowActive) {
+        updateTrayToggleButton();
+        return;
+      }
+      if (!toolbarOpen || toolbar.classList.contains('collapsed')) {
+        toolbarOpen = true;
+        toolbar.classList.remove('collapsed');
+        document.body.classList.remove('ht-toolbar-collapsed');
+        try { localStorage.setItem('htToolbarCollapsed', '0'); } catch {}
+      }
       updateTrayToggleButton();
-      return;
-    }
-    if (!toolbarOpen || toolbar.classList.contains('collapsed')) {
-      toolbarOpen = true;
-      toolbar.classList.remove('collapsed');
-      document.body.classList.remove('ht-toolbar-collapsed');
-      try { localStorage.setItem('htToolbarCollapsed', '0'); } catch {}
-    }
-    updateTrayToggleButton();
-    try { toolbar.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch {}
-  }, 120);
+      try { toolbar.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch {}
+    }, 120);
 
-  setTimeout(() => {
-    setFieldCommandStep(2);
-    focusPlanRoutePanel();
-  }, 140);
+    setTimeout(() => {
+      setFieldCommandStep(2);
+      focusPlanRoutePanel();
+    }, 140);
+  }
 
   if (autoLock) {
     setTimeout(() => {
@@ -9291,7 +9293,7 @@ function setDefaultAreaFromLocation() {
         fillOpacity: 0.12
       });
       circle.addTo(map);
-      setSelectedArea(circle, 'radius');
+      setSelectedArea(circle, 'radius', { suppressTray: true });
 
       const zoom = map && typeof map.getZoom === 'function' ? Math.max(map.getZoom(), 14) : 14;
       map.setView(latlng, zoom, { animate: true });
