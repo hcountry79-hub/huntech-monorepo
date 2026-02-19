@@ -3099,6 +3099,39 @@ body.module-turkey.ht-map-active .ht-map-locate-btn {
   transform: translateY(0);
 }
 
+/* Shed hunting map states */
+/* Hero overlay (visible when map pending) */
+body.module-shed.ht-map-pending .ht-map-hero {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Map container (hidden when map pending) */
+body.module-shed.ht-map-pending #map {
+  opacity: 0;
+  pointer-events: none;
+  filter: blur(1px);
+}
+
+/* Show map when active */
+body.module-shed.ht-map-active #map {
+  opacity: 1;
+  pointer-events: auto;
+  filter: none;
+}
+
+/* Locate button states */
+body.module-shed.ht-map-pending .ht-map-locate-btn {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(8px);
+}
+body.module-shed.ht-map-active .ht-map-locate-btn {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+
 /* ── Turkey hero per-slide: natural proportions, soft-edge blend ──
    Small source thumbnails — displayed at natural ratio, NOT stretched.
    Soft radial mask fades edges into dark charcoal background.
@@ -7707,77 +7740,39 @@ body.ht-toolbar-collapsed .ht-map-left-panel {
   letter-spacing: 0.4px;
 }
 
-.ht-accordion-header-split {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
+.ht-accordion-header-minimal {
+  display: block;
   width: 100%;
-  padding: 8px 12px;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 193, 7, 0.35);
-  background: linear-gradient(135deg, rgba(255, 193, 7, 0.18), rgba(10, 10, 10, 0.92));
-  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.35);
-  position: relative;
-  padding-right: 110px;
-}
-
-.ht-accordion-header-split .ht-define-title {
-  font-size: 13px;
-  font-weight: 900;
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
-  color: var(--gold);
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 100%;
+  padding: 2px 0;
   text-align: center;
+  border: none;
+  background: transparent;
+  box-shadow: none;
+  position: relative;
+}
+
+.ht-accordion-header-minimal .ht-define-title {
+  font-size: 10px;
+  font-weight: 400;
+  letter-spacing: 0.2px;
+  text-transform: uppercase;
+  color: rgba(255, 193, 7, 0.7);
+  opacity: 0.9;
+  display: block;
+  margin: 0;
+  line-height: 1;
   pointer-events: none;
 }
 
-/* Make Define Hunt Area feel distinct from Field Command */
-#defineAreaPanel .ht-accordion-header-split {
-  justify-content: center;
-  padding: 10px 16px;
-  border-radius: 14px;
-  border: 1px solid rgba(255, 193, 7, 0.18);
-  background: linear-gradient(180deg, rgba(12, 12, 12, 0.96), rgba(6, 6, 6, 0.98));
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.03);
-  overflow: hidden;
-}
-
-#defineAreaPanel .ht-accordion-header-split::before {
-  content: '';
-  position: absolute;
-  left: 16px;
-  top: 50%;
-  width: calc(50% - 120px);
-  height: 2px;
-  transform: translateY(-50%);
-  background: linear-gradient(90deg, rgba(255, 193, 7, 0.6), rgba(255, 193, 7, 0));
-  pointer-events: none;
-}
-
-#defineAreaPanel .ht-accordion-header-split::after {
-  content: '';
-  position: absolute;
-  right: 16px;
-  top: 50%;
-  width: calc(50% - 120px);
-  height: 2px;
-  transform: translateY(-50%);
-  background: linear-gradient(270deg, rgba(255, 193, 7, 0.6), rgba(255, 193, 7, 0));
-  pointer-events: none;
+/* Minimal header for Define Hunt Area */
+#defineAreaPanel .ht-accordion-header-minimal {
+  padding: 1px 0;
 }
 
 #defineAreaPanel .ht-define-title {
-  position: static;
-  transform: none;
-  width: auto;
-  text-align: center;
-  font-size: 14px;
-  letter-spacing: 0.8px;
+  font-size: 8px;
+  letter-spacing: 0.2px;
+  opacity: 0.6;
   font-weight: 900;
   color: #ffd675;
   padding: 6px 18px;

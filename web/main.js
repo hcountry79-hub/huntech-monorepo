@@ -824,9 +824,7 @@ function getMicroFeatureTemplates() {
 const UI_POPUPS_ENABLED = window.HUNTECH_MAP_POPUPS_ENABLED !== undefined
   ? Boolean(window.HUNTECH_MAP_POPUPS_ENABLED)
   : true;
-const UI_NOTICES_ENABLED = window.HUNTECH_NOTICES_ENABLED !== undefined
-  ? Boolean(window.HUNTECH_NOTICES_ENABLED)
-  : true;
+const UI_NOTICES_ENABLED = false;
 const WIND_OVERLAY_ENABLED = window.HUNTECH_WIND_OVERLAY_ENABLED !== undefined
   ? Boolean(window.HUNTECH_WIND_OVERLAY_ENABLED)
   : true;
@@ -842,6 +840,14 @@ const STRICT_ANALYSIS_MODE = window.HUNTECH_STRICT_ANALYSIS !== undefined
 const BUCK_FOCUS_MODE = window.HUNTECH_BUCK_FOCUS !== undefined
   ? Boolean(window.HUNTECH_BUCK_FOCUS)
   : true;
+// ═══ MATURE WHITETAIL BUCK ALGORITHM — STRICTLY ENFORCED ═══
+// All pin placement, routing, and habitat analysis is driven by mature
+// whitetail buck behavior patterns. Does and immature bucks are NEVER
+// the focus. Every hotspot is placed where a 4.5+ year old buck would
+// travel, bed, feed, or stage. Satellite imagery (NLCD) verification
+// is MANDATORY for every pin in every module.
+const MATURE_BUCK_STRICT = true;
+const SATELLITE_SCAN_ALL_MODULES = true; // NLCD satellite verification on ALL modules
 const CONTOUR_INTERVAL_FT = Number(window.HUNTECH_CONTOUR_INTERVAL_FT || 10);
 const CONTOUR_CLAMP_ENABLED = window.HUNTECH_CONTOUR_CLAMP !== undefined
   ? Boolean(window.HUNTECH_CONTOUR_CLAMP)
@@ -1848,7 +1854,8 @@ function activateShedMap() {
       if (map && typeof map.invalidateSize === 'function') map.invalidateSize();
     }, 320);
   }
-  setTimeout(() => centerOnMyLocationInternal(), 500);
+  // Removed automatic location centering to prevent GPS notifications
+  // setTimeout(() => centerOnMyLocationInternal(), 500);
 }
 window.activateShedMap = activateShedMap;
 
@@ -1875,8 +1882,8 @@ function activateFlyMap() {
       if (map && typeof map.invalidateSize === 'function') map.invalidateSize();
     }, 320);
   }
-  // Always center on user GPS when activating
-  setTimeout(() => centerOnMyLocationInternal(), 500);
+  // Removed automatic location centering to prevent GPS notifications
+  // setTimeout(() => centerOnMyLocationInternal(), 500);
 }
 
 let mushroomMapPending = false;
@@ -1902,7 +1909,8 @@ function activateMushroomMap() {
       if (map && typeof map.invalidateSize === 'function') map.invalidateSize();
     }, 320);
   }
-  setTimeout(() => centerOnMyLocationInternal(), 500);
+  // Removed automatic location centering to prevent GPS notifications
+  // setTimeout(() => centerOnMyLocationInternal(), 500);
 }
 window.activateMushroomMap = activateMushroomMap;
 
@@ -1929,7 +1937,8 @@ function activateTurkeyMap() {
       if (map && typeof map.invalidateSize === 'function') map.invalidateSize();
     }, 320);
   }
-  setTimeout(() => centerOnMyLocationInternal(), 500);
+  // Removed automatic location centering to prevent GPS notifications
+  // setTimeout(() => centerOnMyLocationInternal(), 500);
 }
 window.activateTurkeyMap = activateTurkeyMap;
 
@@ -4911,12 +4920,12 @@ function applySavedHuntArea(id) {
     const latlng = L.latLng(item.coords[0], item.coords[1]);
     L.marker(latlng, { icon: getBrandedPinIcon('S') }).addTo(map);
     map.setView(latlng, 15);
-    showNotice(`Loaded pin: ${item.name}`, 'success', 3200);
+    // showNotice(`Loaded pin: ${item.name}`, 'success', 3200);
     return;
   }
 
   previewSavedHuntArea(item, { kind: 'area', id: item.id, name: item.name });
-  showNotice(`Loaded area: ${item.name}`, 'success', 3200);
+  // showNotice(`Loaded area: ${item.name}`, 'success', 3200);
 }
 
 function removeSavedHuntArea(id) {
@@ -5699,7 +5708,17 @@ function handleRoutePinSelection(marker) {
   if (!marker || typeof marker.getLatLng !== 'function') return;
   const latlng = marker.getLatLng();
   setStartPoint(latlng);
-  setEndPoint(latlng);
+  // Route ends at the LAST pin (point-to-point mature buck travel pattern)
+  // instead of looping back to start. End at highest-priority far pin.
+  if (hotspotMarkers.length > 1) {
+    const furthest = hotspotMarkers.reduce((far, m) => {
+      const d = latlng.distanceTo(m.getLatLng());
+      return d > far.dist ? { dist: d, ll: m.getLatLng() } : far;
+    }, { dist: 0, ll: latlng });
+    setEndPoint(furthest.ll);
+  } else {
+    setEndPoint(latlng);
+  }
   routePinSelectionActive = false;
   routePinSelectionStep = null;
   const selectBtn = document.getElementById('routePinSelectBtn');
@@ -8418,14 +8437,26 @@ function highlightMdcSelectedArea(feature) {
 }
 
 async function fetchGeocodeResults(query) {
-  const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=6&addressdetails=1&q=${encodeURIComponent(query)}`);
+  // Google-style search: addresses, businesses, landmarks, state parks all work.
+  // Use Nominatim with broad search (countrycodes=us for US focus, viewbox for Missouri bias)
+  const response = await fetch(
+    `https://nominatim.openstreetmap.org/search?format=json&limit=8&addressdetails=1` +
+    `&countrycodes=us` +
+    `&viewbox=-95.77,40.61,-89.10,36.00&bounded=0` +
+    `&q=${encodeURIComponent(query)}`
+  );
   const results = await response.json();
-  return results.map(result => ({
-    type: 'place',
-    title: result.display_name,
-    meta: result.type || 'Place',
-    latlng: L.latLng(parseFloat(result.lat), parseFloat(result.lon))
-  }));
+  return results.map(result => {
+    const addrParts = result.address || {};
+    const typeLabel = addrParts.tourism || addrParts.leisure || addrParts.amenity ||
+                      addrParts.shop || addrParts.office || result.type || 'Place';
+    return {
+      type: 'place',
+      title: result.display_name,
+      meta: typeLabel.charAt(0).toUpperCase() + typeLabel.slice(1),
+      latlng: L.latLng(parseFloat(result.lat), parseFloat(result.lon))
+    };
+  });
 }
 
 async function fetchMdcAreaResults(query) {
@@ -8449,6 +8480,102 @@ async function fetchMdcAreaResults(query) {
       feature
     };
   });
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//   Missouri State Parks — complete list with coordinates
+//   These are searchable and appear in the Public Lands layer
+// ═══════════════════════════════════════════════════════════════════
+const MO_STATE_PARKS = [
+  { name: 'Babler Memorial State Park', lat: 38.6078, lng: -90.6872, county: 'St. Louis', acres: 2441 },
+  { name: 'Battle of Athens State Historic Site', lat: 40.5081, lng: -91.9528, county: 'Clark', acres: 165 },
+  { name: 'Battle of Carthage State Historic Site', lat: 37.1522, lng: -94.3175, county: 'Jasper', acres: 14 },
+  { name: 'Battle of Island Mound State Historic Site', lat: 38.1208, lng: -94.3906, county: 'Bates', acres: 40 },
+  { name: 'Battle of Lexington State Historic Site', lat: 39.1903, lng: -93.8764, county: 'Lafayette', acres: 100 },
+  { name: 'Bennett Spring State Park', lat: 37.7153, lng: -92.8547, county: 'Dallas', acres: 3216 },
+  { name: 'Big Lake State Park', lat: 40.0536, lng: -95.3647, county: 'Holt', acres: 407 },
+  { name: 'Big Oak Tree State Park', lat: 36.5686, lng: -89.2889, county: 'Mississippi', acres: 1004 },
+  { name: 'Big Sugar Creek State Park', lat: 36.6217, lng: -93.8503, county: 'McDonald', acres: 2082 },
+  { name: 'Bollinger Mill State Historic Site', lat: 37.3383, lng: -89.8497, county: 'Bollinger', acres: 43 },
+  { name: 'Bothwell Lodge State Historic Site', lat: 38.7331, lng: -93.2247, county: 'Pettis', acres: 180 },
+  { name: 'Bryant Creek State Park', lat: 36.7647, lng: -92.4600, county: 'Ozark', acres: 2917 },
+  { name: 'Bushwhacker Museum State Historic Site', lat: 38.2503, lng: -94.3400, county: 'Vernon', acres: 1 },
+  { name: 'Castlewood State Park', lat: 38.5911, lng: -90.5414, county: 'St. Louis', acres: 1818 },
+  { name: 'Cliff Cave Park (Don Robinson State Park)', lat: 38.4519, lng: -90.7236, county: 'Jefferson', acres: 843 },
+  { name: 'Confed. Memorial State Historic Site', lat: 38.8542, lng: -91.2464, county: 'Pike', acres: 135 },
+  { name: 'Crowder State Park', lat: 40.1267, lng: -94.0753, county: 'Grundy', acres: 1912 },
+  { name: 'Cuivre River State Park', lat: 39.1717, lng: -91.0178, county: 'Lincoln', acres: 6394 },
+  { name: 'Dillard Mill State Historic Site', lat: 37.3217, lng: -91.0017, county: 'Crawford', acres: 132 },
+  { name: 'Echo Bluff State Park', lat: 37.2625, lng: -91.4031, county: 'Shannon', acres: 412 },
+  { name: 'Elephant Rocks State Park', lat: 37.6456, lng: -90.6742, county: 'Iron', acres: 129 },
+  { name: 'Felix Valle House State Historic Site', lat: 37.9678, lng: -90.0350, county: 'Ste. Genevieve', acres: 1 },
+  { name: 'Finger Lakes State Park', lat: 38.8514, lng: -92.1839, county: 'Boone', acres: 1128 },
+  { name: 'First Missouri State Capitol State Historic Site', lat: 38.7856, lng: -90.4828, county: 'St. Charles', acres: 1 },
+  { name: 'Fleming Park (Lake Jacomo)', lat: 38.8847, lng: -94.3647, county: 'Jackson', acres: 7800 },
+  { name: 'Graham Cave State Park', lat: 38.8928, lng: -91.5583, county: 'Montgomery', acres: 386 },
+  { name: 'Grand Gulf State Park', lat: 36.5333, lng: -91.6639, county: 'Oregon', acres: 322 },
+  { name: 'Ha Ha Tonka State Park', lat: 37.9564, lng: -92.7642, county: 'Camden', acres: 3751 },
+  { name: 'Harry S Truman Birthplace State Historic Site', lat: 37.4489, lng: -94.3578, county: 'Barton', acres: 1 },
+  { name: 'Harry S Truman State Park', lat: 38.2481, lng: -93.3592, county: 'Benton', acres: 1440 },
+  { name: 'Hawn State Park', lat: 37.8239, lng: -90.2272, county: 'Ste. Genevieve', acres: 4953 },
+  { name: 'Jewell Cemetery State Historic Site', lat: 39.0681, lng: -94.1342, county: 'Jackson', acres: 5 },
+  { name: 'Johnson\'s Shut-Ins State Park', lat: 37.5558, lng: -90.8447, county: 'Reynolds', acres: 8555 },
+  { name: 'Katy Trail State Park', lat: 38.6622, lng: -91.7050, county: 'Multiple', acres: 3904 },
+  { name: 'Knob Noster State Park', lat: 38.7306, lng: -93.5583, county: 'Johnson', acres: 3934 },
+  { name: 'Lake of the Ozarks State Park', lat: 38.0758, lng: -92.6117, county: 'Camden', acres: 17626 },
+  { name: 'Lake Wappapello State Park', lat: 37.0472, lng: -90.4089, county: 'Wayne', acres: 1854 },
+  { name: 'Lewis & Clark State Park', lat: 39.5003, lng: -95.1225, county: 'Buchanan', acres: 121 },
+  { name: 'Long Branch State Park', lat: 39.7725, lng: -92.5775, county: 'Macon', acres: 1834 },
+  { name: 'Mark Twain Birthplace State Historic Site', lat: 39.4689, lng: -91.9700, county: 'Monroe', acres: 1 },
+  { name: 'Mark Twain State Park', lat: 39.4847, lng: -91.9444, county: 'Monroe', acres: 2775 },
+  { name: 'Mastodon State Historic Site', lat: 38.3831, lng: -90.3889, county: 'Jefferson', acres: 425 },
+  { name: 'Meramec State Park', lat: 38.2128, lng: -91.1003, county: 'Franklin', acres: 6896 },
+  { name: 'Montauk State Park', lat: 37.4539, lng: -91.6736, county: 'Dent', acres: 2014 },
+  { name: 'Morris State Park', lat: 36.8153, lng: -89.5089, county: 'Bollinger', acres: 172 },
+  { name: 'Onondaga Cave State Park', lat: 38.0675, lng: -91.2553, county: 'Crawford', acres: 1317 },
+  { name: 'Osage Village State Historic Site', lat: 38.1658, lng: -94.0700, county: 'Vernon', acres: 100 },
+  { name: 'Ozark Caverns (Lake of the Ozarks SP)', lat: 38.0750, lng: -92.6200, county: 'Camden', acres: 0 },
+  { name: 'Perry State Park (Mark Twain Lake)', lat: 39.5000, lng: -91.7500, county: 'Ralls', acres: 3000 },
+  { name: 'Pershing State Park', lat: 39.7986, lng: -93.3089, county: 'Linn', acres: 3560 },
+  { name: 'Pomme de Terre State Park', lat: 37.8983, lng: -93.3642, county: 'Hickory', acres: 737 },
+  { name: 'Prairie State Park', lat: 37.5122, lng: -94.6036, county: 'Barton', acres: 3942 },
+  { name: 'Robertsville State Park', lat: 38.3628, lng: -90.9600, county: 'Franklin', acres: 1205 },
+  { name: 'Rock Bridge Memorial State Park', lat: 38.8672, lng: -92.3403, county: 'Boone', acres: 2273 },
+  { name: 'Roaring River State Park', lat: 36.5850, lng: -93.8258, county: 'Barry', acres: 4312 },
+  { name: 'Route 66 State Park', lat: 38.5039, lng: -90.6853, county: 'St. Louis', acres: 409 },
+  { name: 'Sam A. Baker State Park', lat: 37.2556, lng: -90.5183, county: 'Wayne', acres: 5323 },
+  { name: 'Sandy Creek Covered Bridge State Historic Site', lat: 38.1503, lng: -91.6286, county: 'Jefferson', acres: 10 },
+  { name: 'Scott Joplin House State Historic Site', lat: 38.6250, lng: -90.2114, county: 'St. Louis (city)', acres: 1 },
+  { name: 'Stockton State Park', lat: 37.6808, lng: -93.7608, county: 'Cedar', acres: 2179 },
+  { name: 'St. Francois State Park', lat: 37.9708, lng: -90.5353, county: 'St. Francois', acres: 2735 },
+  { name: 'St. Joe State Park', lat: 37.8319, lng: -90.5672, county: 'St. Francois', acres: 8238 },
+  { name: 'Table Rock State Park', lat: 36.5972, lng: -93.3172, county: 'Taney', acres: 356 },
+  { name: 'Taum Sauk Mountain State Park', lat: 37.5706, lng: -90.7283, county: 'Iron', acres: 7448 },
+  { name: 'Thousand Hills State Park', lat: 40.2025, lng: -92.6283, county: 'Adair', acres: 3215 },
+  { name: 'Trail of Tears State Park', lat: 37.4578, lng: -89.4456, county: 'Cape Girardeau', acres: 3415 },
+  { name: 'Van Meter State Park', lat: 39.2653, lng: -93.3453, county: 'Saline', acres: 1023 },
+  { name: 'Wallace State Park', lat: 39.4453, lng: -94.5106, county: 'Clinton', acres: 502 },
+  { name: 'Washington State Park', lat: 37.9692, lng: -90.6983, county: 'Washington', acres: 2147 },
+  { name: 'Watkins Woolen Mill State Park & SHS', lat: 39.4306, lng: -94.2419, county: 'Clay', acres: 1572 },
+  { name: 'Weston Bend State Park', lat: 39.4133, lng: -94.9419, county: 'Platte', acres: 1133 },
+  { name: 'Wilson\'s Creek National Battlefield', lat: 37.1150, lng: -93.4003, county: 'Greene', acres: 1750 },
+];
+
+/**
+ * Search Missouri State Parks by name (local, instant — no network)
+ */
+function searchMoStateParks(query) {
+  if (!query || query.length < 2) return [];
+  const q = query.toLowerCase();
+  return MO_STATE_PARKS
+    .filter(p => p.name.toLowerCase().includes(q))
+    .slice(0, 5)
+    .map(p => ({
+      type: 'public',
+      title: `${p.name} (State Park)`,
+      meta: `${p.county} County • ${p.acres > 0 ? p.acres.toLocaleString() + ' acres' : 'Historic Site'}`,
+      latlng: L.latLng(p.lat, p.lng)
+    }));
 }
 
 function getBoundsFromArcgisGeometry(geometry) {
@@ -9396,13 +9523,13 @@ function updateLocateBtnState() {
 function centerOnMyLocationInternal() {
   if (!navigator.geolocation) {
     restoreLastKnownLocation();
-    showNotice('GPS not available. Enable location services.', 'error', 4200);
+    // showNotice('GPS not available. Enable location services.', 'error', 4200);
     return;
   }
 
   followUserLocation = true;
   updateLocateBtnState();
-  showNotice('Centering on your location…', 'info', 2200);
+  // showNotice('Centering on your location…', 'info', 2200);
   navigator.geolocation.getCurrentPosition(
     (pos) => {
       const latlng = L.latLng(pos.coords.latitude, pos.coords.longitude);
@@ -9410,12 +9537,12 @@ function centerOnMyLocationInternal() {
       mapAutoCentering = true;
       updateUserLocationMarker(latlng);
       map.setView(latlng, zoom, { animate: true });
-      showNotice('Centered on your location.', 'success', 2800);
+      // showNotice('Centered on your location.', 'success', 2800);
     },
     (err) => {
       const msg = err && err.message ? err.message : 'Unable to read GPS location.';
       restoreLastKnownLocation();
-      showNotice(`GPS failed: ${msg}`, 'error', 5200);
+      // showNotice(`GPS failed: ${msg}`, 'error', 5200);
     },
     getPreciseGeolocationOptions({ timeout: 12000 })
   );
@@ -9458,7 +9585,7 @@ function setDefaultAreaFromLocation() {
 
 function showNearestHotspotEducationInternal() {
   if (!navigator.geolocation || hotspotMarkers.length === 0) {
-    showNotice(isMushroomModule() ? 'No hotspots available yet. Start a forage first.' : 'No hotspots available yet. Start a hunt first.', 'warning');
+    // showNotice(isMushroomModule() ? 'No hotspots available yet. Start a forage first.' : 'No hotspots available yet. Start a hunt first.', 'warning');
     return;
   }
 
@@ -9569,12 +9696,49 @@ function enablePublicLandLayer() {
     try { baseLayersControl.addOverlay(publicLandLayer, 'Public Land'); } catch {}
   }
   map.addLayer(publicLandLayer);
+  enableMoStateParksLayer(); // Show MO state parks alongside public lands
 
   showSelectionNoticeOnce(isMushroomModule() ? 'Public land overlay enabled. Verify local regulations for foraging access.' : 'Public land overlay enabled. Verify local regulations for shed hunting access.', 'info', 4200);
 }
 
+let moStateParksLayer = null;
+
+function enableMoStateParksLayer() {
+  if (moStateParksLayer || !map) return;
+  moStateParksLayer = L.layerGroup();
+  MO_STATE_PARKS.forEach(park => {
+    if (!park.lat || !park.lng) return;
+    const marker = L.circleMarker([park.lat, park.lng], {
+      radius: 6,
+      fillColor: '#4CAF50',
+      color: '#1B5E20',
+      weight: 2,
+      opacity: 0.9,
+      fillOpacity: 0.7
+    });
+    marker.bindPopup(
+      `<div style="background:#0b0b0b;color:#4CAF50;padding:10px 14px;border-radius:8px;font-size:13px;border:1.5px solid #4CAF50;min-width:160px;">` +
+      `<strong>${park.name}</strong><br>` +
+      `<span style="color:#aaa;">${park.county} County${park.acres > 0 ? ' • ' + park.acres.toLocaleString() + ' acres' : ''}</span><br>` +
+      `<span style="color:#7cffc7;font-size:11px;">Missouri State Park — Public Land</span>` +
+      `</div>`,
+      { className: 'ht-mdc-popup-dark' }
+    );
+    moStateParksLayer.addLayer(marker);
+  });
+  moStateParksLayer.addTo(map);
+}
+
+function disableMoStateParksLayer() {
+  if (moStateParksLayer && map) {
+    map.removeLayer(moStateParksLayer);
+    moStateParksLayer = null;
+  }
+}
+
 function disablePublicLandLayer() {
   if (publicLandLayer) map.removeLayer(publicLandLayer);
+  disableMoStateParksLayer();
 }
 
 async function fetchMdcJson(url) {
@@ -10055,6 +10219,9 @@ function initializeSearch() {
     }
 
     try {
+      // Search in parallel: geocode (addresses/businesses), MDC conservation areas, MO state parks
+      const stateParks = searchMoStateParks(query);
+      items.push(...stateParks);
       const [geocodeResults, mdcResults] = await Promise.all([
         fetchGeocodeResults(query),
         fetchMdcAreaResults(query)
@@ -10321,14 +10488,49 @@ window.toggleToolbar = function() {
       icon.textContent = 'v';
     });
     try { localStorage.setItem('htToolbarCollapsed', '0'); } catch {}
-    // Fade out hero overlay when user opens Field Command (shed module)
-    if (isShedModule() && !document.body.classList.contains('ht-hero-dismissed')) {
+    // Fade out hero overlay when user opens Field Command (ANY module)
+    if (!document.body.classList.contains('ht-hero-dismissed')) {
       document.body.classList.add('ht-hero-dismissed');
     }
-    // Auto-activate map when toolbar opens on hero-pending modules (fly/turkey)
-    if (!isShedModule() && !document.body.classList.contains('ht-map-active')) {
-      if (isFlyModule()) { activateFlyMap(); }
-      else if (isTurkeyModule()) { activateTurkeyMap(); }
+    // Auto-activate map when toolbar opens on hero-pending modules
+    console.log('toggleToolbar: Opening toolbar, checking map activation');
+    console.log('Map active:', document.body.classList.contains('ht-map-active'));
+    console.log('Map initialized:', mapInitialized);
+    console.log('Module checks:', {
+      fly: isFlyModule(),
+      turkey: isTurkeyModule(), 
+      shed: isShedModule(),
+      mushroom: isMushroomModule()
+    });
+    
+    if (!document.body.classList.contains('ht-map-active')) {
+      console.log('Activating map...');
+      if (isFlyModule()) { 
+        console.log('Activating fly map');
+        activateFlyMap(); 
+      }
+      else if (isTurkeyModule()) { 
+        console.log('Activating turkey map');
+        activateTurkeyMap(); 
+      }
+      else if (isShedModule()) { 
+        console.log('Activating shed map');
+        activateShedMap(); 
+      }
+      else if (isMushroomModule()) { 
+        console.log('Activating mushroom map');
+        activateMushroomMap(); 
+      }
+      document.body.classList.remove('ht-map-pending');
+      document.body.classList.add('ht-map-active');
+      
+      // Force map resize after activation
+      setTimeout(() => {
+        if (map && map.invalidateSize) {
+          console.log('Forcing map resize');
+          map.invalidateSize();
+        }
+      }, 100);
     }
   } else {
     toolbar.classList.add('collapsed');
@@ -13576,7 +13778,7 @@ function loadSavedHuntPlan(id) {
   } else {
     clearScoutingLayer();
   }
-  showNotice(`Loaded plan: ${plan.name}`, 'success', 3200);
+  // showNotice(`Loaded plan: ${plan.name}`, 'success', 3200);
   showStrategyPanel(hydratedHotspots, plan.temperature || null, plan.windSpeed || null, plan.wind || null, { mode: 'plan' });
 }
 
@@ -13655,7 +13857,7 @@ window.savedHuntGo = function() {
     loadSavedHuntPinsOnly(plan);
     window.closeStrategyPanel();
     openPlanRouteTray();
-    showNotice('Pins loaded. Build a new route.', 'success', 3200);
+    // showNotice('Pins loaded. Build a new route.', 'success', 3200);
     return;
   }
   if (selectedAreaLayer || currentPolygon) {
@@ -13881,7 +14083,7 @@ window.selectStartPoint = function() {
 };
 
 window.selectEndPoint = function() {
-  showSelectionNoticeOnce('End point is locked to your start.', 'info', 4200);
+  showSelectionNoticeOnce('End point is set to the furthest pin from your start.', 'info', 4200);
 };
 
 window.createLoopBackRoute = function() {
@@ -15203,7 +15405,16 @@ window.buildRoutePreview = function() {
     return;
   }
   if (!isFlyModule() && !endPoint) {
-    setEndPoint(startPoint);
+    // End at furthest pin from start — mature buck point-to-point pattern
+    if (hotspotMarkers.length > 1 && startPoint) {
+      const furthest = hotspotMarkers.reduce((far, m) => {
+        const d = startPoint.distanceTo(m.getLatLng());
+        return d > far.dist ? { dist: d, ll: m.getLatLng() } : far;
+      }, { dist: 0, ll: startPoint });
+      setEndPoint(furthest.ll);
+    } else {
+      setEndPoint(startPoint);
+    }
   }
   if (isFlyModule() && !endPoint) {
     showNotice('Select parking and entry points before building the route.', 'warning', 5200);
@@ -15221,7 +15432,9 @@ window.buildRoutePreview = function() {
   if (isFlyModule()) {
     createOptimalRoute('linear');
   } else {
-    createOptimalRoute('loop');
+    // Default: linear route ending at the last pin — mirrors mature buck
+    // travel patterns (bucks travel point-to-point, they don't loop).
+    createOptimalRoute('linear');
   }
 
   showNotice(isMushroomModule() ? 'Route built. Tap LET\'S GO to start foraging.' : 'Route built. Tap LET\'S GO to launch the hunt.', 'success', 4200);
@@ -15241,7 +15454,16 @@ window.finalizeRoutePlan = function() {
     return;
   }
   if (!isFlyModule() && !endPoint) {
-    setEndPoint(startPoint);
+    // End at furthest pin from start — mature buck point-to-point pattern
+    if (hotspotMarkers.length > 1 && startPoint) {
+      const furthest = hotspotMarkers.reduce((far, m) => {
+        const d = startPoint.distanceTo(m.getLatLng());
+        return d > far.dist ? { dist: d, ll: m.getLatLng() } : far;
+      }, { dist: 0, ll: startPoint });
+      setEndPoint(furthest.ll);
+    } else {
+      setEndPoint(startPoint);
+    }
   }
   if (isFlyModule() && !endPoint) {
     showNotice('Select parking and entry points before launching.', 'warning', 5200);
@@ -15438,7 +15660,7 @@ window.showStreamPanel = function showStreamPanel(panelId) {
           window._fishNowInitFn();
         } else {
           console.warn('HUNTECH: fishNowInit not ready yet');
-          showNotice('Loading Fish Now… try again in a moment.', 'info', 2000);
+          // showNotice('Loading Fish Now… try again in a moment.', 'info', 2000);
         }
       }
     } else if (panelId !== 'fishNowPanel') {
@@ -15506,6 +15728,8 @@ document.addEventListener('DOMContentLoaded', () => {
     })();
   } else {
     /* Shed module: map initialises immediately, hero is a cosmetic overlay */
+    document.body.classList.remove('ht-map-pending');
+    document.body.classList.add('ht-map-active');
     initializeMap();
     // Start hero slideshow for the shed overlay images
     (function initHeroSlideshow() {
@@ -15552,8 +15776,9 @@ document.addEventListener('DOMContentLoaded', () => {
   updateFilterChips();
   updateWorkflowUI();
   updateSaveAreaState(false);
-  showQuickStartCallout();
-  startOnboarding();
+  // Popups removed — no onboarding or quickstart callouts on load
+  // showQuickStartCallout();
+  // startOnboarding();
   if (!isFly && !isMush) {
     restoreLastKnownLocation();
     tryAutoCenterWithoutPrompt();
