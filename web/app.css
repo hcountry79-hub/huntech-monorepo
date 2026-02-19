@@ -2855,13 +2855,14 @@ body.module-shed .ht-hero-slide {
   background-color: #1a1510;
   filter: brightness(1.1) saturate(1.15);
 }
-/* Per-slide position fine-tuning */
-.ht-shed-slide-1 { background-position: center 30%; }
-.ht-shed-slide-2 { background-position: center 40%; }
-.ht-shed-slide-3 { background-position: center 35%; }
-.ht-shed-slide-4 { background-position: center 30%; }
-.ht-shed-slide-5 { background-position: center 35%; }
-.ht-shed-slide-6 { background-position: center 30%; }
+/* Per-slide position fine-tuning (desktop/tablet) */
+.ht-shed-slide-1 { background-position: center 32%; }
+.ht-shed-slide-2 { background-position: center 42%; }
+.ht-shed-slide-3 { background-position: center 38%; }
+.ht-shed-slide-4 { background-position: center 44%; }
+.ht-shed-slide-5 { background-position: center 36%; }
+.ht-shed-slide-6 { background-position: center 42%; }
+.ht-shed-slide-7 { background-position: center 38%; }
 /* Shed vignette — warm amber tint */
 body.module-shed .ht-hero-vignette {
   background:
@@ -3267,17 +3268,19 @@ body.module-mushroom .ht-map-hero-meta {
         rgba(26, 14, 8, 1.0) 72%);
   }
 
-  /* ── Shed mobile: cover with subject-centred positions ── */
+  /* ── Shed mobile: cover with subject-centred positions (iPhone-optimised) ── */
   body.module-shed .ht-hero-slide {
     background-size: cover;
-    background-position: center 35%;
+    /* Bias slightly upward so antlers stay visible above the command tray */
+    background-position: center 30%;
   }
-  .ht-shed-slide-1 { background-position: center 28% !important; }
-  .ht-shed-slide-2 { background-position: center 38% !important; }
-  .ht-shed-slide-3 { background-position: center 32% !important; }
-  .ht-shed-slide-4 { background-position: center 28% !important; }
-  .ht-shed-slide-5 { background-position: center 32% !important; }
-  .ht-shed-slide-6 { background-position: center 28% !important; }
+  .ht-shed-slide-1 { background-position: center 30% !important; }
+  .ht-shed-slide-2 { background-position: center 40% !important; }
+  .ht-shed-slide-3 { background-position: center 34% !important; }
+  .ht-shed-slide-4 { background-position: center 42% !important; }
+  .ht-shed-slide-5 { background-position: center 36% !important; }
+  .ht-shed-slide-6 { background-position: center 40% !important; }
+  .ht-shed-slide-7 { background-position: center 36% !important; }
 
   /* Warm shed vignette on mobile — deeper bottom blend */
   body.module-shed .ht-hero-vignette {
