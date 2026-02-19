@@ -2211,7 +2211,7 @@ function initializeMap() {
   }
 
   if (document.body && document.body.classList.contains('module-fly')) {
-    setFlyWaterLayerEnabled(true, { explore: true });
+    setFlyWaterLayerEnabled(true, { explore: false }); // show ALL trout waters, no radius filter
   }
 
   // Drawing controls
@@ -15396,16 +15396,24 @@ document.addEventListener('DOMContentLoaded', () => {
   // Expose so inline onclick handlers in HTML can call it
   window.fishShowStep = fishShowStep;
 
-  /* ── Find nearest trout water from GPS ── */
-  function findNearestWater(lat, lng) {
+  /* ── Find nearest trout water from GPS — only returns a match if user is within maxMiles ── */
+  function findNearestWater(lat, lng, maxMiles) {
+    const limit = (typeof maxMiles === 'number') ? maxMiles : 2.0;
     if (!window.TROUT_WATERS || !window.TROUT_WATERS.length) return null;
     let best = null, bestDist = Infinity;
+    const R = 3958.8; // Earth radius in miles
+    const lat1 = lat * Math.PI / 180;
     window.TROUT_WATERS.forEach(w => {
       if (!w.lat || !w.lng) return;
-      const d = Math.sqrt(Math.pow(lat - w.lat, 2) + Math.pow(lng - w.lng, 2));
+      const dlat = (w.lat - lat) * Math.PI / 180;
+      const dlng = (w.lng - lng) * Math.PI / 180;
+      const a = Math.sin(dlat / 2) * Math.sin(dlat / 2) +
+        Math.cos(lat1) * Math.cos(w.lat * Math.PI / 180) *
+        Math.sin(dlng / 2) * Math.sin(dlng / 2);
+      const d = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
       if (d < bestDist) { bestDist = d; best = w; }
     });
-    return best;
+    return (best && bestDist <= limit) ? best : null;
   }
 
   /* ── Create sleek area pin on map ── */
@@ -15432,22 +15440,20 @@ document.addEventListener('DOMContentLoaded', () => {
   /* ═══ FISH NOW — fishNowInit registered on window for top-level showStreamPanel ═══ */
   function fishNowInit() {
     console.log('HUNTECH: fishNowInit running');
-    fishShowStep(0); // show loading state
-    showNotice('📡 Centering on your GPS…', 'success', 2000);
-    // GPS center at ~1000ft out (zoom 16 ≈ 1000ft)
+    fishShowStep(0); // show GPS scanning state
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(function(pos) {
         console.log('HUNTECH: GPS got position', pos.coords.latitude, pos.coords.longitude);
         const lat = pos.coords.latitude, lng = pos.coords.longitude;
+        // Center map at zoom 12 so user can see surrounding water pins
         if (typeof map !== 'undefined' && map) {
-          map.setView([lat, lng], 16, { animate: true, duration: 1.2 });
+          map.setView([lat, lng], 12, { animate: true, duration: 1.0 });
         }
-        // Find nearest water
-        const water = findNearestWater(lat, lng);
+        // Only check-in if user is physically within 2 miles of a public trout water
+        const water = findNearestWater(lat, lng, 2.0);
         if (water) {
           fishFlow.area = water;
           placeAreaPin(water);
-          // Populate step 1 welcome card
           const ribbonEl = document.getElementById('fishAreaRibbon');
           const titleEl = document.getElementById('fishAreaTitle');
           const descEl = document.getElementById('fishAreaDesc');
@@ -15457,20 +15463,74 @@ document.addEventListener('DOMContentLoaded', () => {
             const parts = [(water.streamMiles ? water.streamMiles + ' mi' : ''), (water.species || []).join(', '), (water.waterType || '')].filter(Boolean);
             descEl.textContent = parts.join(' · ');
           }
-          // Show step 1 after a short delay for map animation
-          setTimeout(() => fishShowStep(1), 800);
+          setTimeout(() => fishShowStep(1), 700);
         } else {
-          showNotice('No trout water found near your location. Try My Saved Spots or Trip Planner.', 'error', 4000);
+          // User is NOT near a public trout water — show browse state
+          const loadingEl = document.getElementById('fishStep0_loading');
+          if (loadingEl) {
+            // Build closest 5 waters list so user can select one
+            let listHtml = '';
+            if (window.TROUT_WATERS && window.TROUT_WATERS.length) {
+              const R = 3958.8, lat1 = lat * Math.PI / 180;
+              const sorted = window.TROUT_WATERS
+                .filter(w => w.lat && w.lng)
+                .map(w => {
+                  const dlat = (w.lat - lat) * Math.PI / 180, dlng = (w.lng - lng) * Math.PI / 180;
+                  const a = Math.sin(dlat/2)*Math.sin(dlat/2) + Math.cos(lat1)*Math.cos(w.lat*Math.PI/180)*Math.sin(dlng/2)*Math.sin(dlng/2);
+                  return { water: w, dist: R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)) };
+                })
+                .sort((a, b) => a.dist - b.dist)
+                .slice(0, 5);
+              listHtml = sorted.map(item =>
+                '<button class="ht-fish-browse-row" type="button" onclick="fishSelectWater(\'' + escapeHtml(item.water.id) + '\')">' +
+                '<span class="ht-fish-browse-name">' + escapeHtml(item.water.name) + '</span>' +
+                '<span class="ht-fish-browse-dist">' + item.dist.toFixed(0) + ' mi</span>' +
+                '</button>'
+              ).join('');
+            }
+            loadingEl.innerHTML =
+              '<div class="ht-fish-locate-card">' +
+              '<div class="ht-fish-locate-label" style="margin-bottom:4px;">You\'re not at a trout water</div>' +
+              '<div class="ht-fish-locate-sub" style="margin-bottom:12px;">Tap a pin on the map to check in, or pick a nearby water below.</div>' +
+              (listHtml ? '<div class="ht-fish-browse-list">' + listHtml + '</div>' : '') +
+              '<button class="ht-fish-secondary-link" type="button" onclick="fishStepStartOver()" style="margin-top:10px;">↩ Scan again</button>' +
+              '</div>';
+          }
         }
       }, function() {
-        // GPS error — try last known
         centerOnMyLocationInternal();
-        showNotice('Enable GPS to find your nearest trout water.', 'error', 3500);
+        showNotice('Enable location access to find your nearest trout water.', 'error', 3500);
       }, { enableHighAccuracy: true, maximumAge: 10000, timeout: 15000 });
     } else {
       showNotice('GPS not available on this device.', 'error', 3500);
     }
   }
+
+  // Called when user taps a water in the browse list or a pin on the map
+  window.fishSelectWater = function(waterId) {
+    const water = window.TROUT_WATERS && window.TROUT_WATERS.find(function(w) { return w.id === waterId; });
+    if (!water) return;
+    fishFlow.area = water;
+    placeAreaPin(water);
+    if (typeof map !== 'undefined' && map && water.lat && water.lng) {
+      map.setView([water.lat, water.lng], 14, { animate: true, duration: 0.8 });
+    }
+    const ribbonEl = document.getElementById('fishAreaRibbon');
+    const titleEl = document.getElementById('fishAreaTitle');
+    const descEl = document.getElementById('fishAreaDesc');
+    if (ribbonEl) ribbonEl.textContent = '🎣 ' + (water.ribbon || water.category || 'Trout Water');
+    if (titleEl) titleEl.textContent = 'Welcome to ' + water.name;
+    if (descEl) {
+      const parts = [(water.streamMiles ? water.streamMiles + ' mi' : ''), (water.species || []).join(', '), (water.waterType || '')].filter(Boolean);
+      descEl.textContent = parts.join(' · ');
+    }
+    // Restore the loading card to its default state for next time
+    const loadingEl = document.getElementById('fishStep0_loading');
+    if (loadingEl) {
+      loadingEl.innerHTML = '<div class="ht-fish-locate-card"><div class="ht-fish-locate-pulse">📡</div><div class="ht-fish-locate-label">Finding your water\u2026</div><div class="ht-fish-locate-sub">Scanning for nearby trout waters</div></div>';
+    }
+    fishShowStep(1);
+  };
   // Expose on window so top-level showStreamPanel can call it
   window._fishNowInitFn = fishNowInit;
 

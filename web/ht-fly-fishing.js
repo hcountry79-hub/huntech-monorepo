@@ -1640,6 +1640,14 @@ function openFlyHatchDetailsModal(imageUrl) {
 
 window.flyFishNow = function(id) {
   if (!isFlyModule()) return;
+  // Route into the Fish Now wizard so the user goes through the proper flow
+  if (typeof window.fishSelectWater === 'function') {
+    closeFlyWaterActionBar();
+    if (typeof window.showStreamPanel === 'function') window.showStreamPanel('fishNowPanel');
+    window.fishSelectWater(id);
+    return;
+  }
+  // Fallback to old coach tray if wizard not ready
   const water = getFlyWaterById(id) || getSavedTroutWaterById(id);
   if (water) focusFlyWater(water);
   openFlyCommandTray(water || null);
