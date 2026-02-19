@@ -3171,16 +3171,6 @@ body.module-mushroom .ht-map-hero-content {
   background-position: center 34% !important;
   filter: brightness(0.90) saturate(1.18) contrast(1.05) !important;
 }
-/* hero-3: Harvested morel mushroom pile — rich detail */
-.ht-mush-slide-harvest {
-  background-position: center 42% !important;
-  filter: brightness(0.93) saturate(1.15) contrast(1.06) !important;
-}
-/* hero-4: Morel mushroom unique texture close-up */
-.ht-mush-slide-forest {
-  background-position: center 36% !important;
-  filter: brightness(0.90) saturate(1.12) contrast(1.07) !important;
-}
 /* hero-5: Morel emerging from forest floor — spring foraging */
 .ht-mush-slide-floor {
   background-position: center 38% !important;
@@ -3251,8 +3241,6 @@ body.module-mushroom .ht-map-hero-meta {
   }
   .ht-mush-slide-morel { background-position: center 35% !important; }
   .ht-mush-slide-foliage { background-position: center 30% !important; }
-  .ht-mush-slide-harvest { background-position: center 38% !important; }
-  .ht-mush-slide-forest { background-position: center 32% !important; }
   .ht-mush-slide-floor { background-position: center 34% !important; }
 
   /* Warm mushroom vignette on mobile — deeper bottom blend */

@@ -13147,18 +13147,52 @@ window.openHuntJournalPanel = function() {
   render();
 };
 
+/* ═══ AUTO-ACTIVATE MAP ON DEFINE AREA ═══
+   Dismisses the hero splash, centres on user GPS at ~100 ft zoom,
+   then resolves so the caller can start its drawing tool. */
+function activateMapForDefineArea() {
+  return new Promise((resolve) => {
+    // 1. Activate map (dismiss hero) for mushroom / turkey / shed modules
+    if (!document.body.classList.contains('ht-map-active')) {
+      if (isMushroomModule()) { activateMushroomMap(); }
+      else if (isTurkeyModule()) { activateTurkeyMap(); }
+      else { activateShedMap(); }
+    }
+    // 2. Centre on user at zoom 20 (~100 ft)
+    const ZOOM_100FT = 20;
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const latlng = L.latLng(pos.coords.latitude, pos.coords.longitude);
+          updateUserLocationMarker(latlng);
+          map.setView(latlng, ZOOM_100FT, { animate: true });
+          setTimeout(resolve, 400);
+        },
+        () => { resolve(); },
+        getPreciseGeolocationOptions({ timeout: 8000 })
+      );
+    } else {
+      setTimeout(resolve, 400);
+    }
+  });
+}
+
 window.selectLocationRadius = function() {
   clearRadiusDraft();
-  mapClickMode = 'radius-draw';
   collapseFieldCommandTray();
-  showDrawHelper('radius', 'Tap the center, drag the side bubbles to size, then tap again to lock.');
+  activateMapForDefineArea().then(() => {
+    mapClickMode = 'radius-draw';
+    showDrawHelper('radius', 'Tap the center, drag the side bubbles to size, then tap again to lock.');
+  });
 };
 
 window.selectLocationRectangle = function() {
   clearRectDraft();
-  mapClickMode = 'rect-draw';
   collapseFieldCommandTray();
-  showDrawHelper('rect', 'Tap the center, drag the side bubbles to size, then tap again to lock.');
+  activateMapForDefineArea().then(() => {
+    mapClickMode = 'rect-draw';
+    showDrawHelper('rect', 'Tap the center, drag the side bubbles to size, then tap again to lock.');
+  });
 };
 
 window.selectParcelBoundary = function() {
@@ -13168,12 +13202,14 @@ window.selectParcelBoundary = function() {
 
 window.drawHuntArea = function() {
   mapClickMode = null;
-  const drawer = new L.Draw.Polygon(map, drawControl.options.draw.polygon);
-  drawer.enable();
-  activeDrawHandler = drawer;
   collapseFieldCommandTray();
-  showQuickHint('Tap points around the area.', 1600);
-  showDrawHelper('polygon', 'Tap points to outline the area. Tap the first point again to finish.');
+  activateMapForDefineArea().then(() => {
+    const drawer = new L.Draw.Polygon(map, drawControl.options.draw.polygon);
+    drawer.enable();
+    activeDrawHandler = drawer;
+    showQuickHint('Tap points around the area.', 1600);
+    showDrawHelper('polygon', 'Tap points to outline the area. Tap the first point again to finish.');
+  });
 };
 
 window.lockPropertyBoundary = function() {
