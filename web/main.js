@@ -9908,11 +9908,9 @@ window.centerOnMyLocation = function() {
 
 window.showMap = function() {
   if (isShedModule() && !mapInitialized) {
-    activateShedMap();
-  } else if (isShedModule()) {
-    document.body.classList.remove('ht-map-pending');
-    document.body.classList.add('ht-map-active');
-  } else if (isFlyModule() && !mapInitialized) {
+    initializeMap();
+  }
+  if (isFlyModule() && !mapInitialized) {
     activateFlyMap();
   }
   const panel = document.getElementById('strategy-panel');
@@ -9980,9 +9978,14 @@ window.toggleToolbar = function() {
       icon.textContent = 'v';
     });
     try { localStorage.setItem('htToolbarCollapsed', '0'); } catch {}
-    // Auto-activate map when toolbar opens on hero-pending modules
-    if (isShedModule() && !document.body.classList.contains('ht-map-active')) {
-      activateShedMap();
+    // Fade out hero overlay when user opens Field Command (shed module)
+    if (isShedModule() && !document.body.classList.contains('ht-hero-dismissed')) {
+      document.body.classList.add('ht-hero-dismissed');
+    }
+    // Auto-activate map when toolbar opens on hero-pending modules (fly/turkey)
+    if (!isShedModule() && !document.body.classList.contains('ht-map-active')) {
+      if (isFlyModule()) { activateFlyMap(); }
+      else if (isTurkeyModule()) { activateTurkeyMap(); }
     }
   } else {
     toolbar.classList.add('collapsed');
@@ -13553,20 +13556,16 @@ function activateMapForDefineArea() {
 
 window.selectLocationRadius = function() {
   clearRadiusDraft();
+  mapClickMode = 'radius-draw';
   collapseFieldCommandTray();
-  activateMapForDefineArea().then(() => {
-    mapClickMode = 'radius-draw';
-    showDrawHelper('radius', 'Tap the center, drag the side bubbles to size, then tap again to lock.');
-  });
+  showDrawHelper('radius', 'Tap the center, drag the side bubbles to size, then tap again to lock.');
 };
 
 window.selectLocationRectangle = function() {
   clearRectDraft();
+  mapClickMode = 'rect-draw';
   collapseFieldCommandTray();
-  activateMapForDefineArea().then(() => {
-    mapClickMode = 'rect-draw';
-    showDrawHelper('rect', 'Tap the center, drag the side bubbles to size, then tap again to lock.');
-  });
+  showDrawHelper('rect', 'Tap the center, drag the side bubbles to size, then tap again to lock.');
 };
 
 window.selectParcelBoundary = function() {
@@ -13576,14 +13575,12 @@ window.selectParcelBoundary = function() {
 
 window.drawHuntArea = function() {
   mapClickMode = null;
+  const drawer = new L.Draw.Polygon(map, drawControl.options.draw.polygon);
+  drawer.enable();
+  activeDrawHandler = drawer;
   collapseFieldCommandTray();
-  activateMapForDefineArea().then(() => {
-    const drawer = new L.Draw.Polygon(map, drawControl.options.draw.polygon);
-    drawer.enable();
-    activeDrawHandler = drawer;
-    showQuickHint('Tap points around the area.', 1600);
-    showDrawHelper('polygon', 'Tap points to outline the area. Tap the first point again to finish.');
-  });
+  showQuickHint('Tap points around the area.', 1600);
+  showDrawHelper('polygon', 'Tap points to outline the area. Tap the first point again to finish.');
 };
 
 window.lockPropertyBoundary = function() {
@@ -15205,10 +15202,9 @@ document.addEventListener('DOMContentLoaded', () => {
       if (map && typeof map.invalidateSize === 'function') map.invalidateSize();
     }, 320);
     setTimeout(() => centerOnMyLocationInternal(), 500);
-  } else if (isFly || isTurk || isShed) {
+  } else if (isFly || isTurk) {
     if (isFly) flyMapPending = true;
     if (isTurk) turkeyMapPending = true;
-    if (isShed) shedMapPending = true;
     document.body.classList.add('ht-map-pending');
     document.body.classList.remove('ht-map-active');
     // Start hero slideshow — rotate images every 6s
@@ -15225,7 +15221,20 @@ document.addEventListener('DOMContentLoaded', () => {
       }, 6000);
     })();
   } else {
+    /* Shed module: map initialises immediately, hero is a cosmetic overlay */
     initializeMap();
+    // Start hero slideshow for the shed overlay images
+    (function initHeroSlideshow() {
+      const slides = document.querySelectorAll('.ht-hero-slide');
+      if (slides.length < 2) return;
+      let current = 0;
+      setInterval(() => {
+        if (document.body.classList.contains('ht-hero-dismissed')) return;
+        slides[current].classList.remove('ht-hero-slide--active');
+        current = (current + 1) % slides.length;
+        slides[current].classList.add('ht-hero-slide--active');
+      }, 6000);
+    })();
   }
 
   startLocationWatch();
