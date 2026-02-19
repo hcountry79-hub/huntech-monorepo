@@ -7000,41 +7000,41 @@ body.ht-saved-hunt-preview #planRoutePanel {
 }
 
 .ht-draw-guide {
-  pointer-events: none;
-  transform: translate(-50%, -100%);
+  pointer-events: none !important;
+  /* Detach from map marker — pin to top center of viewport instead */
+  position: fixed !important;
+  top: calc(var(--topbar-height, 60px) + 8px) !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  z-index: 1100 !important;
+  animation: htGuideIn 0.4s ease both;
+}
+
+@keyframes htGuideIn {
+  from { opacity: 0; transform: translateX(-50%) translateY(-12px) scale(0.92); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
 }
 
 .ht-draw-guide-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 999px;
-  background: #ffd24d;
-  border: 2px solid #111;
-  box-shadow: 0 0 10px rgba(255, 210, 77, 0.6);
-  margin: 0 auto 4px;
+  display: none;
 }
 
 .ht-draw-guide-label {
-  background: rgba(0, 0, 0, 0.88);
+  background: rgba(0, 0, 0, 0.82);
   color: #ffd400;
-  font-size: clamp(10px, 2.4vw, 13px);
-  font-weight: 800;
-  letter-spacing: 0.4px;
-  padding: clamp(4px, 1vw, 6px) clamp(8px, 2vw, 14px);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  padding: 4px 10px;
   border-radius: 999px;
-  border: 1.5px solid rgba(255, 212, 0, 0.5);
+  border: 1px solid rgba(255, 212, 0, 0.35);
   white-space: nowrap;
-  position: relative;
-  left: 50%;
-  transform: translateX(-50%);
-  top: -6px;
   text-shadow: none;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   text-align: center;
   width: max-content;
-  max-width: clamp(140px, 45vw, 220px);
 }
 
 .ht-bubble-toggle {
