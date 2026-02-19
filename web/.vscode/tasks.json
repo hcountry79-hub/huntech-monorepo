@@ -1,0 +1,151 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Huntech: Start Dev Server",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-ExecutionPolicy",
+				"Bypass",
+				"-File",
+				"${workspaceFolder}\\tools\\start-server.ps1"
+			],
+			"isBackground": true,
+			"runOptions": {
+				"runOn": "folderOpen"
+			},
+			"problemMatcher": [],
+			"group": "none"
+		},
+		{
+			"label": "Huntech: Open App",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-ExecutionPolicy",
+				"Bypass",
+				"-File",
+				"${workspaceFolder}\\tools\\open-browser.ps1"
+			],
+			"runOptions": {
+				"runOn": "folderOpen"
+			},
+			"problemMatcher": [],
+			"group": "none"
+		},
+		{
+			"label": "Huntech: Generate Handoff",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-ExecutionPolicy",
+				"Bypass",
+				"-File",
+				"${workspaceFolder}\\tools\\handoff.ps1"
+			],
+			"runOptions": {
+				"runOn": "folderOpen"
+			},
+			"problemMatcher": [],
+			"group": "none"
+		},
+		{
+			"label": "Huntech: Start Auto Handoff Watch",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-ExecutionPolicy",
+				"Bypass",
+				"-File",
+				"${workspaceFolder}\\tools\\handoff-watch.ps1"
+			],
+			"isBackground": true,
+			"runOptions": {
+				"runOn": "folderOpen"
+			},
+			"problemMatcher": [],
+			"group": "none"
+		},
+		{
+			"label": "Huntech: Install Git Handoff Hook",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-ExecutionPolicy",
+				"Bypass",
+				"-File",
+				"${workspaceFolder}\\tools\\install-handoff-hook.ps1"
+			],
+			"problemMatcher": [],
+			"group": "none"
+		},
+		{
+			"label": "Huntech: Copy Handoff to Clipboard",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-ExecutionPolicy",
+				"Bypass",
+				"-File",
+				"${workspaceFolder}\\tools\\handoff-copy.ps1"
+			],
+			"problemMatcher": [],
+			"group": "none"
+		},
+		{
+			"label": "Huntech: Prepare New Chat",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-ExecutionPolicy",
+				"Bypass",
+				"-File",
+				"${workspaceFolder}\\tools\\handoff-new-chat.ps1"
+			],
+			"problemMatcher": [],
+			"group": "none"
+		},
+		{
+			"label": "Huntech: Activate",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-ExecutionPolicy",
+				"Bypass",
+				"-File",
+				"${workspaceFolder}\\tools\\huntech-activate.ps1"
+			],
+			"runOptions": {
+				"runOn": "folderOpen"
+			},
+			"problemMatcher": [],
+			"group": "none"
+		},
+		{
+			"label": "Huntech: Start Everything",
+			"dependsOn": [
+				"Huntech: Start Dev Server",
+				"Huntech: Start Auto Handoff Watch",
+				"Huntech: Generate Handoff",
+				"Huntech: Open App"
+			],
+			"problemMatcher": [],
+			"group": "none"
+		},
+		{
+			"label": "Huntech: Build Web Zip",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-ExecutionPolicy",
+				"Bypass",
+				"-File",
+				"${workspaceFolder}\\tools\\build-web-zip.ps1"
+			],
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "none"
+		}
+	]
+}

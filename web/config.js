@@ -17,14 +17,36 @@ window.LIDAR_TILE_URL = window.LIDAR_TILE_URL || 'https://server.arcgisonline.co
 // Optional: use OSRM public router for more realistic walking routes.
 window.WALK_ROUTER_URL = window.WALK_ROUTER_URL || 'https://router.project-osrm.org/route/v1/foot';
 
-// Optional: USGS NWIS Instantaneous Values endpoint for flow + gage data.
-// Example site ids can be added per water in fly-fishing-data.js.
-window.HUNTECH_USGS_NWIS_IV_URL = window.HUNTECH_USGS_NWIS_IV_URL || 'https://waterservices.usgs.gov/nwis/iv/';
-window.HUNTECH_USGS_USE_PROXY = window.HUNTECH_USGS_USE_PROXY || false;
-window.HUNTECH_FLY_FLOW_CACHE_TTL_MS = window.HUNTECH_FLY_FLOW_CACHE_TTL_MS || (10 * 60 * 1000);
+// Optional: prefer MapLibre GL (native rotate/pitch) instead of Leaflet.
+// Set to true to launch the MapLibre-based map (maplibre.html).
+// Recommended on iOS Safari where Leaflet CSS rotation can show tile gaps.
+window.HUNTECH_USE_MAPLIBRE = true;
 
-// GPS accuracy tuning (shed module).
-window.HUNTECH_GPS_MIN_MOVE_M = window.HUNTECH_GPS_MIN_MOVE_M || 2.5;
-window.HUNTECH_GPS_JITTER_FACTOR = window.HUNTECH_GPS_JITTER_FACTOR || 0.6;
-window.HUNTECH_GPS_MAP_LOCK_MIN_M = window.HUNTECH_GPS_MAP_LOCK_MIN_M || 3;
-window.HUNTECH_GPS_ACCURACY_NOTICE_MS = window.HUNTECH_GPS_ACCURACY_NOTICE_MS || (60 * 1000);
+// Mobile rotation controls (Leaflet CSS-based, opt-in to avoid regressions).
+// Default OFF for stability.
+window.HUNTECH_AUTO_ROTATE_ON_HEADING = window.HUNTECH_AUTO_ROTATE_ON_HEADING ?? false;
+window.HUNTECH_TOUCH_ROTATE_ENABLED = window.HUNTECH_TOUCH_ROTATE_ENABLED ?? false;
+
+// Force-disable rotation on iOS devices for stability.
+try {
+	var isIOS = typeof navigator !== 'undefined' && /iPad|iPhone|iPod/.test(navigator.userAgent || '');
+	if (isIOS) {
+		window.HUNTECH_AUTO_ROTATE_ON_HEADING = false;
+		window.HUNTECH_TOUCH_ROTATE_ENABLED = false;
+	}
+} catch (e) {}
+
+// Basemap preferences: keep mobile consistent with desktop and do not lock.
+window.HUNTECH_FORCE_BASEMAP_LOCK = false;
+window.HUNTECH_LOCK_BASEMAP_ON_MOBILE = false;
+// Default mobile basemap to Satellite to match desktop startup feel.
+window.HUNTECH_MOBILE_BASEMAP = 'satellite';
+
+// ===================================================================
+//   Tree / Leaf Identification API (Mushroom Module)
+// ===================================================================
+// Option 1: PlantNet free tier — get a key at https://my.plantnet.org/
+window.PLANTNET_API_KEY = window.PLANTNET_API_KEY || '';
+// Option 2: Custom tree ID API endpoint (must accept { image: base64, api_key: string })
+window.TREE_ID_API_URL = window.TREE_ID_API_URL || '';
+window.TREE_ID_API_KEY = window.TREE_ID_API_KEY || '';

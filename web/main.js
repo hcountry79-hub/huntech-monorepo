@@ -779,6 +779,10 @@ function isTurkeyModule() {
   return Boolean(document.body && document.body.classList.contains('module-turkey'));
 }
 
+function isShedModule() {
+  return Boolean(document.body && document.body.classList.contains('module-shed'));
+}
+
 // ===================================================================
 //   Mushroom Foraging — Education & Habitat Data
 //   Based on Missouri morel research, mycological field guides,
@@ -1445,6 +1449,33 @@ function bindToolbarToggleButtons() {
   });
   toolbarToggleBound = true;
 }
+
+let shedMapPending = false;
+function activateShedMap() {
+  if (!isShedModule()) return;
+  if (!mapInitialized) {
+    shedMapPending = false;
+    document.body.classList.remove('ht-map-pending');
+    document.body.classList.add('ht-map-active');
+    initializeMap();
+    restoreLastKnownLocation();
+    setDefaultAreaFromLocation();
+    updateFilterChips();
+    updateWorkflowUI();
+    updateLocateMeOffset();
+    setTimeout(() => {
+      if (map && typeof map.invalidateSize === 'function') map.invalidateSize();
+    }, 320);
+  } else {
+    document.body.classList.remove('ht-map-pending');
+    document.body.classList.add('ht-map-active');
+    setTimeout(() => {
+      if (map && typeof map.invalidateSize === 'function') map.invalidateSize();
+    }, 320);
+  }
+  setTimeout(() => centerOnMyLocationInternal(), 500);
+}
+window.activateShedMap = activateShedMap;
 
 function activateFlyMap() {
   if (!isFlyModule()) return;
@@ -6059,6 +6090,165 @@ function renderThermalEducationCard(thermal) {
 // ===================================================================
 //   Education Display & Notices
 // ===================================================================
+
+/* Wikimedia Commons reference photos (public domain / CC-BY-SA) for tree species.
+   Each entry has a bark image and a leaves image for visual identification. */
+const TREE_REFERENCE_PHOTOS = {
+  elm:         { bark: 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/3d/Ulmus_americana_bark.jpg/400px-Ulmus_americana_bark.jpg',
+                 leaves: 'https://upload.wikimedia.org/wikipedia/commons/thumb/2/2b/Ulmus_americana_leaves.jpg/400px-Ulmus_americana_leaves.jpg',
+                 whole: 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/a2/American_Elm.jpg/400px-American_Elm.jpg' },
+  ash:         { bark: 'https://upload.wikimedia.org/wikipedia/commons/thumb/f/f5/Fraxinus_americana_bark.jpg/400px-Fraxinus_americana_bark.jpg',
+                 leaves: 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/af/Fraxinus_americana_002.jpg/400px-Fraxinus_americana_002.jpg',
+                 whole: 'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e8/Fraxinus_pennsylvanica.jpg/400px-Fraxinus_pennsylvanica.jpg' },
+  tulipPoplar: { bark: 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/ce/Liriodendron_tulipifera_bark.jpg/400px-Liriodendron_tulipifera_bark.jpg',
+                 leaves: 'https://upload.wikimedia.org/wikipedia/commons/thumb/6/6e/Liriodendron_tulipifera-leaf.jpg/400px-Liriodendron_tulipifera-leaf.jpg',
+                 whole: 'https://upload.wikimedia.org/wikipedia/commons/thumb/e/eb/Liriodendron_tulipifera_tree.jpg/400px-Liriodendron_tulipifera_tree.jpg' },
+  sycamore:    { bark: 'https://upload.wikimedia.org/wikipedia/commons/thumb/4/46/Platanus_occidentalis_bark.jpg/400px-Platanus_occidentalis_bark.jpg',
+                 leaves: 'https://upload.wikimedia.org/wikipedia/commons/thumb/9/93/Platanus_occidentalis_leaves.jpg/400px-Platanus_occidentalis_leaves.jpg',
+                 whole: 'https://upload.wikimedia.org/wikipedia/commons/thumb/6/6c/Platanus_occidentalis.jpg/400px-Platanus_occidentalis.jpg' },
+  cottonwood:  { bark: 'https://upload.wikimedia.org/wikipedia/commons/thumb/7/72/Populus_deltoides_bark.jpg/400px-Populus_deltoides_bark.jpg',
+                 leaves: 'https://upload.wikimedia.org/wikipedia/commons/thumb/b/b9/Populus_deltoides_leaves.jpg/400px-Populus_deltoides_leaves.jpg',
+                 whole: 'https://upload.wikimedia.org/wikipedia/commons/thumb/d/d3/Eastern_Cottonwood.jpg/400px-Eastern_Cottonwood.jpg' },
+  whiteOak:    { bark: 'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e0/Quercus_alba_bark.jpg/400px-Quercus_alba_bark.jpg',
+                 leaves: 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/a0/Quercus_alba_leaves.jpg/400px-Quercus_alba_leaves.jpg',
+                 whole: 'https://upload.wikimedia.org/wikipedia/commons/thumb/e/ef/Quercus_alba.jpg/400px-Quercus_alba.jpg' },
+  hickory:     { bark: 'https://upload.wikimedia.org/wikipedia/commons/thumb/f/fe/Carya_ovata_bark.jpg/400px-Carya_ovata_bark.jpg',
+                 leaves: 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/12/Carya_ovata_leaves.jpg/400px-Carya_ovata_leaves.jpg',
+                 whole: 'https://upload.wikimedia.org/wikipedia/commons/thumb/4/4e/Carya-ovata.jpg/400px-Carya-ovata.jpg' },
+  hackberry:   { bark: 'https://upload.wikimedia.org/wikipedia/commons/thumb/d/d1/Celtis_occidentalis_bark.jpg/400px-Celtis_occidentalis_bark.jpg',
+                 leaves: 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/5d/Celtis_occidentalis_leaves.jpg/400px-Celtis_occidentalis_leaves.jpg',
+                 whole: 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/36/Celtis_occidentalis.jpg/400px-Celtis_occidentalis.jpg' },
+  silverMaple: { bark: 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/50/Acer_saccharinum_bark.jpg/400px-Acer_saccharinum_bark.jpg',
+                 leaves: 'https://upload.wikimedia.org/wikipedia/commons/thumb/d/d3/Acer_saccharinum_leaves.jpg/400px-Acer_saccharinum_leaves.jpg',
+                 whole: 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/cc/Acer_saccharinum.jpg/400px-Acer_saccharinum.jpg' },
+  boxElder:    { bark: 'https://upload.wikimedia.org/wikipedia/commons/thumb/8/8e/Acer_negundo_bark.jpg/400px-Acer_negundo_bark.jpg',
+                 leaves: 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/50/Acer_negundo_leaves.jpg/400px-Acer_negundo_leaves.jpg',
+                 whole: 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/08/Acer_negundo.jpg/400px-Acer_negundo.jpg' },
+  pawpaw:      { bark: 'https://upload.wikimedia.org/wikipedia/commons/thumb/f/f0/Asimina_triloba_bark.jpg/400px-Asimina_triloba_bark.jpg',
+                 leaves: 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/12/Asimina_triloba_leaves.jpg/400px-Asimina_triloba_leaves.jpg',
+                 whole: 'https://upload.wikimedia.org/wikipedia/commons/thumb/b/b0/Paw_Paw_%28Asimina_triloba%29.jpg/400px-Paw_Paw_%28Asimina_triloba%29.jpg' },
+  willow:      { bark: 'https://upload.wikimedia.org/wikipedia/commons/thumb/d/d4/Salix_nigra_bark.jpg/400px-Salix_nigra_bark.jpg',
+                 leaves: 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Salix_nigra_leaves.jpg/400px-Salix_nigra_leaves.jpg',
+                 whole: 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c8/Salix_nigra.jpg/400px-Salix_nigra.jpg' },
+  apple:       { bark: 'https://upload.wikimedia.org/wikipedia/commons/thumb/8/86/Old_apple_tree_bark.jpg/400px-Old_apple_tree_bark.jpg',
+                 leaves: 'https://upload.wikimedia.org/wikipedia/commons/thumb/4/4b/Malus_domestica_a1.jpg/400px-Malus_domestica_a1.jpg',
+                 whole: 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/a6/Malus_domestica_tree.jpg/400px-Malus_domestica_tree.jpg' },
+  wildCherry:  { bark: 'https://upload.wikimedia.org/wikipedia/commons/thumb/b/ba/Prunus_serotina_bark.jpg/400px-Prunus_serotina_bark.jpg',
+                 leaves: 'https://upload.wikimedia.org/wikipedia/commons/thumb/7/70/Prunus_serotina_leaves.jpg/400px-Prunus_serotina_leaves.jpg',
+                 whole: 'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e7/Prunus_serotina.jpg/400px-Prunus_serotina.jpg' }
+};
+
+/** Map tree name to its TREE_REFERENCE_PHOTOS key */
+function getTreePhotoKey(treeName) {
+  const n = String(treeName || '').toLowerCase();
+  if (n.includes('elm'))           return 'elm';
+  if (n.includes('ash'))           return 'ash';
+  if (n.includes('tulip') || n.includes('poplar') && !n.includes('cotton')) return 'tulipPoplar';
+  if (n.includes('sycamore'))      return 'sycamore';
+  if (n.includes('cottonwood'))    return 'cottonwood';
+  if (n.includes('white oak'))     return 'whiteOak';
+  if (n.includes('oak'))           return 'whiteOak';
+  if (n.includes('hickory'))       return 'hickory';
+  if (n.includes('hackberry'))     return 'hackberry';
+  if (n.includes('silver maple'))  return 'silverMaple';
+  if (n.includes('box elder'))     return 'boxElder';
+  if (n.includes('maple'))         return 'silverMaple';
+  if (n.includes('pawpaw'))        return 'pawpaw';
+  if (n.includes('willow'))        return 'willow';
+  if (n.includes('apple'))         return 'apple';
+  if (n.includes('cherry'))        return 'wildCherry';
+  return null;
+}
+
+/** Show a full-screen tree detail popup with photos, bark, leaves, shape, and tip */
+window.showTreeDetailPopup = function(treeKey) {
+  // Find the tree data in MUSHROOM_EDUCATION
+  let treeData = null;
+  Object.values(typeof MUSHROOM_EDUCATION !== 'undefined' ? MUSHROOM_EDUCATION : {}).forEach(habitat => {
+    if (habitat.treeId && habitat.treeId[treeKey]) {
+      treeData = habitat.treeId[treeKey];
+    }
+  });
+  if (!treeData) { showNotice('Tree details not found.', 'info', 2000); return; }
+
+  const photos = TREE_REFERENCE_PHOTOS[treeKey] || {};
+  const relevance = getMorelRelevanceForSpecies(treeData.name);
+  const relevanceClass = `ht-tree-relevance--${relevance.level}`;
+
+  // Remove any existing popup
+  let popup = document.getElementById('htTreeDetailPopup');
+  if (popup) popup.remove();
+
+  popup = document.createElement('div');
+  popup.id = 'htTreeDetailPopup';
+  popup.className = 'ht-tree-detail-popup-overlay';
+  popup.innerHTML = `
+    <div class="ht-tree-detail-popup">
+      <div class="ht-tree-detail-header">
+        <div class="ht-tree-detail-header-left">
+          <div class="ht-tree-detail-svg">${getTreeIdSvg(treeData.name)}</div>
+          <div class="ht-tree-detail-title">${escapeHtml(treeData.name)}</div>
+        </div>
+        <button class="ht-tree-detail-close" onclick="window.closeTreeDetailPopup()">✕</button>
+      </div>
+      <div class="ht-tree-detail-body">
+        ${photos.whole ? `
+        <div class="ht-tree-detail-photo-row">
+          <img class="ht-tree-detail-photo" src="${photos.whole}" alt="${escapeHtml(treeData.name)} tree" loading="lazy" onerror="this.style.display='none'">
+        </div>` : ''}
+        <div class="ht-tree-detail-photos">
+          ${photos.bark ? `<div class="ht-tree-detail-photo-card">
+            <img class="ht-tree-detail-photo-sm" src="${photos.bark}" alt="Bark" loading="lazy" onerror="this.parentElement.style.display='none'">
+            <div class="ht-tree-detail-photo-label">🌲 Bark</div>
+          </div>` : ''}
+          ${photos.leaves ? `<div class="ht-tree-detail-photo-card">
+            <img class="ht-tree-detail-photo-sm" src="${photos.leaves}" alt="Leaves" loading="lazy" onerror="this.parentElement.style.display='none'">
+            <div class="ht-tree-detail-photo-label">🍃 Leaves</div>
+          </div>` : ''}
+        </div>
+        <div class="ht-tree-detail-grid">
+          <div class="ht-tree-detail-cell">
+            <div class="ht-tree-detail-cell-label">🌲 Bark</div>
+            <div class="ht-tree-detail-cell-text">${escapeHtml(treeData.bark)}</div>
+          </div>
+          <div class="ht-tree-detail-cell">
+            <div class="ht-tree-detail-cell-label">🍃 Leaves</div>
+            <div class="ht-tree-detail-cell-text">${escapeHtml(treeData.leaves)}</div>
+          </div>
+          <div class="ht-tree-detail-cell">
+            <div class="ht-tree-detail-cell-label">🌳 Shape</div>
+            <div class="ht-tree-detail-cell-text">${escapeHtml(treeData.shape)}</div>
+          </div>
+        </div>
+        <div class="ht-tree-detail-tip">💡 ${escapeHtml(treeData.tip)}</div>
+        <div class="ht-tree-detail-relevance ${relevanceClass}">
+          🍄 <strong>Morel Relevance:</strong> ${escapeHtml(relevance.message)}
+        </div>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(popup);
+  // Close on overlay click
+  popup.addEventListener('click', (e) => { if (e.target === popup) window.closeTreeDetailPopup(); });
+};
+
+window.closeTreeDetailPopup = function() {
+  const popup = document.getElementById('htTreeDetailPopup');
+  if (popup) popup.remove();
+};
+
+/** Truncate text to a max length, breaking at a sentence or word boundary */
+function summarizeText(text, maxLen) {
+  if (!text || text.length <= maxLen) return text;
+  // Try to break at a sentence end
+  const trimmed = text.substring(0, maxLen);
+  const sentEnd = Math.max(trimmed.lastIndexOf('. '), trimmed.lastIndexOf('! '), trimmed.lastIndexOf('? '));
+  if (sentEnd > maxLen * 0.5) return trimmed.substring(0, sentEnd + 1);
+  // Fall back to word boundary
+  const wordEnd = trimmed.lastIndexOf(' ');
+  return (wordEnd > maxLen * 0.4 ? trimmed.substring(0, wordEnd) : trimmed) + '…';
+}
+
 function showEducationTile(hotspot, reason) {
   if (!UI_POPUPS_ENABLED) return;
   const tile = ensureEducationTile();
@@ -6074,96 +6264,97 @@ function showEducationTile(hotspot, reason) {
   const rank = hotspot?.rank ?? hotspot?.priority ?? tier;
   const accent = getPriorityColor(tier);
   const descriptionText = String(hotspot?.education?.description || '');
-  const lookForText = String(hotspot?.education?.lookFor || hotspot?.education?.tips || '');
+  const tipsText = String(hotspot?.education?.tips || '');
+  const lookForText = String(hotspot?.education?.lookFor || '');
   const microHint = !isMicroFeature ? getMicroFeatureHint() : '';
   const used = new Set([normalizeEducationText(descriptionText), normalizeEducationText(lookForText)]);
   const whyItems = buildEducationList([...(hotspot?.education?.why || []), ...(microHint ? [microHint] : [])], used);
   const approachItems = buildEducationList(hotspot?.education?.approach, used);
-  const whyList = whyItems.length
-    ? `<ul class="ht-edu-list">${whyItems.map((item) => `<li>${escapeHtml(item)}</li>`).join('')}</ul>`
-    : '';
-  const approachList = approachItems.length
-    ? `<ul class="ht-edu-list">${approachItems.map((item) => `<li>${escapeHtml(item)}</li>`).join('')}</ul>`
-    : '';
   const thermalCard = renderThermalEducationCard(hotspot?.education?.thermal);
-  const logoClass = isMicroFeature
-    ? 'ht-huntech-logo ht-huntech-logo--micro'
-    : 'ht-huntech-logo ht-huntech-logo--sm';
-  const logo = getHuntechLogoMarkup(logoClass);
   const checkinBtn = isMicroFeature
     ? ''
     : `<button class="ht-edu-pill" id="htEduCheckinBtn" type="button" onclick="window.checkInHotspot()" ${checkinDisabled ? 'disabled' : ''}>${checkinLabel}</button>`;
+
+  // Short summary — first sentence of description (cap at 140 chars)
+  const summary = summarizeText(descriptionText, 140);
+
+  // Action tips — combine tips + lookFor into one compact block, truncated
+  const actionText = [tipsText, lookForText].filter(Boolean).join(' ');
+  const actionSummary = summarizeText(actionText, 200);
+
+  // Build clickable tree chips (mushroom module only)
+  let treeChipsHtml = '';
+  if (isMushroomModule() && hotspot.education?.treeFocus?.length) {
+    const treeChips = hotspot.education.treeFocus.map(treeName => {
+      let treeKey = null;
+      if (hotspot.education.treeId) {
+        Object.keys(hotspot.education.treeId).forEach(k => {
+          if (hotspot.education.treeId[k].name.toLowerCase().includes(treeName.split(' ')[0].toLowerCase()) ||
+              treeName.toLowerCase().includes(k.toLowerCase())) {
+            treeKey = k;
+          }
+        });
+      }
+      if (!treeKey) {
+        Object.values(MUSHROOM_EDUCATION).forEach(habitat => {
+          if (habitat.treeId) {
+            Object.keys(habitat.treeId).forEach(k => {
+              const n = habitat.treeId[k].name.toLowerCase();
+              if (n.includes(treeName.split('(')[0].trim().split(' ')[0].toLowerCase())) {
+                treeKey = k;
+              }
+            });
+          }
+        });
+      }
+      const svg = getTreeIdSvg(treeName);
+      const onclick = treeKey ? `onclick="window.showTreeDetailPopup('${treeKey}')"` : '';
+      const clickClass = treeKey ? 'ht-tree-chip--clickable' : '';
+      return `<button class="ht-tree-chip ${clickClass}" ${onclick} type="button">
+        <span class="ht-tree-chip-svg">${svg}</span>
+        <span class="ht-tree-chip-name">${escapeHtml(treeName)}</span>
+      </button>`;
+    }).join('');
+    treeChipsHtml = `<div class="ht-tree-chip-row">${treeChips}</div>`;
+  }
+
+  // Collapsed "More Info" — full description, why, approach, season, thermal
+  let moreItems = '';
+  if (descriptionText.length > 140) {
+    moreItems += `<div class="ht-edu-more-block"><div class="ht-edu-more-label">Overview</div><div class="ht-edu-desc">${escapeHtml(descriptionText)}</div></div>`;
+  }
+  if (whyItems.length) {
+    moreItems += `<div class="ht-edu-more-block"><div class="ht-edu-more-label">${labels.whyTitle}</div><ul class="ht-edu-list">${whyItems.map(i => `<li>${escapeHtml(i)}</li>`).join('')}</ul></div>`;
+  }
+  if (approachItems.length) {
+    moreItems += `<div class="ht-edu-more-block"><div class="ht-edu-more-label">${labels.approachTitle}</div><ul class="ht-edu-list">${approachItems.map(i => `<li>${escapeHtml(i)}</li>`).join('')}</ul></div>`;
+  }
+  if (isMushroomModule() && hotspot.education?.seasonCues?.length) {
+    moreItems += `<div class="ht-edu-more-block"><div class="ht-edu-more-label">📅 Season Indicators</div><ul class="ht-edu-cue-list">${hotspot.education.seasonCues.map(c => `<li>${escapeHtml(c)}</li>`).join('')}</ul></div>`;
+  }
+  if (isMushroomModule() && hotspot.education?.treeNotes) {
+    moreItems += `<div class="ht-edu-more-block"><div class="ht-edu-more-label">🌳 Tree Notes</div><div class="ht-edu-desc ht-edu-desc--muted">${escapeHtml(hotspot.education.treeNotes)}</div></div>`;
+  }
+
   tile.innerHTML = `
     <div class="ht-edu-header">
-      <div class="ht-edu-title-wrap">
-        ${logo}
-        <div class="ht-edu-title-stack">
-          <div class="ht-edu-title" style="color:${accent};">${isMicroFeature ? 'Micro Feature' : `Priority ${rank}`}: ${escapeHtml(hotspot.education.title)}</div>
-          <div class="ht-edu-subtitle">${labels.pinBrief}</div>
-        </div>
-      </div>
-      <button onclick="closeEducationTile()" class="ht-edu-close-btn" type="button">Close</button>
+      <div class="ht-edu-title" style="color:${accent};">${isMicroFeature ? 'Micro' : `#${rank}`} ${escapeHtml(hotspot.education.title)}</div>
+      <button onclick="closeEducationTile()" class="ht-edu-close-btn" type="button">✕</button>
     </div>
     <div class="ht-edu-actions">
       ${checkinBtn}
-      <button class="ht-edu-pill ht-edu-pill--ghost" id="htEduAudioBtn" type="button" onclick="window.toggleEducationAudio()" aria-pressed="${speechActive ? 'true' : 'false'}">${speechActive ? 'Stop Audio' : 'Read to Me'}</button>
-      ${isMushroomModule() ? `<button class="ht-edu-pill ht-edu-pill--camera" type="button" onclick="window.openTreeIdCamera()">\uD83D\uDCF7 ID This Tree</button>` : ''}
+      <button class="ht-edu-pill ht-edu-pill--ghost" id="htEduAudioBtn" type="button" onclick="window.toggleEducationAudio()" aria-pressed="${speechActive ? 'true' : 'false'}">${speechActive ? 'Stop Audio' : '🔊 Read to Me'}</button>
+      ${isMushroomModule() ? `<button class="ht-edu-pill ht-edu-pill--camera" type="button" onclick="window.openTreeIdCamera()">📷 ID a Tree</button>` : ''}
     </div>
-    <div class="ht-edu-meta">${reason || (isMicroFeature ? 'Micro pin brief' : 'Education briefing')}</div>
-    <div class="ht-edu-desc">${escapeHtml(descriptionText)}</div>
-    ${whyList ? `
-      <div class="ht-edu-section ht-edu-section--accent" style="border-left-color:${accent};">
-        <div class="ht-edu-section-title">${labels.whyTitle}</div>
-        ${whyList}
-      </div>
-    ` : ''}
-    ${approachList ? `
-      <div class="ht-edu-section ht-edu-section--approach">
-        <div class="ht-edu-section-title">${labels.approachTitle}</div>
-        ${approachList}
-      </div>
-    ` : ''}
+    <div class="ht-edu-summary">${escapeHtml(summary)}</div>
+    ${actionSummary ? `<div class="ht-edu-action-box" style="border-left-color:${accent};"><div class="ht-edu-action-label">👀 What to look for</div><div class="ht-edu-action-text">${escapeHtml(actionSummary)}</div></div>` : ''}
     ${thermalCard}
-    <div class="ht-edu-section ht-edu-section--accent" style="border-left-color:${accent};">
-      <div class="ht-edu-section-title">${labels.lookForTitle}</div>
-      <div class="ht-edu-desc">${escapeHtml(lookForText)}</div>
-    </div>
-    ${isMushroomModule() && hotspot.education?.treeFocus?.length ? `
-    <div class="ht-edu-section ht-edu-section--trees">
-      <div class="ht-edu-section-title">\uD83C\uDF33 Key Trees to Find</div>
-      <div class="ht-edu-desc">${escapeHtml(hotspot.education.treeFocus.join(', '))}</div>
-      ${hotspot.education.treeNotes ? `<div class="ht-edu-desc ht-edu-desc--muted">${escapeHtml(hotspot.education.treeNotes)}</div>` : ''}
-      ${hotspot.education.treeId ? Object.values(hotspot.education.treeId).map(t => `
-        <div class="ht-tree-id-card">
-          <div class="ht-tree-id-header">
-            <div class="ht-tree-id-icon">${getTreeIdSvg(t.name)}</div>
-            <div class="ht-tree-id-name">${escapeHtml(t.name)}</div>
-          </div>
-          <div class="ht-tree-id-grid">
-            <div class="ht-tree-id-cell">
-              <div class="ht-tree-id-cell-label">\uD83C\uDF32 Bark</div>
-              <div class="ht-tree-id-detail">${escapeHtml(t.bark)}</div>
-            </div>
-            <div class="ht-tree-id-cell">
-              <div class="ht-tree-id-cell-label">\uD83C\uDF43 Leaves</div>
-              <div class="ht-tree-id-detail">${escapeHtml(t.leaves)}</div>
-            </div>
-            <div class="ht-tree-id-cell">
-              <div class="ht-tree-id-cell-label">\uD83C\uDF33 Shape</div>
-              <div class="ht-tree-id-detail">${escapeHtml(t.shape)}</div>
-            </div>
-          </div>
-          <div class="ht-tree-id-tip">\uD83D\uDCA1 ${escapeHtml(t.tip)}</div>
-        </div>
-      `).join('') : ''}
-    </div>
-    ` : ''}
-    ${isMushroomModule() && hotspot.education?.seasonCues?.length ? `
-    <div class="ht-edu-section ht-edu-section--season">
-      <div class="ht-edu-section-title">\uD83D\uDCC5 Season Indicators</div>
-      <ul class="ht-edu-cue-list">${hotspot.education.seasonCues.map(c => `<li>${escapeHtml(c)}</li>`).join('')}</ul>
-    </div>
-    ` : ''}
+    ${treeChipsHtml}
+    ${moreItems ? `
+    <details class="ht-edu-collapsible">
+      <summary class="ht-edu-collapsible-toggle">More details <span class="ht-edu-collapse-arrow">▸</span></summary>
+      <div class="ht-edu-more-content">${moreItems}</div>
+    </details>` : ''}
   `;
   tile.style.display = 'block';
   updateEducationCheckinButton();
@@ -6209,10 +6400,17 @@ function buildHotspotSpeakText(hotspot) {
   const title = hotspot.education.title || 'Hotspot';
   const desc = hotspot.education.description || '';
   const tips = hotspot.education.tips || '';
-  const why = Array.isArray(hotspot.education.why) ? hotspot.education.why.join(' ') : '';
-  const approach = Array.isArray(hotspot.education.approach) ? hotspot.education.approach.join(' ') : '';
+  const why = Array.isArray(hotspot.education.why) ? hotspot.education.why.join('. ') : '';
+  const approach = Array.isArray(hotspot.education.approach) ? hotspot.education.approach.join('. ') : '';
   const lookFor = hotspot.education.lookFor || '';
-  return `Priority ${hotspot.rank || hotspot.priority || ''} ${title}. ${desc} Why it matters: ${why}. How to hunt it: ${approach}. What to look for: ${lookFor}. Field tip: ${tips}.`;
+  const rank = hotspot.rank || hotspot.priority || '';
+  // Write in natural conversational cadence with clear pauses
+  let speech = `This is priority ${rank}, ${title}. ${desc}.`;
+  if (why)      speech += ` Here's why it matters. ${why}.`;
+  if (approach) speech += ` For your approach. ${approach}.`;
+  if (lookFor)  speech += ` Look for, ${lookFor}.`;
+  if (tips)     speech += ` Field tip. ${tips}.`;
+  return speech;
 }
 
 function updateMissionBriefAudioButton() {
@@ -6251,6 +6449,7 @@ function updateEducationCheckinButton() {
 //   Text-to-Speech & Audio
 // ===================================================================
 function stopAiSpeech(notice = true) {
+  _ttsChunkAbort = true;
   if (ttsAbortController) {
     try { ttsAbortController.abort(); } catch {}
     ttsAbortController = null;
@@ -6272,6 +6471,7 @@ function pickPreferredSpeechVoice(voices) {
   const list = Array.isArray(voices) ? voices : [];
   if (!list.length) return null;
 
+  // Allow explicit override from config
   const desiredName = String(window.HUNTECH_TTS_VOICE_NAME || '').trim();
   if (desiredName) {
     const match = list.find((voice) => (
@@ -6289,80 +6489,195 @@ function pickPreferredSpeechVoice(voices) {
     if (cached) return cached;
   }
 
-  const femaleNames = /(siri|samantha|ava|allison|olivia|zoe|joanna|emma|amelia|linda|karen|victoria|female)/i;
-  const maleNames = /(daniel|david|alex|matthew|nathan|tom|fred|george|michael|male)/i;
-  const qualityNames = /(enhanced|premium|neural|natural)/i;
-  const enUs = list.filter((voice) => /en(-|_)?US/i.test(voice.lang));
-  const enEnglish = list.filter((voice) => /en(-|_)?(US|GB|AU|CA)/i.test(voice.lang));
-  const pool = enUs.length ? enUs : enEnglish.length ? enEnglish : list;
+  // ── Realistic voice ranking ──
+  // Prioritise neural / online / enhanced voices — they sound human.
+  // Chrome/Edge have "Google US English" and "Microsoft … Online (Natural)".
+  // Safari has "Samantha (Enhanced)", "Siri" voices.
+  const neuralPat   = /online|neural|natural|enhanced|premium|wavenet|journey/i;
+  const siriPat     = /siri/i;
+  const googlePat   = /google/i;
+  const msEdgePat   = /microsoft.*online/i;
+  const femalePat   = /(samantha|ava|allison|olivia|zoe|joanna|emma|amelia|jenny|aria|siri.*female|karen|victoria|female)/i;
+  const malePat     = /(daniel|david|alex|matthew|nathan|tom|fred|george|michael|guy|male)/i;
 
-  const ranked = pool
-    .map((voice) => {
-      const name = String(voice.name || '');
-      const uri = String(voice.voiceURI || '');
-      let score = 0;
-      const isFemale = femaleNames.test(name) || femaleNames.test(uri);
-      const isMale = maleNames.test(name) || maleNames.test(uri);
-      if (isFemale) score += 8;
-      if (isMale) score -= 6;
-      if (qualityNames.test(name) || qualityNames.test(uri)) score += 3;
-      if (voice.localService) score += 2;
-      if (voice.default) score += 1;
-      return { voice, score, isFemale };
-    })
-    .sort((a, b) => b.score - a.score);
+  const enUs     = list.filter(v => /en(-|_)?US/i.test(v.lang));
+  const enAny    = list.filter(v => /en(-|_)?(US|GB|AU|CA)/i.test(v.lang));
+  const pool     = enUs.length ? enUs : enAny.length ? enAny : list;
+
+  const ranked = pool.map(voice => {
+    const n = String(voice.name || '');
+    const u = String(voice.voiceURI || '');
+    let score = 0;
+
+    // Strongly prefer high-quality neural/online voices
+    if (neuralPat.test(n) || neuralPat.test(u)) score += 20;
+    if (msEdgePat.test(n) || msEdgePat.test(u)) score += 18;
+    if (siriPat.test(n)   || siriPat.test(u))   score += 16;
+    if (googlePat.test(n)  || googlePat.test(u))  score += 14;
+
+    // Prefer female voices (generally smoother TTS)
+    const isFemale = femalePat.test(n) || femalePat.test(u);
+    const isMale   = malePat.test(n)   || malePat.test(u);
+    if (isFemale) score += 6;
+    if (isMale)   score -= 2;
+
+    // Local service = already downloaded = lower latency
+    if (voice.localService) score += 2;
+    if (voice.default)      score += 1;
+
+    return { voice, score, isFemale };
+  }).sort((a, b) => b.score - a.score);
 
   let choice = ranked.length ? ranked[0].voice : null;
   if (window.HUNTECH_TTS_FORCE_FEMALE) {
-    const femaleChoice = ranked.find((item) => item.isFemale);
+    const femaleChoice = ranked.find(item => item.isFemale);
     if (femaleChoice) choice = femaleChoice.voice;
   }
 
-  if (choice) preferredSpeechVoiceName = choice.name || choice.voiceURI || '';
+  if (choice) {
+    preferredSpeechVoiceName = choice.name || choice.voiceURI || '';
+    console.log('[TTS] Selected voice:', choice.name, '| lang:', choice.lang,
+      '| local:', choice.localService, '| URI:', choice.voiceURI);
+  }
   return choice;
 }
 
 function normalizeSpeechText(text) {
-  return String(text || '')
-    .replace(/\bhun\s*-?\s*tech\b/gi, 'Hun-tek')
-    .replace(/\bHuntech\b/gi, 'Hun-tek');
+  let t = String(text || '');
+  // Brand pronunciation
+  t = t.replace(/\bHUNT[ΞE]CH\b/gi, 'Hun-tek');
+  t = t.replace(/\bhun\s*-?\s*tech\b/gi, 'Hun-tek');
+  t = t.replace(/\bHuntech\b/gi, 'Hun-tek');
+  // Expand directional abbreviations — NEVER say single letters
+  t = t.replace(/\bNE\b/g, 'Northeast');
+  t = t.replace(/\bNW\b/g, 'Northwest');
+  t = t.replace(/\bSE\b/g, 'Southeast');
+  t = t.replace(/\bSW\b/g, 'Southwest');
+  t = t.replace(/\bN\b(?=[- ]facing|\s+slope|\s+side)/gi, 'North');
+  t = t.replace(/\bS\b(?=[- ]facing|\s+slope|\s+side)/gi, 'South');
+  t = t.replace(/\bE\b(?=[- ]facing|\s+slope|\s+side)/gi, 'East');
+  t = t.replace(/\bW\b(?=[- ]facing|\s+slope|\s+side)/gi, 'West');
+  // Standalone single-letter compass after whitespace/start
+  t = t.replace(/(^|[\s,.])\bN\b(?=[\s,.])/g, '$1North');
+  t = t.replace(/(^|[\s,.])\bS\b(?=[\s,.])/g, '$1South');
+  t = t.replace(/(^|[\s,.])\bE\b(?=[\s,.])/g, '$1East');
+  t = t.replace(/(^|[\s,.])\bW\b(?=[\s,.])/g, '$1West');
+  // Expand common abbreviations for natural flow
+  t = t.replace(/\bGPS\b/g, 'G P S');
+  t = t.replace(/\bAI\b/g, 'A I');
+  t = t.replace(/\bHD\b/g, 'H D');
+  t = t.replace(/\bID\b/g, 'I D');
+  t = t.replace(/\bft\b/g, 'feet');
+  t = t.replace(/\bmph\b/g, 'miles per hour');
+  t = t.replace(/\b(\d+)°F\b/g, '$1 degrees Fahrenheit');
+  t = t.replace(/\b(\d+)"/g, '$1 inches');
+  t = t.replace(/\b(\d+)'\b/g, '$1 feet');
+  // Soften numbered list markers that sound robotic
+  t = t.replace(/(\d+)\.\s/g, '$1, ');
+  // Add micro-pauses after colons for breathing room
+  t = t.replace(/:\s*/g, ': ... ');
+  // Smooth out multiple spaces
+  t = t.replace(/\s{2,}/g, ' ');
+  return t.trim();
 }
+
+/**
+ * Split text into natural sentence-sized chunks for smooth sequential speech.
+ * Short chunks prevent the browser TTS from stuttering on long passages.
+ */
+function splitSpeechChunks(text) {
+  if (!text) return [];
+  // Split on sentence boundaries (. ! ?) followed by space or end
+  const raw = text.match(/[^.!?]+[.!?]+[\s]*/g) || [text];
+  const chunks = [];
+  let buf = '';
+  for (const seg of raw) {
+    // Keep chunks between ~40-180 chars for natural pacing
+    if (buf.length + seg.length > 180 && buf.length > 30) {
+      chunks.push(buf.trim());
+      buf = seg;
+    } else {
+      buf += seg;
+    }
+  }
+  if (buf.trim()) chunks.push(buf.trim());
+  return chunks;
+}
+
+/**
+ * Speak a single chunk via browser TTS. Returns a Promise that resolves
+ * when the chunk finishes (or rejects on error).
+ */
+function speakChunk(text, voice, rate, pitch, volume) {
+  return new Promise((resolve, reject) => {
+    const utt = new SpeechSynthesisUtterance(text);
+    if (voice) utt.voice = voice;
+    utt.lang = 'en-US';
+    utt.rate   = rate;
+    utt.pitch  = pitch;
+    utt.volume = volume;
+    utt.onend   = () => resolve();
+    utt.onerror = (e) => reject(e);
+    speechSynthesis.speak(utt);
+  });
+}
+
+/**
+ * Main browser TTS entry point — chunked for smooth, realistic delivery.
+ * Splits long text into sentence chunks and speaks them sequentially
+ * with micro-pauses in between so the voice sounds natural and unhurried.
+ */
+let _ttsChunkAbort = false;
 
 function speakTextBrowser(text, notice) {
   if (!text) return false;
   if (!('speechSynthesis' in window)) return false;
 
-  const utterance = new SpeechSynthesisUtterance(normalizeSpeechText(text));
-  const voices = speechSynthesis.getVoices();
-  const isIOS = /iPad|iPhone|iPod/i.test(navigator.userAgent || '');
-  if (voices && voices.length) {
-    const preferredVoice = pickPreferredSpeechVoice(voices);
-    if (preferredVoice) utterance.voice = preferredVoice;
-  }
-  utterance.lang = 'en-US';
+  const normalized = normalizeSpeechText(text);
+  const chunks = splitSpeechChunks(normalized);
+  if (!chunks.length) return false;
 
-  const rate = Number(window.HUNTECH_TTS_RATE);
-  const pitch = Number(window.HUNTECH_TTS_PITCH);
-  const volume = Number(window.HUNTECH_TTS_VOLUME);
-  const defaultRate = isIOS ? 0.92 : 0.95;
-  const defaultPitch = 1.0;
-  utterance.rate = Number.isFinite(rate) ? Math.min(1.1, Math.max(0.85, rate)) : defaultRate;
-  utterance.pitch = Number.isFinite(pitch) ? Math.min(1.1, Math.max(0.9, pitch)) : defaultPitch;
-  utterance.volume = Number.isFinite(volume) ? Math.min(1.0, Math.max(0.6, volume)) : 1.0;
+  // Resolve best available voice (prefer neural/online)
+  let voices = speechSynthesis.getVoices();
+  const isIOS = /iPad|iPhone|iPod/i.test(navigator.userAgent || '');
+  const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent || '');
+  const preferredVoice = (voices && voices.length) ? pickPreferredSpeechVoice(voices) : null;
+
+  // Natural cadence settings — slightly faster than old default, warmer pitch
+  const rateVal   = Number(window.HUNTECH_TTS_RATE);
+  const pitchVal  = Number(window.HUNTECH_TTS_PITCH);
+  const volVal    = Number(window.HUNTECH_TTS_VOLUME);
+  const rate   = Number.isFinite(rateVal)  ? Math.min(1.15, Math.max(0.85, rateVal))  : (isIOS ? 0.98 : 1.02);
+  const pitch  = Number.isFinite(pitchVal) ? Math.min(1.15, Math.max(0.85, pitchVal)) : 1.02;
+  const volume = Number.isFinite(volVal)   ? Math.min(1.0,  Math.max(0.4, volVal))    : 1.0;
+
+  // Pause between chunks (ms) — gives a natural breathing cadence
+  const chunkPause = isIOS ? 180 : 120;
 
   speechActive = true;
+  _ttsChunkAbort = false;
   updateMissionBriefAudioButton();
-  utterance.onend = () => {
-    speechActive = false;
-    updateMissionBriefAudioButton();
-  };
-  utterance.onerror = () => {
-    speechActive = false;
-    updateMissionBriefAudioButton();
-  };
 
   try { speechSynthesis.cancel(); } catch {}
-  try { speechSynthesis.speak(utterance); } catch { return false; }
+
+  // Sequential async chunk delivery
+  (async () => {
+    for (let i = 0; i < chunks.length; i++) {
+      if (_ttsChunkAbort || !speechActive) break;
+      try {
+        await speakChunk(chunks[i], preferredVoice, rate, pitch, volume);
+      } catch {
+        break;
+      }
+      // Micro-pause between sentences for breathing room
+      if (i < chunks.length - 1 && !_ttsChunkAbort) {
+        await new Promise(r => setTimeout(r, chunkPause));
+      }
+    }
+    speechActive = false;
+    updateMissionBriefAudioButton();
+  })();
+
   if (notice) showNotice(notice, 'info', 3200);
   return true;
 }
@@ -9263,7 +9578,12 @@ window.centerOnMyLocation = function() {
 };
 
 window.showMap = function() {
-  if (isFlyModule() && !mapInitialized) {
+  if (isShedModule() && !mapInitialized) {
+    activateShedMap();
+  } else if (isShedModule()) {
+    document.body.classList.remove('ht-map-pending');
+    document.body.classList.add('ht-map-active');
+  } else if (isFlyModule() && !mapInitialized) {
     activateFlyMap();
   }
   const panel = document.getElementById('strategy-panel');
@@ -14434,10 +14754,12 @@ document.addEventListener('DOMContentLoaded', () => {
   const isFly = isFlyModule();
   const isMush = isMushroomModule();
   const isTurk = isTurkeyModule();
-  if (isFly || isMush || isTurk) {
+  const isShed = isShedModule();
+  if (isFly || isMush || isTurk || isShed) {
     if (isFly) flyMapPending = true;
     if (isMush) mushroomMapPending = true;
     if (isTurk) turkeyMapPending = true;
+    if (isShed) shedMapPending = true;
     document.body.classList.add('ht-map-pending');
     document.body.classList.remove('ht-map-active');
     // Start hero slideshow — rotate images every 6s
@@ -14460,6 +14782,20 @@ document.addEventListener('DOMContentLoaded', () => {
   startLocationWatch();
   updateWeather();
   initializeSearch();
+
+  // Pre-warm TTS voice list — Chrome loads voices async, this ensures
+  // the best neural/online voice is cached before user taps "Read to Me"
+  if ('speechSynthesis' in window) {
+    const warmVoices = () => {
+      const v = speechSynthesis.getVoices();
+      if (v && v.length) pickPreferredSpeechVoice(v);
+    };
+    warmVoices();
+    if (speechSynthesis.onvoiceschanged !== undefined) {
+      speechSynthesis.onvoiceschanged = warmVoices;
+    }
+  }
+
   loadRegulationsIndex();
   loadShedCache();
   loadSavedHuntAreas();

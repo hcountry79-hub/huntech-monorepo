@@ -1,0 +1,9 @@
+node_modules/
+.env
+.DS_Store
+*.log
+.elasticbeanstalk/
+dist/
+build/
+.idea/
+.vscode/settings.json

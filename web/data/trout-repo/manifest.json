@@ -1,0 +1,134 @@
+{
+  "generated_at": "2026-02-11T13:50:37.565Z",
+  "source_directory": "data/trout",
+  "raw_directory": "data/trout-repo/raw",
+  "normalized_directory": "data/trout-repo/normalized",
+  "files": [
+    {
+      "name": "missouri_trout_data (1).json",
+      "bytes": 2,
+      "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "type": "json"
+    },
+    {
+      "name": "missouri_trout_data.json",
+      "bytes": 2,
+      "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "type": "json"
+    },
+    {
+      "name": "missouri_trout_full (1).json",
+      "bytes": 53,
+      "sha256": "bf5de2f3460189240dde389e8235f8950ce29ee29e829686567598bf7a193dc3",
+      "type": "json"
+    },
+    {
+      "name": "missouri_trout_full.json",
+      "bytes": 15091,
+      "sha256": "18e5523c3c3992e3219d2236fd297f85102cff59a798a9749bac6a48f4558165",
+      "type": "json"
+    },
+    {
+      "name": "missouri_trout_full_text (1).txt",
+      "bytes": 7710,
+      "sha256": "6e76fa4b7c60d34ca730349530ae77decbf3d12f4359a670ab9a69a472042bcc",
+      "type": "txt"
+    },
+    {
+      "name": "missouri_trout_full_text (10).txt",
+      "bytes": 4492,
+      "sha256": "8c9b8aaf2dc376198365c95c76ec6e5cca275be7d0c6181720d9013f320fa302",
+      "type": "txt"
+    },
+    {
+      "name": "missouri_trout_full_text (2).txt",
+      "bytes": 4492,
+      "sha256": "8c9b8aaf2dc376198365c95c76ec6e5cca275be7d0c6181720d9013f320fa302",
+      "type": "txt"
+    },
+    {
+      "name": "missouri_trout_full_text (3).txt",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "type": "txt"
+    },
+    {
+      "name": "missouri_trout_full_text (4).txt",
+      "bytes": 4492,
+      "sha256": "8c9b8aaf2dc376198365c95c76ec6e5cca275be7d0c6181720d9013f320fa302",
+      "type": "txt"
+    },
+    {
+      "name": "missouri_trout_full_text (5).txt",
+      "bytes": 4492,
+      "sha256": "8c9b8aaf2dc376198365c95c76ec6e5cca275be7d0c6181720d9013f320fa302",
+      "type": "txt"
+    },
+    {
+      "name": "missouri_trout_full_text (6).txt",
+      "bytes": 4492,
+      "sha256": "8c9b8aaf2dc376198365c95c76ec6e5cca275be7d0c6181720d9013f320fa302",
+      "type": "txt"
+    },
+    {
+      "name": "missouri_trout_full_text (7).txt",
+      "bytes": 4492,
+      "sha256": "8c9b8aaf2dc376198365c95c76ec6e5cca275be7d0c6181720d9013f320fa302",
+      "type": "txt"
+    },
+    {
+      "name": "missouri_trout_full_text (8).txt",
+      "bytes": 4492,
+      "sha256": "8c9b8aaf2dc376198365c95c76ec6e5cca275be7d0c6181720d9013f320fa302",
+      "type": "txt"
+    },
+    {
+      "name": "missouri_trout_full_text (9).txt",
+      "bytes": 4492,
+      "sha256": "8c9b8aaf2dc376198365c95c76ec6e5cca275be7d0c6181720d9013f320fa302",
+      "type": "txt"
+    },
+    {
+      "name": "missouri_trout_full_text.txt",
+      "bytes": 7567,
+      "sha256": "68b5a6c32e0ea550e3e2b2f25744cbe17bd73b50dfbae1699d41747050139538",
+      "type": "txt"
+    }
+  ],
+  "entry_count": 7,
+  "map_count": 4,
+  "json_sources": [
+    {
+      "file": "missouri_trout_data (1).json",
+      "bytes": 2,
+      "page_count": 0,
+      "has_maps": false
+    },
+    {
+      "file": "missouri_trout_data.json",
+      "bytes": 2,
+      "page_count": 0,
+      "has_maps": false
+    },
+    {
+      "file": "missouri_trout_full.json",
+      "bytes": 15091,
+      "page_count": 7,
+      "has_maps": true
+    }
+  ],
+  "errors": [
+    {
+      "file": "missouri_trout_data (1).json",
+      "error": "empty JSON object"
+    },
+    {
+      "file": "missouri_trout_data.json",
+      "error": "empty JSON object"
+    },
+    {
+      "file": "missouri_trout_full (1).json",
+      "error": "Unexpected token '<', \"<JSON cont\"... is not valid JSON"
+    }
+  ]
+}

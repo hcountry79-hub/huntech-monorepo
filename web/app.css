@@ -3160,30 +3160,30 @@ body.module-mushroom .ht-map-hero-content {
   border-color: rgba(245, 200, 66, 0.3);
   background: linear-gradient(160deg, rgba(30, 16, 8, 0.92), rgba(20, 10, 4, 0.88));
 }
-/* hero-1: Morel in spring foliage — centre on mushroom (landscape 16:9) */
+/* hero-1: Common morel in spring foliage — sharp subject centre */
 .ht-mush-slide-morel {
-  background-position: center 42% !important;
-  filter: brightness(0.95) saturate(1.15) contrast(1.06) !important;
-}
-/* hero-2: Yellow morel in foliage — tall portrait, centre on cap */
-.ht-mush-slide-foliage {
-  background-position: center 36% !important;
-  filter: brightness(0.92) saturate(1.18) contrast(1.05) !important;
-}
-/* hero-3: Morel in forest habitat — rich detail portrait */
-.ht-mush-slide-forest {
   background-position: center 38% !important;
-  filter: brightness(0.93) saturate(1.12) contrast(1.06) !important;
+  filter: brightness(0.92) saturate(1.15) contrast(1.06) !important;
 }
-/* hero-4: Harvested morel textures — warm portrait */
+/* hero-2: Yellow morel amid spring leaves — warm natural light */
+.ht-mush-slide-foliage {
+  background-position: center 34% !important;
+  filter: brightness(0.90) saturate(1.18) contrast(1.05) !important;
+}
+/* hero-3: Harvested morel mushroom pile — rich detail */
 .ht-mush-slide-harvest {
-  background-position: center 40% !important;
-  filter: brightness(0.95) saturate(1.18) contrast(1.05) !important;
+  background-position: center 42% !important;
+  filter: brightness(0.93) saturate(1.15) contrast(1.06) !important;
 }
-/* hero-7: Forest floor mushrooms — woodland portrait */
-.ht-mush-slide-floor {
+/* hero-4: Morel mushroom unique texture close-up */
+.ht-mush-slide-forest {
   background-position: center 36% !important;
-  filter: brightness(0.93) saturate(1.12) contrast(1.06) !important;
+  filter: brightness(0.90) saturate(1.12) contrast(1.07) !important;
+}
+/* hero-5: Morel emerging from forest floor — spring foraging */
+.ht-mush-slide-floor {
+  background-position: center 38% !important;
+  filter: brightness(0.92) saturate(1.14) contrast(1.06) !important;
 }
 
 body.module-mushroom .ht-map-hero-sub,
@@ -3248,11 +3248,11 @@ body.module-mushroom .ht-map-hero-meta {
     background-size: cover;
     background-position: center 35%;
   }
-  .ht-mush-slide-morel { background-position: center 38% !important; }
-  .ht-mush-slide-foliage { background-position: center 32% !important; }
-  .ht-mush-slide-forest { background-position: center 34% !important; }
-  .ht-mush-slide-harvest { background-position: center 36% !important; }
-  .ht-mush-slide-floor { background-position: center 32% !important; }
+  .ht-mush-slide-morel { background-position: center 35% !important; }
+  .ht-mush-slide-foliage { background-position: center 30% !important; }
+  .ht-mush-slide-harvest { background-position: center 38% !important; }
+  .ht-mush-slide-forest { background-position: center 32% !important; }
+  .ht-mush-slide-floor { background-position: center 34% !important; }
 
   /* Warm mushroom vignette on mobile — deeper bottom blend */
   body.module-mushroom .ht-hero-vignette {
@@ -3265,6 +3265,31 @@ body.module-mushroom .ht-map-hero-meta {
         rgba(45, 24, 16, 0.75) 52%,
         rgba(26, 14, 8, 0.95) 62%,
         rgba(26, 14, 8, 1.0) 72%);
+  }
+
+  /* ── Shed mobile: cover fill, centre on antler subjects ── */
+  body.module-shed .ht-hero-slide {
+    background-size: cover;
+    background-position: center 30%;
+  }
+  .ht-shed-slide-1 { background-position: center 22% !important; }
+  .ht-shed-slide-2 { background-position: center 32% !important; }
+  .ht-shed-slide-3 { background-position: center 28% !important; }
+  .ht-shed-slide-4 { background-position: center 22% !important; }
+  .ht-shed-slide-5 { background-position: center 28% !important; }
+  .ht-shed-slide-6 { background-position: center 32% !important; }
+
+  /* Warm shed vignette on mobile — deeper bottom blend */
+  body.module-shed .ht-hero-vignette {
+    background:
+      radial-gradient(ellipse at 50% 28%, rgba(255, 193, 7, 0.03), transparent 55%),
+      linear-gradient(180deg,
+        rgba(26, 21, 16, 0.0) 0%,
+        rgba(26, 21, 16, 0.05) 18%,
+        rgba(26, 21, 16, 0.35) 40%,
+        rgba(26, 21, 16, 0.75) 52%,
+        rgba(26, 21, 16, 0.95) 62%,
+        rgba(26, 21, 16, 1.0) 72%);
   }
 }
 
