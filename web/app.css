@@ -2980,7 +2980,7 @@ body.module-shed .ht-map-locate-btn {
 /* Shed hero backgrounds: brighten and bias framing so antlers sit above center on phones */
 body.module-shed .ht-hero-slide {
   display: block;
-  background-position: center 24%;
+  background-position: center 18%;
   filter: brightness(1.25) saturate(1.18) contrast(1.06);
 }
 body.module-shed .ht-hero-slide--active {
@@ -2992,7 +2992,7 @@ body.module-shed .ht-shed-slide-3,
 body.module-shed .ht-shed-slide-4,
 body.module-shed .ht-shed-slide-5 {
   background-size: cover;
-  background-position: center 22%;
+  background-position: center 16%;
 }
 
 /* ═══ MUSHROOM MODULE HERO SPLASH ═══ */
