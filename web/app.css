@@ -2816,12 +2816,20 @@ body.module-fly #map {
   background: rgba(43, 212, 255, 0.15) !important;
 }
 
-/* Hero slides disabled - clean interface for Field Command */
+/* Hero slides base state - hidden until a module enables them */
 .ht-hero-slide {
-  display: none;
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center center;
+  background-repeat: no-repeat;
+  opacity: 0;
+  transform: scale(1.04);
+  transition: opacity 1.2s ease, transform 2s ease;
 }
 .ht-hero-slide--active {
-  display: none;
+  opacity: 1;
+  transform: scale(1);
 }
 
 /* Per-slide centering disabled - fly heroes removed for clean interface */
@@ -2951,9 +2959,10 @@ body.module-fly.ht-map-active .ht-map-locate-btn {
   transform: translateY(0);
 }
 
-/* ═══ SHED MODULE - CLEAN MAP INTERFACE === */
+/* ═══ SHED MODULE - HERO OVERLAY ON LIVE MAP === */
 body.module-shed .ht-map-hero {
-  display: none;
+  opacity: 0.96;
+  pointer-events: none;
 }
 body.module-shed #map {
   opacity: 1;
@@ -2968,12 +2977,22 @@ body.module-shed .ht-map-locate-btn {
   pointer-events: auto;
   transform: translateY(0);
 }
-/* Shed hero backgrounds removed for clean Field Command interface */
+/* Shed hero backgrounds: brighten and bias framing so antlers sit above center on phones */
 body.module-shed .ht-hero-slide {
-  display: none;
+  display: block;
+  background-position: center 24%;
+  filter: brightness(1.25) saturate(1.18) contrast(1.06);
 }
-body.module-shed .ht-hero-vignette {
-  display: none;
+body.module-shed .ht-hero-slide--active {
+  display: block;
+}
+body.module-shed .ht-shed-slide-1,
+body.module-shed .ht-shed-slide-2,
+body.module-shed .ht-shed-slide-3,
+body.module-shed .ht-shed-slide-4,
+body.module-shed .ht-shed-slide-5 {
+  background-size: cover;
+  background-position: center 22%;
 }
 
 /* ═══ MUSHROOM MODULE HERO SPLASH ═══ */
@@ -6995,17 +7014,26 @@ body.ht-saved-hunt-preview #planRoutePanel {
 }
 
 .ht-draw-guide-label {
-  background: transparent;
-  color: #ffd24d;
-  font-size: 11px;
-  padding: 0;
-  border-radius: 0;
-  border: none;
+  background: rgba(0, 0, 0, 0.88);
+  color: #ffd400;
+  font-size: clamp(10px, 2.4vw, 13px);
+  font-weight: 800;
+  letter-spacing: 0.4px;
+  padding: clamp(4px, 1vw, 6px) clamp(8px, 2vw, 14px);
+  border-radius: 999px;
+  border: 1.5px solid rgba(255, 212, 0, 0.5);
   white-space: nowrap;
   position: relative;
-  left: -120px;
-  top: -26px;
-  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.7);
+  left: 50%;
+  transform: translateX(-50%);
+  top: -6px;
+  text-shadow: none;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  text-align: center;
+  width: max-content;
+  max-width: clamp(140px, 45vw, 220px);
 }
 
 .ht-bubble-toggle {
