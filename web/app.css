@@ -2963,6 +2963,13 @@ body.module-fly.ht-map-active .ht-map-locate-btn {
 body.module-shed .ht-map-hero {
   opacity: 0.96;
   pointer-events: none;
+  transition: opacity 1.2s ease, transform 1.2s ease;
+}
+/* When Field Command tray opens, fade out the hero */
+body.module-shed:not(.ht-toolbar-collapsed) .ht-map-hero {
+  opacity: 0;
+  transform: scale(1.04);
+  pointer-events: none;
 }
 body.module-shed #map {
   opacity: 1;
