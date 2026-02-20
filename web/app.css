@@ -4424,7 +4424,7 @@ body.module-mushroom .ht-map-hero-meta {
 }
 
 .ht-mission-brief-pill.is-active {
-  background: rgba(255, 193, 7, 0.28);
+  background: #ffc107;
   color: #0a0a0a;
   border-color: rgba(255, 193, 7, 0.7);
 }
@@ -5802,10 +5802,10 @@ body.module-mushroom .ht-map-hero-meta {
 
 /* Camera ID button in education tile */
 .ht-edu-pill--camera {
-  background: linear-gradient(135deg, rgba(76, 175, 80, 0.2), rgba(76, 175, 80, 0.08));
-  border: 1px solid rgba(76, 175, 80, 0.5);
-  color: #a5d6a7;
-  font-weight: 700;
+  background: #ffc107;
+  border: 1px solid rgba(255, 193, 7, 0.7);
+  color: #0a0a0a;
+  font-weight: 800;
   font-size: 12px;
   padding: 6px 14px;
   border-radius: 999px;
@@ -5814,7 +5814,7 @@ body.module-mushroom .ht-map-hero-meta {
 }
 
 .ht-edu-pill--camera:hover {
-  background: rgba(76, 175, 80, 0.25);
+  background: #ffca28;
   transform: scale(1.03);
 }
 
@@ -6316,9 +6316,9 @@ body.module-mushroom .ht-map-hero-meta {
 }
 
 #education-tile .ht-edu-pill {
-  background: rgba(255, 193, 7, 0.18);
-  color: var(--gold);
-  border: 1px solid rgba(255, 193, 7, 0.6);
+  background: #ffc107;
+  color: #0a0a0a;
+  border: 1px solid rgba(255, 193, 7, 0.7);
   border-radius: 999px;
   padding: 6px 12px;
   font-size: 13px;
@@ -6332,9 +6332,9 @@ body.module-mushroom .ht-map-hero-meta {
 }
 
 #education-tile .ht-edu-pill--ghost {
-  background: rgba(0, 0, 0, 0.55);
-  color: #ffe28a;
-  border-color: rgba(255, 193, 7, 0.35);
+  background: #ffc107;
+  color: #0a0a0a;
+  border-color: rgba(255, 193, 7, 0.7);
 }
 
 #education-tile .ht-edu-pill:disabled {

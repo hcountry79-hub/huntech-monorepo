@@ -5841,7 +5841,7 @@ function updateRoutePinStatus() {
   const el = document.getElementById('routePinStatus');
   if (el) {
     const startLabel = startPoint ? getRoutePinLabelForPoint(startPoint) : '--';
-    el.textContent = `Start ${startLabel} • Loop back`;
+    el.textContent = `Start ${startLabel} • One-way`;
   }
   if (fieldCommandFlowActive) {
     if (startPoint) {
@@ -5977,7 +5977,7 @@ function openRoutePinModal() {
         <label style="font-size:12px;color:#bbb;">Entry Pin</label>
         <select id="routeEndPrompt" class="ht-select">${options}</select>
       ` : ''}
-      <div style="font-size:12px;color:#aaa;">${isFly ? 'Route order follows the nearest-neighbor path.' : 'Route loops back to the start.'}</div>
+      <div style="font-size:12px;color:#aaa;">${isFly ? 'Route order follows the nearest-neighbor path.' : 'One-way route to the furthest pin.'}</div>
     </div>
     <div class="ht-modal-actions">
       <button class="ht-modal-btn primary" id="routePinsConfirm">Continue</button>
@@ -7443,7 +7443,7 @@ function getHuntOverviewStats() {
   const hotspotCount = hotspotMarkers.length;
   const startLabel = startPoint ? getRoutePinLabelForPoint(startPoint) : '--';
   const endLabel = endPoint ? getRoutePinLabelForPoint(endPoint) : '--';
-  const modeLabel = selectedRoutingMode === 'loop' ? 'Loop' : 'Linear';
+  const modeLabel = 'Linear';
   const wind = lastPlanSnapshot?.wind || activeWindDir || '--';
   const windSpeed = Number.isFinite(activeWindSpeed) ? `${activeWindSpeed} mph` : '--';
   let miles = null;
@@ -7454,7 +7454,7 @@ function getHuntOverviewStats() {
   } else if (startPoint && endPoint && hotspotMarkers.length) {
     const routePoints = getHotspotRouteLatLngsOrdered(startPoint, endPoint);
     const base = [startPoint, ...routePoints];
-    const ideal = selectedRoutingMode === 'loop' ? [...base, startPoint] : [...base, endPoint];
+    const ideal = [...base, endPoint];
     miles = estimateRouteMiles(dedupeSequentialLatLngs(ideal));
   }
 
@@ -14739,7 +14739,7 @@ window.selectEndPoint = function() {
 };
 
 window.createLoopBackRoute = function() {
-  window.selectRoutingMode('loop');
+  window.selectRoutingMode('linear');
 };
 
 window.setRadiusFromLocation = function() {
@@ -15840,16 +15840,9 @@ window.createOptimalRoute = function(type) {
   let endCoord = endPoint || rawHotspots[rawHotspots.length - 1];
   let hotspotCoords = orderHotspotsByNearest(startCoord, rawHotspots, endCoord);
 
-  if (type === 'loop') {
-    // Loop should be: start -> nearest hotspots -> stop -> back to start.
-    coords.push(startCoord);
-    coords.push(...hotspotCoords);
-    coords.push(startCoord);
-  } else {
-    // Linear should be: start -> nearest hotspots -> stop.
-    coords.push(startCoord);
-    coords.push(...hotspotCoords);
-  }
+  // Always one-way: start -> nearest hotspots -> end (no loop back)
+  coords.push(startCoord);
+  coords.push(...hotspotCoords);
 
   const idealCoords = dedupeSequentialLatLngs(coords);
   const curvedIdeal = ensureRouteCurvature(idealCoords);
