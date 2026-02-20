@@ -210,9 +210,13 @@ window.TROUT_WATERS = [
     regulations: { method: 'Fly fishing and spinning in designated zones. Zone 1 fly only within 225ft of spring.', dailyLimit: 4, minSize: null, gearRestrictions: 'Zone 1: fly only. Zones 2-3: all legal methods.', specialRules: 'Daily tag required ($3). Hours 6:30am-30min after sunset. No fishing from bridge. Winter C&R: flies/artificial lures only.' },
     access: [
       { name: 'Park Main Entrance', lat: 37.7165, lng: -92.8490, type: 'parking', notes: 'Main lot near spring — get daily tag at office. Easy walk to all zones.' },
-      { name: 'Zone 1 Spring Pool', lat: 37.7155, lng: -92.8515, type: 'entry', notes: 'Fly fishing only. Crystal clear — long leaders and small flies required.' },
-      { name: 'Zone 2 Bridge Area', lat: 37.7148, lng: -92.8528, type: 'entry', notes: 'Most popular area. Arrive early for a good spot.' },
-      { name: 'Zone 3 Lower Creek', lat: 37.7130, lng: -92.8560, type: 'entry', notes: 'Least crowded. Best for families and beginners. Good spin fishing.' }
+      { name: 'Zone 1 Spring Pool', lat: 37.7157, lng: -92.8518, type: 'entry', notes: 'Fly fishing only within 225ft of spring. Crystal clear — long leaders and small flies required.' },
+      { name: 'Concession / Store', lat: 37.7162, lng: -92.8497, type: 'parking', notes: 'Park store and concession building near main parking. Tackle, snacks, daily tags.' },
+      { name: 'Nature Center', lat: 37.7170, lng: -92.8485, type: 'entry', notes: 'Nature center with exhibits. Trailheads to Spring Trail and Natural Tunnel Trail.' },
+      { name: 'Dam Area (Zone 1/2 Transition)', lat: 37.7150, lng: -92.8525, type: 'entry', notes: 'Low-head dam between Zone 1 and Zone 2. Good fishing on both sides. No fishing from bridge.' },
+      { name: 'Zone 2 Bridge Area', lat: 37.7148, lng: -92.8530, type: 'entry', notes: 'Most popular area. Arrive early for a good spot.' },
+      { name: 'Zone 3 Lower Creek', lat: 37.7130, lng: -92.8560, type: 'entry', notes: 'Least crowded. Best for families and beginners. Good spin fishing.' },
+      { name: 'Zone 3 Lower Parking', lat: 37.7125, lng: -92.8570, type: 'parking', notes: 'Lower lot near Zone 3. Closer access for families avoiding the walk from main lot.' }
     ],
     solitude: 'low', difficulty: 'easy', wadingRequired: false, familyFriendly: true,
     bestSeasons: ['spring', 'fall'],
@@ -233,7 +237,12 @@ window.TROUT_WATERS = [
     access: [
       { name: 'Montauk Lodge Parking', lat: 37.4552, lng: -91.6700, type: 'parking', notes: 'Main park lot. Walk to spring and stream.' },
       { name: 'Spring Branch Entry', lat: 37.4545, lng: -91.6725, type: 'entry', notes: 'Near spring pool. Fly only — technical but rewarding.' },
-      { name: 'Lower Stream Access', lat: 37.4530, lng: -91.6750, type: 'entry', notes: 'Easier wading, all methods. Good for families.' }
+      { name: 'Montauk Hatchery / Mill', lat: 37.4548, lng: -91.6718, type: 'entry', notes: 'Historic gristmill (1896) and hatchery area. Walk to spring outflow.' },
+      { name: 'Lower Stream Access', lat: 37.4530, lng: -91.6750, type: 'entry', notes: 'Easier wading, all methods. Good for families.' },
+      { name: 'Campground Stream Access', lat: 37.4538, lng: -91.6740, type: 'entry', notes: 'Access from campground side. Short walk through campground to lower stream.' },
+      { name: 'Tan Vat Access', lat: 37.4370, lng: -91.6500, type: 'entry', notes: 'Downstream on Current River via CR 119. Named for historic tanning vat. Good wade fishing — wild trout in spring branches. Gravel road access.' },
+      { name: 'Baptist Camp Access', lat: 37.4260, lng: -91.6380, type: 'entry', notes: 'Downstream on Current River. Walk-in from gravel road. Quieter section with deeper pools. Some private land — respect posted signs.' },
+      { name: 'Cedar Grove Access', lat: 37.4130, lng: -91.6270, type: 'entry', notes: 'Further downstream on Current River. Remote walk-in. Excellent solitude. Wild brown trout in this stretch. Gravel bar camping possible.' }
     ],
     solitude: 'low', difficulty: 'easy', wadingRequired: false, familyFriendly: true,
     bestSeasons: ['spring', 'fall'],
@@ -253,8 +262,13 @@ window.TROUT_WATERS = [
     regulations: { method: 'All legal methods. Fly-only zone near spring.', dailyLimit: 4, minSize: null, gearRestrictions: 'Fly fishing only area near spring. General methods downstream.', specialRules: 'Daily tag required ($3). Winter C&R: flies/artificial lures only.' },
     access: [
       { name: 'Park Main Parking', lat: 36.5880, lng: -93.8270, type: 'parking', notes: 'Main lot. Short walk to stream.' },
-      { name: 'Spring Pool Area', lat: 36.5868, lng: -93.8295, type: 'entry', notes: 'Fly only. Deep blue spring pool — sight fishing possible.' },
-      { name: 'Lower Stream Picnic Area', lat: 36.5855, lng: -93.8310, type: 'entry', notes: 'Family friendly. Easy bank access.' }
+      { name: 'Spring Pool Area', lat: 36.5870, lng: -93.8295, type: 'entry', notes: 'Fly only. Deep blue spring pool — sight fishing possible.' },
+      { name: 'Hatchery Area', lat: 36.5876, lng: -93.8288, type: 'entry', notes: 'MDC trout hatchery. Outflow channel holds active feeders. Educational stop for families.' },
+      { name: 'CCC Lodge / Emory Melton Inn', lat: 36.5883, lng: -93.8262, type: 'parking', notes: 'Historic CCC Lodge (1930s) and Emory Melton Inn. Upper parking area. Restaurant on-site.' },
+      { name: 'Cardiac Hill Trail', lat: 36.5862, lng: -93.8305, type: 'entry', notes: 'Steep switchback trail from ridge to stream. Named for the climb back up. Access mid-stream section.' },
+      { name: 'Nature Center', lat: 36.5878, lng: -93.8275, type: 'entry', notes: 'Park nature center with exhibits. Trailhead for Fire Tower and Deer Leap trails.' },
+      { name: 'Lower Stream Picnic Area', lat: 36.5855, lng: -93.8315, type: 'entry', notes: 'Family friendly. Easy bank access. Picnic shelters available.' },
+      { name: 'Campground 3 Stream Access', lat: 36.5848, lng: -93.8325, type: 'entry', notes: 'Access from lower campground. Walk to furthest downstream section. Least crowded.' }
     ],
     solitude: 'low', difficulty: 'easy', wadingRequired: false, familyFriendly: true,
     bestSeasons: ['spring', 'fall'],
@@ -273,8 +287,12 @@ window.TROUT_WATERS = [
     seasonDates: { open: 'March 15', close: 'October 31', catchRelease: 'Nov 1 - Feb 28' },
     regulations: { method: 'All legal methods except fly zone.', dailyLimit: 4, minSize: null, gearRestrictions: 'Fly area near spring. General methods elsewhere.', specialRules: 'Privately owned (James Foundation). Separate entrance fee.' },
     access: [
-      { name: 'Maramec Spring Park Gate', lat: 37.9355, lng: -91.7680, type: 'parking', notes: 'Pay entrance fee. Parking near spring and stream.' },
-      { name: 'Spring Pool Walk', lat: 37.9345, lng: -91.7710, type: 'entry', notes: 'Walk to spring. Deep clear pool — sight fish for large trout.' }
+      { name: 'Maramec Spring Park Gate', lat: 37.9355, lng: -91.7680, type: 'parking', notes: 'Pay entrance fee ($5/vehicle). Parking near spring and stream.' },
+      { name: 'Spring Pool Walk', lat: 37.9345, lng: -91.7710, type: 'entry', notes: 'Walk to spring. Deep clear pool — sight fish for large trout. 96M gal/day.' },
+      { name: 'Iron Works Museum', lat: 37.9358, lng: -91.7695, type: 'entry', notes: 'James Foundation iron works museum. History exhibits. Stream access nearby.' },
+      { name: 'Lower Stream / Riffle Area', lat: 37.9335, lng: -91.7725, type: 'entry', notes: 'Downstream section with riffles. Less crowded than spring pool. Good nymphing water.' },
+      { name: 'Campground Access', lat: 37.9362, lng: -91.7665, type: 'parking', notes: 'Campground area with stream access. Walk to middle section of trout water.' },
+      { name: 'Nature Center', lat: 37.9350, lng: -91.7700, type: 'entry', notes: 'Nature education center. Adjacent to spring pool area.' }
     ],
     solitude: 'low', difficulty: 'easy', wadingRequired: false, familyFriendly: true,
     bestSeasons: ['spring', 'fall'],
@@ -379,8 +397,10 @@ window.TROUT_WATERS = [
     seasonDates: { open: 'Year-round', close: null, catchRelease: null },
     regulations: { method: 'Flies and artificial lures ONLY. No soft plastics.', dailyLimit: 1, minSize: '18 inches', gearRestrictions: 'Flies and artificial lures only. No soft plastics.', specialRules: 'Blue Ribbon. Conservation Area — check MDC access rules.' },
     access: [
-      { name: 'Crane Creek CA Main Parking', lat: 36.6960, lng: -93.3310, type: 'parking', notes: 'Conservation area gravel parking. Walk to stream.' },
-      { name: 'Upper Crane Creek Trail', lat: 36.6980, lng: -93.3280, type: 'entry', notes: 'Upstream access. Hike in for solitude.' }
+      { name: 'Crane Creek CA Main Parking', lat: 36.6960, lng: -93.3310, type: 'parking', notes: 'Conservation area gravel parking. Walk to stream. Check MDC access rules.' },
+      { name: 'Upper Crane Creek Trail', lat: 36.6980, lng: -93.3280, type: 'entry', notes: 'Upstream access via hiking trail. More solitude in upper reaches.' },
+      { name: 'Lower Crane Creek Walk-In', lat: 36.6930, lng: -93.3350, type: 'entry', notes: 'Downstream section. Longer hike. Deeper pools hold bigger fish. True backcountry.' },
+      { name: 'Hwy 13 Bridge Access', lat: 36.6945, lng: -93.3340, type: 'entry', notes: 'Roadside pulloff near Hwy 13. Quick access to middle section of Crane Creek.' }
     ],
     solitude: 'high', difficulty: 'moderate', wadingRequired: true, familyFriendly: false,
     bestSeasons: ['spring', 'fall', 'winter'],
@@ -398,10 +418,12 @@ window.TROUT_WATERS = [
     seasonDates: { open: 'Year-round', close: null, catchRelease: null },
     regulations: { method: 'Flies and artificial lures ONLY. No soft plastics.', dailyLimit: 1, minSize: '18 inches', gearRestrictions: 'Flies and artificial lures only. Soft plastics excluded.', specialRules: 'Blue Ribbon: Rainbow Springs outlet → Patrick Bridge (~7mi). Trophy management.' },
     access: [
-      { name: 'Rainbow Springs Access', lat: 36.7720, lng: -92.2270, type: 'parking', notes: 'Near Rainbow Springs outlet. Start of Blue Ribbon.' },
-      { name: 'Kelly Ford', lat: 36.7680, lng: -92.2350, type: 'entry', notes: 'Popular float put-in. Good wade access. Mid-Blue-Ribbon.' },
-      { name: 'Patrick Bridge', lat: 36.7600, lng: -92.2450, type: 'entry', notes: 'End of Blue Ribbon / start of Red Ribbon.' },
-      { name: 'Blair Bridge', lat: 36.7550, lng: -92.2520, type: 'entry', notes: 'Float take-out. In Red Ribbon section.' }
+      { name: 'Rainbow Springs Access', lat: 36.7815, lng: -92.2105, type: 'parking', notes: 'Near Rainbow Springs outlet. Start of Blue Ribbon. Small gravel lot — arrive early. Cold spring branch enters here.' },
+      { name: 'Hammond Camp', lat: 36.7745, lng: -92.2195, type: 'entry', notes: 'Walk-in access between Rainbow Springs and Kelly Ford. Primitive camping. Good wade fishing on gravel bars.' },
+      { name: 'Kelly Ford', lat: 36.7680, lng: -92.2320, type: 'entry', notes: 'Popular float put-in. Low-water ford/crossing. Good wade access to prime riffles. Mid-Blue-Ribbon.' },
+      { name: 'Twin Bridges Access', lat: 36.7640, lng: -92.2390, type: 'entry', notes: 'Between Kelly Ford and Patrick Bridge. Walk-in. Less pressure than Kelly Ford.' },
+      { name: 'Patrick Bridge (Hwy CC)', lat: 36.7565, lng: -92.2475, type: 'parking', notes: 'End of Blue Ribbon / start of Red Ribbon. Bridge with parking both sides. Major put-in/take-out.' },
+      { name: 'Blair Bridge', lat: 36.7420, lng: -92.2580, type: 'entry', notes: 'Float take-out. In Red Ribbon section. Good wade access to deep pools.' }
     ],
     solitude: 'medium', difficulty: 'moderate-hard', wadingRequired: true, familyFriendly: false,
     bestSeasons: ['spring', 'fall', 'winter'],
@@ -423,9 +445,11 @@ window.TROUT_WATERS = [
     seasonDates: { open: 'Year-round', close: null, catchRelease: null },
     regulations: { method: 'Flies and artificial lures ONLY. No soft plastics.', dailyLimit: 2, minSize: '15 inches', gearRestrictions: 'Flies and artificial lures only. Soft plastics excluded.', specialRules: 'Red Ribbon: Patrick Bridge → downstream past Althea Spring. Stocked brown trout + trophy management.' },
     access: [
-      { name: 'Patrick Bridge', lat: 36.7600, lng: -92.2450, type: 'parking', notes: 'Start of Red Ribbon. Bridge parking both sides.' },
-      { name: 'Althea Spring Access', lat: 36.7480, lng: -92.2600, type: 'entry', notes: 'Spring branch — best trout concentration in Red Ribbon. Dirt road.' },
-      { name: 'Blair Bridge', lat: 36.7550, lng: -92.2520, type: 'entry', notes: 'Major access. Float take-out. Good wade access.' }
+      { name: 'Patrick Bridge (Hwy CC)', lat: 36.7565, lng: -92.2475, type: 'parking', notes: 'Start of Red Ribbon. Bridge parking both sides. Float put-in.' },
+      { name: 'Blair Bridge', lat: 36.7420, lng: -92.2580, type: 'parking', notes: 'Major access. Float take-out. Good wade access up and downstream.' },
+      { name: 'Althea Spring Access', lat: 36.7380, lng: -92.2640, type: 'entry', notes: 'Spring branch — best trout concentration in Red Ribbon. Cold spring inflow. Dirt road access.' },
+      { name: 'Norfork Access', lat: 36.7250, lng: -92.2780, type: 'entry', notes: 'Downstream Red Ribbon. More remote. Float access recommended.' },
+      { name: 'Dawt Mill', lat: 36.7100, lng: -92.2950, type: 'parking', notes: 'Historic mill site. End of Red Ribbon area. Lodging and canoe rental available. Float take-out.' }
     ],
     solitude: 'medium', difficulty: 'moderate', wadingRequired: true, familyFriendly: false,
     bestSeasons: ['spring', 'fall'],
@@ -471,11 +495,18 @@ window.TROUT_WATERS = [
     seasonDates: { open: 'Year-round', close: null, catchRelease: null },
     regulations: { method: 'Varies by section. Check MDC for specific reach.', dailyLimit: 4, minSize: 'Varies', gearRestrictions: 'Some sections fly/artificial only. Others all methods.', specialRules: 'National Scenic Riverway. Federal + state regulations.' },
     access: [
-      { name: 'Montauk State Park', lat: 37.4549, lng: -91.6712, type: 'parking', notes: 'Upper Current begins here. Float downstream.' },
-      { name: 'Welch Spring', lat: 37.3700, lng: -91.5600, type: 'entry', notes: 'Spring branch holds wild trout. Walk-in. Remote.' },
-      { name: 'Pulltite Spring', lat: 37.3200, lng: -91.4200, type: 'parking', notes: 'NPS launch. Float access. Good wade near spring mouth.' },
-      { name: 'Round Spring', lat: 37.2800, lng: -91.3800, type: 'parking', notes: 'NPS campground. Good base for multi-day floats.' },
-      { name: 'Blue Spring (Current)', lat: 37.2500, lng: -91.3600, type: 'entry', notes: 'Missouris deepest spring. Spring branch holds trout. Hiking access.' }
+      { name: 'Montauk State Park', lat: 37.4549, lng: -91.6712, type: 'parking', notes: 'Upper Current begins here. Float downstream. Trout park — see Montauk listing.' },
+      { name: 'Tan Vat Access', lat: 37.4370, lng: -91.6500, type: 'entry', notes: 'Downstream of Montauk via CR 119. Named for old tanning vat. Gravel road. Wild trout in spring branches.' },
+      { name: 'Baptist Camp', lat: 37.4260, lng: -91.6380, type: 'entry', notes: 'Walk-in access downstream. Deeper pools, quieter water. Some private land — check signs.' },
+      { name: 'Cedar Grove', lat: 37.4130, lng: -91.6270, type: 'entry', notes: 'Remote downstream access. Excellent solitude and wild trout. Gravel bar camping.' },
+      { name: 'Welch Spring', lat: 37.3700, lng: -91.5580, type: 'entry', notes: 'Major spring branch (121 cfs average). Wild trout. Walk-in 0.5mi from Hwy KK. Remote.' },
+      { name: 'Akers Ferry', lat: 37.3440, lng: -91.4960, type: 'parking', notes: 'NPS campground and historic ferry crossing. Major float put-in/take-out. Canoe rental. Ranger station.' },
+      { name: 'Pulltite Spring', lat: 37.3180, lng: -91.4180, type: 'parking', notes: 'NPS launch and campground. Good wade fishing near spring mouth. Float access.' },
+      { name: 'Round Spring', lat: 37.2780, lng: -91.3810, type: 'parking', notes: 'NPS campground. Ranger-led cave tours in summer. Good base for multi-day floats.' },
+      { name: 'Two Rivers (Current + Jacks Fork)', lat: 37.2540, lng: -91.3640, type: 'parking', notes: 'NPS campground at confluence of Current and Jacks Fork rivers. Float junction point.' },
+      { name: 'Blue Spring (Current)', lat: 37.2450, lng: -91.3570, type: 'entry', notes: 'Missouris deepest spring (310ft). Spring branch holds trout. Hiking trail access.' },
+      { name: 'Big Spring', lat: 36.9620, lng: -90.9880, type: 'parking', notes: 'One of Americas largest springs (277M gal/day). NPS campground, CCC structures. Lower Current River. Major access.' },
+      { name: 'Van Buren Access', lat: 36.9910, lng: -91.0150, type: 'parking', notes: 'NPS headquarters town. Hwy 60 bridge. Float take-out. Canoe liveries. Services.' }
     ],
     solitude: 'medium', difficulty: 'moderate', wadingRequired: false, familyFriendly: true,
     bestSeasons: ['spring', 'fall', 'winter'],
@@ -494,9 +525,13 @@ window.TROUT_WATERS = [
     seasonDates: { open: 'Year-round', close: null, catchRelease: null },
     regulations: { method: 'Varies by section.', dailyLimit: 4, minSize: 'Varies', gearRestrictions: 'Some sections restricted to flies/lures.', specialRules: 'Wild and Scenic River. Section-specific regulations.' },
     access: [
-      { name: 'Greer Spring Trail', lat: 36.7900, lng: -91.5100, type: 'entry', notes: 'Hike to Greer Spring — Missouris 2nd largest. Wild trout in spring branch.' },
-      { name: 'Turner Mill Access', lat: 36.7800, lng: -91.5250, type: 'parking', notes: 'Float launch. Good wade fishing upstream.' },
-      { name: 'Riverton Access', lat: 36.7700, lng: -91.5400, type: 'parking', notes: 'Popular float access. Good camping.' }
+      { name: 'Thomasville Access', lat: 36.7830, lng: -91.5140, type: 'parking', notes: 'Upper Eleven Point near Thomasville. Float put-in. Hwy 99 bridge. Services in town.' },
+      { name: 'Greer Spring Trailhead', lat: 36.7650, lng: -91.3580, type: 'entry', notes: 'Hike 1.5mi to Greer Spring — Missouris 2nd largest (220M gal/day). Wild trout in spring branch. USFS trailhead off CR 1B / Hwy 19.' },
+      { name: 'Greer Crossing', lat: 36.7580, lng: -91.3520, type: 'parking', notes: 'River access near Greer Spring confluence. Float put-in/take-out. USFS campground.' },
+      { name: 'Turner Mill South', lat: 36.7700, lng: -91.4500, type: 'parking', notes: 'Float launch on middle section. Good wade fishing upstream toward Greer influence.' },
+      { name: 'Riverton Access', lat: 36.7750, lng: -91.4950, type: 'parking', notes: 'Popular float access upstream section. Good camping nearby.' },
+      { name: 'Mary Decker Shoal', lat: 36.7400, lng: -91.3200, type: 'entry', notes: 'Downstream of Greer Crossing. Walk-in shoal access. Excellent smallmouth + trout water.' },
+      { name: 'Boze Mill', lat: 36.7100, lng: -91.2800, type: 'parking', notes: 'Lower Eleven Point access. Float take-out. Near Hwy 142 bridge. Good trout fishing near remaining spring influence.' }
     ],
     solitude: 'high', difficulty: 'moderate', wadingRequired: false, familyFriendly: true,
     bestSeasons: ['spring', 'fall', 'winter'],
@@ -513,15 +548,17 @@ window.TROUT_WATERS = [
   // ═══════════════════════════════════════════════════════════════════════
   {
     id: 'lake-taneycomo-z1', name: 'Lake Taneycomo — Zone 1 (Fly/Lure Only)', category: 'tailwater', ribbon: 'Special Management',
-    region: 'southwest-mo', lat: 36.6350, lng: -93.2380, acres: null, streamMiles: 3.0,
+    region: 'southwest-mo', lat: 36.6310, lng: -93.3140, acres: null, streamMiles: 3.0,
     species: ['rainbow', 'brown'], waterType: 'tailwater', flowSource: 'Table Rock Dam releases',
     usgsSiteId: '07053810', generationWarning: true, troutStampRequired: true,
     seasonDates: { open: 'Year-round', close: null, catchRelease: null },
     regulations: { method: 'Artificial flies and lures ONLY. No soft plastics.', dailyLimit: 4, minSize: 'RB: <12" or >20". BN: >20" to keep.', gearRestrictions: 'Flies and artificial lures only. Soft plastics prohibited.', specialRules: 'Zone 1: 760ft below dam → Fall Creek. Only 1 brown in limit. DANGER: Dam generation changes flows — EXIT WATER when sirens sound.' },
     access: [
-      { name: 'Table Rock Dam Parking', lat: 36.6380, lng: -93.2350, type: 'parking', notes: 'Corps of Engineers parking. Walk to wade water below dam.' },
-      { name: 'Shepherd of the Hills Hatchery', lat: 36.6360, lng: -93.2365, type: 'parking', notes: 'MDC hatchery parking. Trail to stream. Educational stop.' },
-      { name: 'Trophy Run Area', lat: 36.6320, lng: -93.2400, type: 'entry', notes: 'Wade downstream from dam. Best past first quarter-mile of heavy pressure.' }
+      { name: 'Table Rock Dam Parking (Corps)', lat: 36.6295, lng: -93.3185, type: 'parking', notes: 'US Army Corps of Engineers parking below dam. Walk to wade water. Check generation schedule.' },
+      { name: 'Shepherd of the Hills Hatchery', lat: 36.6310, lng: -93.3150, type: 'parking', notes: 'MDC hatchery parking. Trail to stream. Free tours. Tackle shop. Best lot for Zone 1 fishing.' },
+      { name: 'Hatchery Outflow / Upper Zone 1', lat: 36.6315, lng: -93.3135, type: 'entry', notes: 'Directly below hatchery outflow. High trout concentration. Cold water year-round. Crowded weekends.' },
+      { name: 'Trophy Run Area', lat: 36.6330, lng: -93.3080, type: 'entry', notes: 'Wade downstream from dam past the initial crowded stretch. Better fish past first quarter-mile.' },
+      { name: 'Fall Creek Access (Zone 1/2 boundary)', lat: 36.6350, lng: -93.2980, type: 'entry', notes: 'Near Fall Creek — Zone 1/Zone 2 transition. Last fly-only water before general methods zone.' }
     ],
     solitude: 'low', difficulty: 'moderate', wadingRequired: true, familyFriendly: false,
     bestSeasons: ['spring', 'fall', 'winter'],
@@ -533,16 +570,18 @@ window.TROUT_WATERS = [
   },
   {
     id: 'lake-taneycomo-z2', name: 'Lake Taneycomo — Zone 2 (General)', category: 'tailwater', ribbon: 'Special Management',
-    region: 'southwest-mo', lat: 36.6100, lng: -93.2550, acres: null, streamMiles: 20,
+    region: 'southwest-mo', lat: 36.6500, lng: -93.2400, acres: null, streamMiles: 20,
     species: ['rainbow', 'brown'], waterType: 'tailwater', flowSource: 'Table Rock Dam releases',
     usgsSiteId: '07053810', generationWarning: true, troutStampRequired: true,
     seasonDates: { open: 'Year-round', close: null, catchRelease: null },
     regulations: { method: 'No bait restrictions.', dailyLimit: 4, minSize: 'Browns >20" to keep. No rainbow size restriction.', gearRestrictions: 'All legal methods including bait.', specialRules: 'Zone 2: Fall Creek → Powersite Dam (~20mi). Only 1 brown in limit.' },
     access: [
-      { name: 'Fall Creek Marina Area', lat: 36.6200, lng: -93.2480, type: 'parking', notes: 'Zone 1/2 transition. Marina access and docks.' },
-      { name: 'Branson Landing', lat: 36.6430, lng: -93.2200, type: 'parking', notes: 'Downtown Branson. Guide services and dock fishing.' },
-      { name: 'Rockaway Beach', lat: 36.6800, lng: -93.1700, type: 'parking', notes: 'Mid-lake. Less crowded, good bank fishing.' },
-      { name: 'Forsyth / Powersite Dam', lat: 36.6850, lng: -93.1200, type: 'parking', notes: 'Lower end. Dam area. Good fishing.' }
+      { name: 'Fall Creek Marina Area', lat: 36.6350, lng: -93.2980, type: 'parking', notes: 'Zone 1/2 transition. Marina access and docks. Boat rental available.' },
+      { name: 'Lilley\'s Landing Resort & Marina', lat: 36.6370, lng: -93.2900, type: 'parking', notes: 'Premier fly fishing guide headquarters. Dock fishing. Boat rental. Fly shop on-site.' },
+      { name: 'Branson Landing', lat: 36.6430, lng: -93.2200, type: 'parking', notes: 'Downtown Branson waterfront. Guide services, dock fishing, walks along the lake. Marina access.' },
+      { name: 'Rockaway Beach', lat: 36.6800, lng: -93.1700, type: 'parking', notes: 'Mid-lake. Less crowded, good bank fishing. Family area with beach access.' },
+      { name: 'Taneycomo Lakefront / Midway', lat: 36.6600, lng: -93.1950, type: 'entry', notes: 'Mid-section access. Various resorts with dock fishing. Boat access points.' },
+      { name: 'Forsyth / Powersite Dam', lat: 36.6850, lng: -93.1200, type: 'parking', notes: 'Lower end at Powersite Dam. Dam tailwater area. Good fishing year-round.' }
     ],
     solitude: 'low', difficulty: 'easy', wadingRequired: false, familyFriendly: true,
     bestSeasons: ['spring', 'fall', 'winter'],

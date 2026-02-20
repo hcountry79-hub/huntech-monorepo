@@ -321,6 +321,7 @@ function showFlyWaterMarkersByDistance(center, radiusMiles) {
     if (distance <= radiusMeters) {
       if (water.id) seen.add(water.id);
       addFlyWaterMarker(water);
+      addAccessPointsForWater(water);
     }
   });
   getFlyCustomWaters().forEach((water, idx) => {
@@ -331,6 +332,7 @@ function showFlyWaterMarkersByDistance(center, radiusMiles) {
     if (distance <= radiusMeters) {
       seen.add(id);
       addFlyWaterMarker(water, formatFlyWaterShortName(water.name));
+      addAccessPointsForWater(water);
     }
   });
 }
@@ -509,6 +511,87 @@ function addFlyWaterMarker(water, labelOverride) {
   return marker;
 }
 
+/* ── Access Point Pin helpers ───────────────────────── */
+function getAccessPinIcon(accessPt) {
+  const isParking = String(accessPt.type || '').toLowerCase() === 'parking';
+  const shortLabel = getAccessPinLabel(accessPt.name);
+  const wrapperClass = isParking
+    ? 'ht-pin-wrapper ht-pin-wrapper--access ht-pin-wrapper--access-parking'
+    : 'ht-pin-wrapper ht-pin-wrapper--access';
+  return L.divIcon({
+    className: wrapperClass,
+    html: `
+      <div class="ht-pin ht-pin--access">
+        <div class="ht-pin-inner">
+          <span class="ht-access-pin-label">${escapeHtml(shortLabel)}</span>
+        </div>
+      </div>
+    `,
+    iconSize: [36, 46],
+    iconAnchor: [18, 40]
+  });
+}
+
+function getAccessPinLabel(name) {
+  const n = String(name || '').trim();
+  if (!n) return 'Access';
+  // Short-circuit well-known labels
+  const lower = n.toLowerCase();
+  if (lower.includes('parking') || lower.includes('main lot')) return 'P';
+  if (lower.includes('concession') || lower.includes('store')) return 'Store';
+  if (lower.includes('nature center')) return 'Visitor';
+  if (lower.includes('hatchery')) return 'Hatch';
+  if (lower.includes('campground')) return 'Camp';
+  // Take first meaningful word(s), max ~8 chars
+  const words = n.replace(/\b(access|area|entry|point)\b/gi, '').trim().split(/\s+/);
+  const token = words.slice(0, 2).join(' ');
+  return token.length > 10 ? token.substring(0, 9) + '…' : (token || 'Access');
+}
+
+function openAccessPointPopup(marker, water, accessPt) {
+  if (!marker || !accessPt) return;
+  const isParking = String(accessPt.type || '').toLowerCase() === 'parking';
+  const typeBadge = isParking ? '🅿️ Parking' : '🎣 Entry';
+  const waterName = water ? escapeHtml(water.name || 'Trout Water') : 'Trout Water';
+  const waterId = water ? escapeHtml(water.id || '') : '';
+  const popup = `
+    <div style="min-width:210px;">
+      <div style="font-weight:700;color:#7cffc7;font-size:14px;">${escapeHtml(accessPt.name)}</div>
+      <div style="font-size:12px;color:#ddd;margin-top:3px;">${typeBadge} • ${waterName}</div>
+      <div style="font-size:11px;color:#b8d8c8;margin-top:6px;">${escapeHtml(accessPt.notes || 'Public access point.')}</div>
+      <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;">
+        <button style="padding:4px 10px;border-radius:6px;border:1px solid #7cffc7;background:rgba(124,255,199,0.12);color:#7cffc7;font-size:11px;font-weight:700;cursor:pointer;"
+          onclick="flyCheckInAtAccess('${waterId}',${accessPt.lat},${accessPt.lng},'${escapeHtml(accessPt.name)}')">Check In Here</button>
+        ${waterId ? `<button style="padding:4px 10px;border-radius:6px;border:1px solid #2bd4ff;background:rgba(43,212,255,0.1);color:#2bd4ff;font-size:11px;font-weight:700;cursor:pointer;"
+          onclick="flyFishNow('${waterId}')">Fish Now</button>` : ''}
+      </div>
+    </div>
+  `;
+  marker.bindPopup(popup).openPopup();
+}
+
+function addFlyAccessPointMarker(water, accessPt) {
+  if (!accessPt || !Number.isFinite(accessPt.lat) || !Number.isFinite(accessPt.lng)) return null;
+  const marker = L.marker([accessPt.lat, accessPt.lng], {
+    icon: getAccessPinIcon(accessPt),
+    zIndexOffset: -100  // keep below main water pins
+  });
+  marker.__flyWater = water;
+  marker.__accessPoint = accessPt;
+  marker.on('click', () => {
+    openAccessPointPopup(marker, water, accessPt);
+  });
+  ensureFlyWaterLayer().addLayer(marker);
+  flyWaterMarkers.push(marker);
+  return marker;
+}
+
+function addAccessPointsForWater(water) {
+  if (!water || !Array.isArray(water.access)) return;
+  water.access.forEach((ap) => addFlyAccessPointMarker(water, ap));
+}
+/* ── end access point helpers ───────────────────────── */
+
 function showFlyWaterMarkers() {
   clearFlyWaterLayer();
   const seen = new Set();
@@ -516,12 +599,14 @@ function showFlyWaterMarkers() {
     if (!water || !water.id) return;
     seen.add(water.id);
     addFlyWaterMarker(water);
+    addAccessPointsForWater(water);
   });
   getFlyCustomWaters().forEach((water, idx) => {
     const id = water.id || `custom_${idx}`;
     if (seen.has(id)) return;
     seen.add(id);
     addFlyWaterMarker(water, formatFlyWaterShortName(water.name));
+    addAccessPointsForWater(water);
   });
 }
 
@@ -1671,6 +1756,19 @@ window.flyCheckIn = function() {
   }
   const spots = getFlyCheckInSpots();
   updateFlyCoachFeed(`Check-in logged. Focus next: ${spots.slice(0, 3).join(', ')}.`);
+  if (flyLiveSessionActive) {
+    showFlyLiveCommandTray();
+  }
+};
+
+window.flyCheckInAtAccess = function(waterId, lat, lng, accessName) {
+  if (!isFlyModule()) return;
+  const latlng = L.latLng(lat, lng);
+  showFlyCheckInZone(latlng);
+  if (map) map.setView(latlng, Math.max(map.getZoom(), 14));
+  showFlyCoachPanel();
+  const label = accessName || 'access point';
+  updateFlyCoachFeed(`Checked in at ${label}. Scouting zone deployed. Fish smart.`);
   if (flyLiveSessionActive) {
     showFlyLiveCommandTray();
   }
