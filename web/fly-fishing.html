@@ -20,11 +20,11 @@
   <link rel="dns-prefetch" href="https://server.arcgisonline.com">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css" />
-  <link rel="stylesheet" href="app.css?v=20260220i">
+  <link rel="stylesheet" href="app.css?v=20260220l">
 
   <!-- AWS Backend Configuration -->
-  <script src="config.js?v=20260220i"></script>
-  <script src="api.js?v=20260220i"></script>
+  <script src="config.js?v=20260220l"></script>
+  <script src="api.js?v=20260220l"></script>
 </head>
 <body class="module-fly">
   <header class="ht-topbar">
@@ -184,7 +184,7 @@
           <div class="ht-fish-welcome-card">
             <div class="ht-fish-welcome-ribbon" id="fishAreaRibbon">?? Trout Water</div>
             <div class="ht-fish-welcome-name" id="fishAreaTitle">Welcome to the Water</div>
-            <div class="ht-fish-welcome-detail" id="fishAreaDesc">Locating nearest trout water…</div>
+            <div class="ht-fish-welcome-detail" id="fishAreaDesc">Locating nearest trout waterï¿½</div>
             <div style="margin-top:12px;text-align:center;">
               <button class="ht-gold-btn ht-go-btn" type="button" onclick="fishStepCheckIn()" style="font-size:14px;padding:10px 22px;">? CHECK IN TO AREA</button>
             </div>
@@ -498,7 +498,7 @@
     </div>
   </div>
 
-  <!-- CMD bubble removed — user requested removal -->
+  <!-- CMD bubble removed ï¿½ user requested removal -->
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
@@ -517,7 +517,7 @@
   </script>
 
   <script>
-    // Global error handler — catch initialization errors visibly
+    // Global error handler ï¿½ catch initialization errors visibly
     window.onerror = function(msg, src, line) {
       console.error('HUNTECH JS ERROR:', msg, src, line);
       var el = document.createElement('div');
@@ -528,10 +528,10 @@
     };
   </script>
 
-  <script src="regulations.js?v=20260220k"></script>
-  <script src="fly-fishing-data.js?v=20260220k"></script>
-  <script src="ht-fly-fishing.js?v=20260220k"></script>
-  <script src="main.js?v=20260220k"></script>
+  <script src="regulations.js?v=20260220l"></script>
+  <script src="fly-fishing-data.js?v=20260220l"></script>
+  <script src="ht-fly-fishing.js?v=20260220l"></script>
+  <script src="main.js?v=20260220l"></script>
 
   <script>
     // --- FAILSAFE fishStepCheckIn ---
@@ -543,7 +543,7 @@
         console.log('HUNTECH: fishStepCheckIn defined by main.js OK');
         return; // main.js already defined it during parse (unlikely, it's in DOMContentLoaded)
       }
-      console.warn('HUNTECH: fishStepCheckIn NOT yet defined — installing failsafe');
+      console.warn('HUNTECH: fishStepCheckIn NOT yet defined ï¿½ installing failsafe');
       window.fishStepCheckIn = function(waterId) {
         try {
           console.log('HUNTECH FAILSAFE: fishStepCheckIn called', waterId);

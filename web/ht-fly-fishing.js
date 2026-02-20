@@ -443,62 +443,73 @@ function showFlyWaterActionBar(water) {
   if (!water) return;
   collapseFlyCommandPanels();
   const bar = ensureFlyWaterActionBar();
-  const permitInfo = getTroutPermitInfo(water);
-  const stampLabel = permitInfo.label;
-  const stampPill = permitInfo.pill;
-  const stampClass = permitInfo.type !== 'none' ? 'ht-fly-pill ht-fly-pill--stamp' : 'ht-fly-pill ht-fly-pill--stamp ht-fly-pill--stamp-optional';
-  const ribbonLabel = water.ribbon ? ` • ${escapeHtml(water.ribbon)}` : '';
   bar.innerHTML = `
-    <div class="ht-fly-water-bar-header">
-      <div>
-        <div class="ht-fly-water-bar-title">${escapeHtml(water.name || 'Trout Water')}</div>
-        <div class="ht-fly-water-bar-sub">${escapeHtml(water.waterType || 'Public Water')}${ribbonLabel}</div>
+    <div class="ht-fly-water-bar-header ht-fly-water-bar-header--center">
+      <button class="ht-fly-water-bar-close" type="button" onclick="closeFlyWaterActionBar()">✕</button>
+      <div class="ht-fly-water-bar-nameblock">
+        <div class="ht-fly-water-bar-title ht-fly-water-bar-title--hero">${escapeHtml(water.name || 'Trout Water')}</div>
       </div>
-      <button class="ht-fly-water-bar-close" type="button" onclick="closeFlyWaterActionBar()">X</button>
     </div>
-    <div class="ht-fly-water-bar-actions">
-      <button class="ht-fly-pill ht-fly-pill--primary" type="button" onclick="fishStepCheckIn('${escapeHtml(water.id)}')">Check In to Area</button>
-      <button class="ht-fly-pill" type="button" onclick="fishStepSaveSpot('${escapeHtml(water.id)}')">Add to My Spots</button>
-      <button class="ht-fly-pill ht-fly-pill--ghost" type="button" onclick="openFlyWaterRegulations('${escapeHtml(water.id)}')">Area Rules + Regs</button>
-      <button class="${stampClass}" type="button" aria-label="${stampLabel}" disabled>${stampPill}</button>
+    <div class="ht-fly-water-bar-actions ht-fly-water-bar-actions--single">
+      <button class="ht-fly-pill ht-fly-pill--checkin-hero" type="button" onclick="fishStepCheckIn('${escapeHtml(water.id)}')">🎣 CHECK IN TO AREA</button>
     </div>
   `;
   bar.classList.add('is-visible');
 }
 
-/* ── Check-In form: expands tray to show preferences + LET'S GO ── */
+/* ── Stream Command Tray: zone selection + user inputs + LET'S GO ── */
 function showFlyCheckInForm(water) {
   if (!water) return;
   const bar = ensureFlyWaterActionBar();
-  const permitInfo = getTroutPermitInfo(water);
-  const stampNote = permitInfo.type !== 'none' ? '⚠️ ' + permitInfo.pill : '✅ No Extra Permit';
-  const ribbonLabel = water.ribbon ? ` • ${escapeHtml(water.ribbon)}` : '';
+  const zones = (water.access || []).filter(a => a.type === 'zone');
+
+  // Build zone pills
+  let zonePillsHtml = '';
+  zones.forEach((z, idx) => {
+    const methodIcons = (z.methods || []).map(m => {
+      if (m === 'fly') return '🪰';
+      if (m === 'spin') return '🎣';
+      if (m === 'bait') return '🪱';
+      return '';
+    }).join(' ');
+    const shortName = z.name.replace(/\s*—\s*.*$/, ''); // "Zone 1"
+    const methodLabel = z.name.replace(/^.*—\s*/, '');    // "Fly Only"
+    zonePillsHtml += `<button class="ht-zone-select-pill${idx === 0 ? ' ht-zone-select-pill--active' : ''}" type="button" data-zone-idx="${idx}" onclick="pickFishZone(this,${idx})">
+      <span class="ht-zone-select-name">${escapeHtml(shortName)}</span>
+      <span class="ht-zone-select-method">${methodIcons} ${escapeHtml(methodLabel)}</span>
+    </button>`;
+  });
+
   bar.innerHTML = `
-    <div class="ht-fly-water-bar-header">
-      <div>
-        <div class="ht-fly-water-bar-title">✅ ${escapeHtml(water.name || 'Trout Water')}</div>
-        <div class="ht-fly-water-bar-sub">Checked In${ribbonLabel} • ${stampNote}</div>
+    <div class="ht-fly-water-bar-header ht-fly-water-bar-header--center">
+      <button class="ht-fly-water-bar-close" type="button" onclick="closeFlyWaterActionBar()">✕</button>
+      <div class="ht-fly-water-bar-nameblock">
+        <div class="ht-fly-water-bar-title ht-fly-water-bar-title--hero">⚡ ${escapeHtml(water.name)}</div>
+        <div class="ht-fly-water-bar-sub--cmd">STREAM COMMAND</div>
       </div>
-      <button class="ht-fly-water-bar-close" type="button" onclick="closeFlyWaterActionBar()">X</button>
     </div>
-    <div class="ht-fly-tray-form">
-      <div class="ht-fly-tray-row">
-        <div class="ht-fly-tray-label">Fishing Method</div>
+    <div class="ht-stream-cmd-body">
+      <div class="ht-stream-cmd-section">
+        <div class="ht-stream-cmd-label">SELECT YOUR ZONE</div>
+        <div class="ht-zone-select-row">${zonePillsHtml}</div>
+      </div>
+      <div class="ht-stream-cmd-section">
+        <div class="ht-stream-cmd-label">YOUR METHOD</div>
         <div class="ht-method-row">
           <button class="ht-method-btn ht-method-btn--active" data-fish-method="fly" onclick="pickFishMethod(this,'fly')">🪰 Fly</button>
           <button class="ht-method-btn" data-fish-method="spin" onclick="pickFishMethod(this,'spin')">🎣 Lure</button>
           <button class="ht-method-btn" data-fish-method="bait" onclick="pickFishMethod(this,'bait')">🪱 Bait</button>
         </div>
       </div>
-      <div class="ht-fly-tray-row">
-        <div class="ht-fly-tray-label">Water Access</div>
+      <div class="ht-stream-cmd-section">
+        <div class="ht-stream-cmd-label">WADERS?</div>
         <div class="ht-method-row">
-          <button class="ht-method-btn ht-method-btn--active" data-fish-wade="waders" onclick="pickFishWade(this,'waders')">🥾 Wading</button>
-          <button class="ht-method-btn" data-fish-wade="streamside" onclick="pickFishWade(this,'streamside')">🏖️ Bank</button>
+          <button class="ht-method-btn ht-method-btn--active" data-fish-wade="waders" onclick="pickFishWade(this,'waders')">🥾 Yes</button>
+          <button class="ht-method-btn" data-fish-wade="streamside" onclick="pickFishWade(this,'streamside')">🏖️ No — Bank</button>
         </div>
       </div>
-      <div class="ht-fly-tray-row">
-        <div class="ht-fly-tray-label">Skill Level</div>
+      <div class="ht-stream-cmd-section">
+        <div class="ht-stream-cmd-label">SKILL LEVEL</div>
         <div class="ht-method-row">
           <button class="ht-method-btn" data-fish-exp="new" onclick="pickFishExp(this,'new')">🌱 New</button>
           <button class="ht-method-btn ht-method-btn--active" data-fish-exp="learning" onclick="pickFishExp(this,'learning')">📈 Learning</button>
@@ -506,12 +517,57 @@ function showFlyCheckInForm(water) {
           <button class="ht-method-btn" data-fish-exp="advanced" onclick="pickFishExp(this,'advanced')">🏆 Advanced</button>
         </div>
       </div>
-      <button class="ht-fly-pill ht-fly-pill--letsgo" type="button" onclick="fishStepDeploy();closeFlyWaterActionBar();">🎣 LET'S GO</button>
+      <button class="ht-letsgo-hero" type="button" onclick="fishLetsGo()">🎣 LET'S GO</button>
     </div>
   `;
   bar.classList.add('is-visible');
 }
 window.showFlyCheckInForm = showFlyCheckInForm;
+
+/* Zone pill selection handler */
+window.pickFishZone = function(btn, idx) {
+  btn.closest('.ht-zone-select-row').querySelectorAll('.ht-zone-select-pill').forEach(b => b.classList.remove('ht-zone-select-pill--active'));
+  btn.classList.add('ht-zone-select-pill--active');
+  if (window._fishFlow) window._fishFlow.selectedZoneIdx = idx;
+};
+
+/* ══ LET'S GO — main launch sequence ══ */
+window.fishLetsGo = function() {
+  const fishFlow = window._fishFlow;
+  if (!fishFlow || !fishFlow.area) return;
+  const water = fishFlow.area;
+  const zones = (water.access || []).filter(a => a.type === 'zone');
+  const zoneIdx = typeof fishFlow.selectedZoneIdx === 'number' ? fishFlow.selectedZoneIdx : 0;
+  const zone = zones[zoneIdx] || zones[0];
+  if (!zone) return;
+
+  // Store selected zone
+  fishFlow.selectedZone = zone;
+  fishFlow.selectedZoneIdx = zoneIdx;
+
+  // 1) Collapse the action bar
+  closeFlyWaterActionBar();
+  showNotice('⚡ Deploying AI fishing strategy…', 'success', 2000);
+
+  // 2) Deploy zone polygon (flash then fade)
+  if (typeof window.deployZonePolygonWithFade === 'function') {
+    window.deployZonePolygonWithFade(water, zone);
+  }
+
+  // 3) Calculate and deploy ranked pins in the selected zone
+  setTimeout(function() {
+    if (typeof window.deployAiFishingPins === 'function') {
+      window.deployAiFishingPins(water, zone, fishFlow);
+    }
+
+    // 4) Show mission summary popup
+    setTimeout(function() {
+      if (typeof window.showMissionSummary === 'function') {
+        window.showMissionSummary(water, zone, fishFlow);
+      }
+    }, 800);
+  }, 600);
+};
 
 function getFlyPinIcon(labelText) {
   const label = String(labelText || '').trim();
@@ -2373,6 +2429,852 @@ window.flySearchOnMap = function() {
   enableSearch();
 };
 
+/* ═══════════════════════════════════════════════════════════════════════
+   AI GUIDED FISHING ENGINE — Zone Polygons, Ranked Pins, Proximity,
+   Mission Summary, Spot Info Tray, Voice AI Coach
+   ═══════════════════════════════════════════════════════════════════════ */
+
+var _aiFishingPins = [];        // ranked pin markers
+var _aiFishingSpots = [];       // spot data objects
+var _activeZonePolygon = null;  // current zone polygon layer
+var _activeMicroPolygons = [];  // micro-area polygons
+var _activeMicroPins = [];      // micro-spot pins within a pin area
+var _missionSummaryEl = null;   // mission summary overlay DOM
+var _spotInfoTrayEl = null;     // spot info tray DOM
+var _proximityWatchId = null;   // geolocation watch for auto-checkin
+var _checkedInPinIdx = -1;      // index of pin user is currently at
+var _checkedInMicroIdx = -1;    // index of micro-spot user is at
+var _aiCoachState = {           // live AI coach state
+  reports: [],                  // user reports (voice + manual)
+  currentStrategy: null,
+  currentFlyRec: null,
+  lastUpdate: 0
+};
+
+/* ── Deploy zone polygon with flash-then-fade ── */
+window.deployZonePolygonWithFade = function(water, zone) {
+  if (!water || !zone || !map) return;
+
+  // Clear any previous
+  if (_activeZonePolygon) { try { map.removeLayer(_activeZonePolygon); } catch {} }
+
+  var segment = getZoneStreamSegment(water, zone);
+  if (!segment || segment.length < 2) return;
+
+  var corridor = buildStreamCorridor(segment, 45);
+  if (!corridor) return;
+
+  _activeZonePolygon = L.polygon(corridor, {
+    color: '#7cffc7',
+    weight: 2,
+    fillColor: '#2bd4ff',
+    fillOpacity: 0.25,
+    dashArray: '6 3',
+    className: 'ht-zone-polygon-flash'
+  }).addTo(map);
+
+  // Flash bright then fade to subtle
+  setTimeout(function() {
+    if (_activeZonePolygon) {
+      _activeZonePolygon.setStyle({ fillOpacity: 0.15 });
+    }
+  }, 1500);
+  setTimeout(function() {
+    if (_activeZonePolygon) {
+      _activeZonePolygon.setStyle({ fillOpacity: 0.08, weight: 1 });
+    }
+  }, 3000);
+  setTimeout(function() {
+    if (_activeZonePolygon) {
+      _activeZonePolygon.setStyle({ fillOpacity: 0.04, weight: 1, opacity: 0.4 });
+    }
+  }, 5000);
+};
+
+/* ── AI Fishing Pin Calculator — ranks spots by user inputs ── */
+window.deployAiFishingPins = function(water, zone, fishFlow) {
+  if (!water || !zone || !map) return;
+
+  // Clear previous
+  _aiFishingPins.forEach(function(m) { try { map.removeLayer(m); } catch {} });
+  _aiFishingPins = [];
+  _aiFishingSpots = [];
+  clearMicroPins();
+
+  var segment = getZoneStreamSegment(water, zone);
+  if (!segment || segment.length < 2) {
+    showNotice('⚠️ No stream data for this zone', 'warning', 3000);
+    return;
+  }
+
+  var method = fishFlow.method || 'fly';
+  var wade = fishFlow.wade || 'waders';
+  var skill = fishFlow.experience || 'learning';
+
+  // Generate fishing spots along the zone segment
+  var habitats = ['riffle', 'run', 'pool', 'tailout', 'boulder'];
+  var numSpots = Math.min(6, Math.max(3, Math.floor(segment.length * 0.8)));
+  var spots = [];
+
+  for (var i = 0; i < numSpots; i++) {
+    var pIdx = Math.round(i * (segment.length - 1) / Math.max(1, numSpots - 1));
+    pIdx = Math.min(pIdx, segment.length - 1);
+    var habitat = habitats[i % habitats.length];
+    var lat = segment[pIdx][0];
+    var lng = segment[pIdx][1];
+
+    // Score this spot based on user inputs
+    var score = _scoreSpot(habitat, method, wade, skill, i, numSpots);
+
+    spots.push({
+      idx: i,
+      habitat: habitat,
+      lat: lat,
+      lng: lng,
+      segmentIdx: pIdx,
+      score: score,
+      rank: 0, // filled after sort
+      strategy: _buildSpotStrategy(habitat, method, wade, skill, water, zone)
+    });
+  }
+
+  // Sort by score descending (best first)
+  spots.sort(function(a, b) { return b.score - a.score; });
+  spots.forEach(function(s, idx) { s.rank = idx + 1; });
+
+  _aiFishingSpots = spots;
+
+  // Deploy ranked pins on map
+  var bounds = [];
+  spots.forEach(function(spot) {
+    var pinColor = spot.rank === 1 ? '#7cffc7' : spot.rank === 2 ? '#2bd4ff' : spot.rank <= 4 ? '#ffe082' : '#9fc3ce';
+    var icon = L.divIcon({
+      className: 'ht-ai-fish-pin',
+      html: '<div class="ht-ai-fish-pill" style="border-color:' + pinColor + ';color:' + pinColor + ';">' +
+        '<span class="ht-ai-fish-rank">#' + spot.rank + '</span>' +
+        '<span class="ht-ai-fish-habitat">' + _habitatEmoji(spot.habitat) + ' ' + escapeHtml(_capitalize(spot.habitat)) + '</span>' +
+      '</div>',
+      iconSize: [0, 0],
+      iconAnchor: [0, 16]
+    });
+
+    var marker = L.marker([spot.lat, spot.lng], {
+      icon: icon,
+      zIndexOffset: 400 - spot.rank
+    }).addTo(map);
+
+    marker.__aiSpot = spot;
+    marker.on('click', function() {
+      _onAiPinClick(water, zone, spot, fishFlow);
+    });
+
+    _aiFishingPins.push(marker);
+    bounds.push([spot.lat, spot.lng]);
+  });
+
+  var deployed = spots.length;
+  showNotice('🎯 ' + deployed + ' fishing spot' + (deployed > 1 ? 's' : '') + ' deployed — ranked best to worst', 'success', 3000);
+};
+
+/* Score a spot based on user inputs */
+function _scoreSpot(habitat, method, wade, skill, spotIdx, totalSpots) {
+  var score = 50; // base
+
+  // Method compatibility
+  if (method === 'fly') {
+    if (habitat === 'riffle') score += 25;
+    else if (habitat === 'run') score += 20;
+    else if (habitat === 'pool') score += 15;
+    else if (habitat === 'tailout') score += 22;
+    else if (habitat === 'boulder') score += 10;
+  } else if (method === 'spin') {
+    if (habitat === 'pool') score += 25;
+    else if (habitat === 'run') score += 20;
+    else if (habitat === 'boulder') score += 18;
+    else if (habitat === 'riffle') score += 8;
+    else if (habitat === 'tailout') score += 15;
+  } else { // bait
+    if (habitat === 'pool') score += 28;
+    else if (habitat === 'tailout') score += 22;
+    else if (habitat === 'run') score += 15;
+    else if (habitat === 'boulder') score += 10;
+    else if (habitat === 'riffle') score += 5;
+  }
+
+  // Wading access bonus
+  if (wade === 'waders') {
+    if (habitat === 'riffle' || habitat === 'run') score += 10;
+  } else {
+    // Bank fishing favors pools and tailouts
+    if (habitat === 'pool' || habitat === 'tailout') score += 12;
+    if (habitat === 'riffle') score -= 5; // harder from bank
+  }
+
+  // Skill level adjustments
+  if (skill === 'new') {
+    if (habitat === 'pool' || habitat === 'tailout') score += 10;
+    if (habitat === 'riffle') score -= 8; // technical
+  } else if (skill === 'advanced') {
+    if (habitat === 'riffle' || habitat === 'run') score += 8;
+    if (habitat === 'pool') score -= 3; // too easy
+  }
+
+  // Time of day bonus
+  var h = new Date().getHours();
+  if ((h >= 5 && h < 9) || (h >= 17 && h < 21)) {
+    if (habitat === 'riffle' || habitat === 'tailout') score += 8; // active feeding
+  } else if (h >= 12 && h < 15) {
+    if (habitat === 'pool' || habitat === 'boulder') score += 8; // deep water midday
+  }
+
+  // Slight randomization for variety
+  score += Math.floor(Math.random() * 6);
+
+  return Math.max(0, Math.min(100, score));
+}
+
+function _habitatEmoji(h) {
+  var map = { riffle: '💨', pool: '🌊', run: '🏞️', boulder: '🪨', tailout: '🌀' };
+  return map[h] || '🐟';
+}
+
+function _capitalize(s) {
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+/* Build spot-specific strategy text */
+function _buildSpotStrategy(habitat, method, wade, skill, water, zone) {
+  var strat = {};
+
+  // Approach
+  var approaches = {
+    riffle: { fly: 'Approach from downstream. Stay low. False cast away from the water, then deliver upstream at 10-2 o\'clock.',
+              spin: 'Cast upstream and let your lure tumble through the riffle naturally. Retrieve just fast enough to maintain contact.',
+              bait: 'Use split shot to get bait down. Let it drift naturally through the riffle — trout hold behind rocks.' },
+    pool: { fly: 'Dead drift nymphs through the head of the pool. Switch to streamers along the deep edges. Fish the tailout last.',
+            spin: 'Cast to the head of the pool and let your lure sink. Slow retrieve along the bottom. Work the edges and deep sections.',
+            bait: 'Let your bait sink to the bottom of the pool. Trout hold in the deepest sections. Be patient — the big fish are here.' },
+    run: { fly: 'Dry-dropper rig is ideal. Cast across, mend upstream, let the nymph swing below the dry. Cover the seam lines.',
+           spin: 'Cast quartering upstream. Let the lure swing down through the run. The transition zones between fast and slow water hold fish.',
+           bait: 'Drift bait through the run naturally. Add just enough weight to bounce the bottom. Target the slower edges.' },
+    tailout: { fly: 'Approach carefully — this water is thin and clear. Long leaders, small flies. Target risers in the evening.',
+               spin: 'Light line here. Small lures cast upstream. Trout sip in the thin water — finesse is key.',
+               bait: 'Keep bait light and natural. The shallow tailout water requires subtle presentation. Early morning is best.' },
+    boulder: { fly: 'Cast tight behind boulders. Dead drift a nymph through the pocket water. Each pocket is a separate lie.',
+               spin: 'Target pocket water behind and beside boulders. Short accurate casts. Let the lure drop into the slack water.',
+               bait: 'Drop bait into the calm pockets behind boulders. Trout ambush from these protected lies.' }
+  };
+  var apKey = approaches[habitat] || approaches.run;
+  strat.approach = apKey[method] || apKey.fly;
+
+  // Casting direction
+  var castMap = {
+    riffle: 'Cast upstream at 10-2 o\'clock. Mend immediately. Let fly dead drift back toward you.',
+    pool: 'Cast to the head or across to the seam. Let your offering sink and drift through the strike zone.',
+    run: 'Cast quartering upstream. Mend to extend drift through the seam between fast and slow water.',
+    tailout: 'Cast upstream in the thin water. Keep a low profile. Drag-free drift is critical here.',
+    boulder: 'Short casts directly behind boulders. Target each pocket individually. 2-3 drifts per pocket then move on.'
+  };
+  strat.castDirection = castMap[habitat] || castMap.run;
+
+  // Fly/lure recommendation
+  var rec = getTimeAwareFlyRec(water, habitat);
+  strat.flyRec = rec.flyRec;
+  strat.altFly = rec.altFly;
+  strat.timeAdvice = rec.timeAdvice;
+  strat.hatches = rec.hatches;
+  strat.season = rec.season;
+
+  // Wading advice
+  if (wade === 'waders') {
+    strat.wadingAdvice = 'You\'re in waders — position yourself in the stream for the best casting angle. ' +
+      (habitat === 'riffle' ? 'Wade to knee depth. Stand at the tail of the riffle and cast upstream.' :
+       habitat === 'pool' ? 'Stay at the pool edges. Don\'t wade through the strike zone.' :
+       'Position yourself offset from the target. Keep your feet planted — shuffling spooks fish.');
+  } else {
+    strat.wadingAdvice = 'Fishing from the bank — use the terrain. ' +
+      (habitat === 'pool' ? 'Find a high bank with a clear backcast lane. Roll casts work great.' :
+       'Kneel low. Keep your shadow off the water. Use sidearm casts to keep a low profile.');
+  }
+
+  return strat;
+}
+
+/* ── Mission Summary Popup ── */
+window.showMissionSummary = function(water, zone, fishFlow) {
+  // Remove existing
+  if (_missionSummaryEl) { try { _missionSummaryEl.remove(); } catch {} }
+
+  var spots = _aiFishingSpots;
+  var topSpot = spots[0];
+  var method = fishFlow.method || 'fly';
+  var rec = getTimeAwareFlyRec(water, topSpot ? topSpot.habitat : 'riffle');
+  var totalSpots = spots.length;
+
+  var summaryText = 'Welcome to ' + water.name + ', ' + zone.name + '. ' +
+    'I\'ve deployed ' + totalSpots + ' fishing spots ranked by your ' +
+    (method === 'fly' ? 'fly fishing' : method === 'spin' ? 'lure fishing' : 'bait fishing') + ' setup. ' +
+    'Your #1 spot is a ' + (topSpot ? topSpot.habitat : 'run') + ' — ' +
+    (rec.timeAdvice || 'Prime conditions for catching trout.') + ' ' +
+    'Start with ' + (rec.flyRec || 'your confidence pattern') + '. ' +
+    'Walk to each pin in order. When you reach a pin, I\'ll deploy micro-spots and give you precise casting instructions. ' +
+    'Report back to me with voice — tell me what you see, what\'s hatching, and what the trout are doing. I\'ll update your strategy in real time. Tight lines!';
+
+  var spotsListHtml = '';
+  spots.forEach(function(s) {
+    var col = s.rank === 1 ? '#7cffc7' : s.rank === 2 ? '#2bd4ff' : '#ffe082';
+    spotsListHtml += '<div class="ht-mission-spot" style="border-left:3px solid ' + col + ';">' +
+      '<span class="ht-mission-spot-rank" style="color:' + col + ';">#' + s.rank + '</span>' +
+      '<span class="ht-mission-spot-name">' + _habitatEmoji(s.habitat) + ' ' + escapeHtml(_capitalize(s.habitat)) + '</span>' +
+      '<span class="ht-mission-spot-score">' + s.score + ' pts</span>' +
+    '</div>';
+  });
+
+  var el = document.createElement('div');
+  el.className = 'ht-mission-summary-overlay';
+  el.innerHTML = `
+    <div class="ht-mission-summary-card">
+      <div class="ht-mission-summary-header">
+        <div class="ht-mission-summary-icon">🎯</div>
+        <div class="ht-mission-summary-title">MISSION BRIEFING</div>
+        <div class="ht-mission-summary-sub">${escapeHtml(water.name)} — ${escapeHtml(zone.name)}</div>
+      </div>
+      <div class="ht-mission-summary-body">
+        <div class="ht-mission-summary-text" id="missionSummaryText">${escapeHtml(summaryText)}</div>
+        <div class="ht-mission-summary-spots">${spotsListHtml}</div>
+      </div>
+      <div class="ht-mission-summary-actions">
+        <button class="ht-mission-btn ht-mission-btn--listen" type="button" onclick="window._listenMission()">🔊 Listen</button>
+        <button class="ht-mission-btn ht-mission-btn--save" type="button" onclick="window._saveMissionToJournal()">📓 Save to Journal</button>
+        <button class="ht-mission-btn ht-mission-btn--close" type="button" onclick="window._closeMissionSummary()">✕ Close & Fish</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(el);
+  _missionSummaryEl = el;
+
+  // Animate in
+  requestAnimationFrame(function() {
+    el.classList.add('is-visible');
+  });
+};
+
+window._listenMission = function() {
+  var textEl = document.getElementById('missionSummaryText');
+  if (!textEl) return;
+  if (typeof window.speakText === 'function') {
+    window.speakText(textEl.textContent);
+    showNotice('🔊 Reading mission briefing...', 'info', 2000);
+  } else if (typeof speakTextBrowser === 'function') {
+    speakTextBrowser(textEl.textContent);
+  } else {
+    showNotice('TTS not available', 'warning', 2000);
+  }
+};
+
+window._saveMissionToJournal = function() {
+  try {
+    var fishFlow = window._fishFlow;
+    if (!fishFlow || !fishFlow.area) return;
+    var key = 'huntech_fish_journal_v1';
+    var journal = JSON.parse(localStorage.getItem(key) || '[]');
+    journal.push({
+      id: Date.now(),
+      water: fishFlow.area.name,
+      waterId: fishFlow.area.id,
+      zone: fishFlow.selectedZone ? fishFlow.selectedZone.name : '',
+      method: fishFlow.method,
+      skill: fishFlow.experience,
+      wade: fishFlow.wade,
+      spots: _aiFishingSpots.length,
+      date: new Date().toISOString(),
+      summary: document.getElementById('missionSummaryText') ? document.getElementById('missionSummaryText').textContent : ''
+    });
+    localStorage.setItem(key, JSON.stringify(journal));
+    showNotice('📓 Session saved to your fishing journal!', 'success', 2500);
+  } catch (e) {
+    showNotice('Could not save: ' + e.message, 'error', 3000);
+  }
+};
+
+window._closeMissionSummary = function() {
+  if (_missionSummaryEl) {
+    _missionSummaryEl.classList.remove('is-visible');
+    setTimeout(function() {
+      if (_missionSummaryEl) { try { _missionSummaryEl.remove(); } catch {} _missionSummaryEl = null; }
+    }, 350);
+  }
+
+  // Zoom map to show all fishing pins
+  if (_aiFishingPins.length > 0 && map) {
+    var bounds = L.latLngBounds(_aiFishingPins.map(function(m) { return m.getLatLng(); }));
+    map.fitBounds(bounds.pad(0.15), { animate: true, duration: 1.0, maxZoom: 17 });
+  }
+
+  // Start proximity watch for auto-checkin
+  _startProximityWatch();
+
+  // Stop any TTS
+  if (typeof window.stopSpeech === 'function') window.stopSpeech();
+};
+
+/* ── Proximity Auto Check-In System ── */
+function _startProximityWatch() {
+  if (_proximityWatchId) return; // already watching
+  if (!navigator.geolocation) return;
+
+  _proximityWatchId = navigator.geolocation.watchPosition(
+    function(pos) {
+      var userLat = pos.coords.latitude;
+      var userLng = pos.coords.longitude;
+      var accuracy = pos.coords.accuracy;
+
+      // Skip if accuracy is too poor
+      if (accuracy > 50) return;
+
+      // Check proximity to each fishing pin
+      _aiFishingSpots.forEach(function(spot, idx) {
+        if (idx === _checkedInPinIdx) return; // already checked in here
+        var dist = _distanceMeters(userLat, userLng, spot.lat, spot.lng);
+        if (dist < 30) { // within 30m
+          _autoCheckInToPin(idx);
+        }
+      });
+
+      // Check proximity to micro spots
+      if (_activeMicroPins.length > 0) {
+        _activeMicroPins.forEach(function(mPin, mIdx) {
+          if (mIdx === _checkedInMicroIdx) return;
+          var mLatLng = mPin.getLatLng();
+          var dist = _distanceMeters(userLat, userLng, mLatLng.lat, mLatLng.lng);
+          if (dist < 15) { // within 15m
+            _autoCheckInToMicroSpot(mIdx);
+          }
+        });
+      }
+    },
+    function() { /* GPS error — silent */ },
+    { enableHighAccuracy: true, maximumAge: 5000, timeout: 15000 }
+  );
+}
+
+function _stopProximityWatch() {
+  if (_proximityWatchId) {
+    navigator.geolocation.clearWatch(_proximityWatchId);
+    _proximityWatchId = null;
+  }
+}
+
+function _distanceMeters(lat1, lng1, lat2, lng2) {
+  var R = 6371000;
+  var dLat = (lat2 - lat1) * Math.PI / 180;
+  var dLng = (lng2 - lng1) * Math.PI / 180;
+  var a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLng / 2) * Math.sin(dLng / 2);
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+/* ── Auto Check-In to a ranked pin — deploys micro spots ── */
+function _autoCheckInToPin(pinIdx) {
+  if (pinIdx === _checkedInPinIdx) return;
+  _checkedInPinIdx = pinIdx;
+  _checkedInMicroIdx = -1;
+
+  var spot = _aiFishingSpots[pinIdx];
+  if (!spot) return;
+
+  var fishFlow = window._fishFlow;
+  var water = fishFlow ? fishFlow.area : null;
+  var zone = fishFlow ? fishFlow.selectedZone : null;
+  if (!water || !zone) return;
+
+  showNotice('📍 Arrived at Spot #' + spot.rank + ' — ' + _capitalize(spot.habitat) + '. Deploying micro-spots...', 'success', 3500);
+
+  // Clear previous micro pins & polygons
+  _activeMicroPins.forEach(function(m) { try { map.removeLayer(m); } catch {} });
+  _activeMicroPins = [];
+  _activeMicroPolygons.forEach(function(p) { try { map.removeLayer(p); } catch {} });
+  _activeMicroPolygons = [];
+
+  // Build micro-area polygon around this spot (small radius)
+  var segment = getZoneStreamSegment(water, zone);
+  if (segment && segment.length >= 2) {
+    // Extract nearby segment points
+    var centerIdx = spot.segmentIdx;
+    var start = Math.max(0, centerIdx - 2);
+    var end = Math.min(segment.length - 1, centerIdx + 2);
+    var microSegment = segment.slice(start, end + 1);
+
+    if (microSegment.length >= 2) {
+      var microCorridor = buildStreamCorridor(microSegment, 25);
+      if (microCorridor) {
+        var microPoly = L.polygon(microCorridor, {
+          color: '#ffe082',
+          weight: 2,
+          fillColor: '#ffe082',
+          fillOpacity: 0.20,
+          dashArray: '4 3'
+        }).addTo(map);
+        _activeMicroPolygons.push(microPoly);
+
+        // Flash then fade
+        setTimeout(function() { microPoly.setStyle({ fillOpacity: 0.10 }); }, 2000);
+        setTimeout(function() { microPoly.setStyle({ fillOpacity: 0.04, opacity: 0.3 }); }, 4000);
+      }
+    }
+  }
+
+  // Deploy 3 micro cast-to spots within this area
+  var microTypes = ['primary-lie', 'seam-edge', 'pocket-water'];
+  var microLabels = ['🎯 Primary Lie', '🌊 Seam Edge', '💧 Pocket Water'];
+  var offsets = [[-0.00008, -0.00005], [0.00005, 0.00008], [-0.00004, 0.00010]];
+
+  for (var i = 0; i < 3; i++) {
+    var mLat = spot.lat + offsets[i][0];
+    var mLng = spot.lng + offsets[i][1];
+    var mIcon = L.divIcon({
+      className: 'ht-micro-cast-pin',
+      html: '<div class="ht-micro-cast-pill">' + microLabels[i] + '</div>',
+      iconSize: [0, 0],
+      iconAnchor: [0, 12]
+    });
+    var mMarker = L.marker([mLat, mLng], { icon: mIcon, zIndexOffset: 500 }).addTo(map);
+    mMarker.__microType = microTypes[i];
+    mMarker.__microIdx = i;
+    (function(mk, mType, mIdx) {
+      mk.on('click', function() {
+        _showSpotInfoTray(water, zone, spot, mType, mIdx);
+      });
+    })(mMarker, microTypes[i], i);
+    _activeMicroPins.push(mMarker);
+  }
+
+  // Zoom to the pin area
+  map.setView([spot.lat, spot.lng], 18, { animate: true, duration: 0.8 });
+}
+window._autoCheckInToPin = _autoCheckInToPin;
+
+/* Manual pin click → same as auto checkin */
+function _onAiPinClick(water, zone, spot, fishFlow) {
+  var idx = _aiFishingSpots.indexOf(spot);
+  _autoCheckInToPin(idx >= 0 ? idx : 0);
+}
+
+/* ── Auto Check-In to a micro spot ── */
+function _autoCheckInToMicroSpot(microIdx) {
+  if (microIdx === _checkedInMicroIdx) return;
+  _checkedInMicroIdx = microIdx;
+
+  var mPin = _activeMicroPins[microIdx];
+  if (!mPin) return;
+  var mType = mPin.__microType || 'primary-lie';
+
+  var fishFlow = window._fishFlow;
+  var water = fishFlow ? fishFlow.area : null;
+  var zone = fishFlow ? fishFlow.selectedZone : null;
+  var spot = _aiFishingSpots[_checkedInPinIdx];
+  if (!water || !zone || !spot) return;
+
+  showNotice('🎯 At micro-spot: ' + _capitalize(mType.replace(/-/g, ' ')), 'success', 2500);
+  _showSpotInfoTray(water, zone, spot, mType, microIdx);
+}
+
+/* ── Spot Info Tray — detailed guidance for a specific micro-spot ── */
+function _showSpotInfoTray(water, zone, spot, microType, microIdx) {
+  // Remove existing
+  if (_spotInfoTrayEl) { try { _spotInfoTrayEl.remove(); } catch {} }
+
+  var strat = spot.strategy;
+  var rec = getTimeAwareFlyRec(water, spot.habitat);
+  var microLabel = _capitalize(microType.replace(/-/g, ' '));
+
+  var microAdvice = {
+    'primary-lie': 'This is the main holding position. Trout actively feed here. Your first cast should target this spot. Deliver your fly 3-4 feet upstream and let it drift naturally into the strike zone.',
+    'seam-edge': 'The seam between fast and slow water. Trout hold just inside the slow side, picking off food from the fast current. Cast to the fast side and let your offering drift into the seam.',
+    'pocket-water': 'Protected pocket behind structure. Trout rest here between feeding runs. Short, accurate casts directly into the pocket. Let your fly sink 2-3 seconds before any retrieval.'
+  };
+
+  var el = document.createElement('div');
+  el.className = 'ht-spot-info-tray';
+  el.innerHTML = `
+    <div class="ht-spot-info-header">
+      <div class="ht-spot-info-title">🎯 ${escapeHtml(microLabel)}</div>
+      <div class="ht-spot-info-sub">${_habitatEmoji(spot.habitat)} ${escapeHtml(_capitalize(spot.habitat))} — Spot #${spot.rank}</div>
+      <button class="ht-spot-info-close" type="button" onclick="window._closeSpotInfoTray()">✕</button>
+    </div>
+    <div class="ht-spot-info-body">
+      <div class="ht-spot-info-section">
+        <div class="ht-spot-info-label">🎯 MICRO-SPOT STRATEGY</div>
+        <div class="ht-spot-info-text">${escapeHtml(microAdvice[microType] || microAdvice['primary-lie'])}</div>
+      </div>
+      <div class="ht-spot-info-section">
+        <div class="ht-spot-info-label">🧭 APPROACH</div>
+        <div class="ht-spot-info-text">${escapeHtml(strat.approach)}</div>
+      </div>
+      <div class="ht-spot-info-section">
+        <div class="ht-spot-info-label">🎣 CASTING</div>
+        <div class="ht-spot-info-text">${escapeHtml(strat.castDirection)}</div>
+      </div>
+      <div class="ht-spot-info-section">
+        <div class="ht-spot-info-label">🪰 RECOMMENDED FLY</div>
+        <div class="ht-spot-info-text">${escapeHtml(rec.flyRec || 'Match the hatch — observe the water first.')}</div>
+        ${rec.altFly ? '<div class="ht-spot-info-alt">Backup: ' + escapeHtml(rec.altFly) + '</div>' : ''}
+      </div>
+      <div class="ht-spot-info-section">
+        <div class="ht-spot-info-label">🥾 WADING</div>
+        <div class="ht-spot-info-text">${escapeHtml(strat.wadingAdvice)}</div>
+      </div>
+      <div class="ht-spot-info-section">
+        <div class="ht-spot-info-label">⏰ CONDITIONS</div>
+        <div class="ht-spot-info-text">${escapeHtml(rec.timeAdvice)}</div>
+      </div>
+    </div>
+    <div class="ht-spot-info-actions">
+      <button class="ht-spot-info-btn ht-spot-info-btn--voice" type="button" onclick="window._startVoiceReport()">🎙️ Report to Coach</button>
+      <button class="ht-spot-info-btn ht-spot-info-btn--listen" type="button" onclick="window._listenSpotBriefing()">🔊 Listen</button>
+      <button class="ht-spot-info-btn ht-spot-info-btn--next" type="button" onclick="window._nextSpot()">→ Next Spot</button>
+    </div>
+  `;
+  document.body.appendChild(el);
+  _spotInfoTrayEl = el;
+
+  requestAnimationFrame(function() {
+    el.classList.add('is-visible');
+  });
+}
+
+window._closeSpotInfoTray = function() {
+  if (_spotInfoTrayEl) {
+    _spotInfoTrayEl.classList.remove('is-visible');
+    setTimeout(function() {
+      if (_spotInfoTrayEl) { try { _spotInfoTrayEl.remove(); } catch {} _spotInfoTrayEl = null; }
+    }, 300);
+  }
+};
+
+window._listenSpotBriefing = function() {
+  if (!_spotInfoTrayEl) return;
+  var bodyEl = _spotInfoTrayEl.querySelector('.ht-spot-info-body');
+  if (!bodyEl) return;
+  var text = bodyEl.textContent || '';
+  if (typeof window.speakText === 'function') {
+    window.speakText(text);
+  } else if (typeof speakTextBrowser === 'function') {
+    speakTextBrowser(text);
+  }
+  showNotice('🔊 Reading spot briefing...', 'info', 2000);
+};
+
+window._nextSpot = function() {
+  window._closeSpotInfoTray();
+  if (_checkedInPinIdx >= 0 && _checkedInPinIdx < _aiFishingSpots.length - 1) {
+    _autoCheckInToPin(_checkedInPinIdx + 1);
+  } else {
+    showNotice('🏆 You\'ve covered all spots! Great session.', 'success', 3000);
+  }
+};
+
+/* ── Voice AI Coach — Speech Recognition Input ── */
+window._startVoiceReport = function() {
+  if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+    showNotice('🎙️ Voice input not supported on this browser. Try Chrome.', 'warning', 3500);
+    // Fallback: show text input
+    _showTextReportInput();
+    return;
+  }
+
+  var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  var recognition = new SpeechRecognition();
+  recognition.continuous = false;
+  recognition.interimResults = false;
+  recognition.lang = 'en-US';
+
+  showNotice('🎙️ Listening… tell me what you see', 'info', 5000);
+
+  recognition.onresult = function(event) {
+    var transcript = event.results[0][0].transcript;
+    console.log('HUNTECH VOICE:', transcript);
+    showNotice('🎙️ Heard: "' + transcript + '"', 'success', 3000);
+    _processCoachReport(transcript);
+  };
+
+  recognition.onerror = function(event) {
+    console.warn('HUNTECH voice error:', event.error);
+    if (event.error === 'not-allowed') {
+      showNotice('🎙️ Microphone access denied. Enable mic permissions.', 'error', 4000);
+    } else {
+      showNotice('🎙️ Could not hear you. Try again or type your report.', 'warning', 3000);
+      _showTextReportInput();
+    }
+  };
+
+  recognition.start();
+};
+
+function _showTextReportInput() {
+  var existing = document.getElementById('ht-voice-text-input');
+  if (existing) existing.remove();
+
+  var input = document.createElement('div');
+  input.id = 'ht-voice-text-input';
+  input.className = 'ht-voice-input-overlay';
+  input.innerHTML = `
+    <div class="ht-voice-input-card">
+      <div class="ht-voice-input-title">🎙️ Report to AI Fly Coach</div>
+      <textarea class="ht-voice-textarea" id="htVoiceTextarea" placeholder="Describe what you see: hatch activity, fish behavior, water conditions, strikes..."></textarea>
+      <div class="ht-voice-input-actions">
+        <button class="ht-mission-btn ht-mission-btn--save" type="button" onclick="window._submitTextReport()">Send Report</button>
+        <button class="ht-mission-btn ht-mission-btn--close" type="button" onclick="document.getElementById('ht-voice-text-input').remove()">Cancel</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(input);
+  requestAnimationFrame(function() { input.classList.add('is-visible'); });
+  setTimeout(function() { document.getElementById('htVoiceTextarea').focus(); }, 200);
+}
+
+window._submitTextReport = function() {
+  var ta = document.getElementById('htVoiceTextarea');
+  if (!ta || !ta.value.trim()) return;
+  _processCoachReport(ta.value.trim());
+  var overlay = document.getElementById('ht-voice-text-input');
+  if (overlay) overlay.remove();
+};
+
+/* ── AI Fly Coach — Process user report and update strategy ── */
+function _processCoachReport(report) {
+  if (!report) return;
+
+  _aiCoachState.reports.push({
+    text: report,
+    time: new Date().toISOString(),
+    spotIdx: _checkedInPinIdx,
+    microIdx: _checkedInMicroIdx
+  });
+
+  var lowerReport = report.toLowerCase();
+
+  // Analyze the report for key indicators
+  var response = '';
+  var newFlyRec = '';
+
+  // Hatch detection
+  if (lowerReport.match(/hatch|mayfl|caddis|midge|stonefl|spinner|emerger|bwo|pmd|hendrickson|sulphur/)) {
+    if (lowerReport.match(/mayfl|bwo|pmd|hendrickson|sulphur/)) {
+      newFlyRec = 'Switch to a #16-18 Parachute Adams or BWO emerger. Match the mayfly hatch.';
+      response += '🦟 Mayfly activity detected! ';
+    } else if (lowerReport.match(/caddis/)) {
+      newFlyRec = 'Switch to #14-16 Elk Hair Caddis dry or a #16 beadhead caddis pupa below.';
+      response += '🦗 Caddis hatch confirmed! ';
+    } else if (lowerReport.match(/midge/)) {
+      newFlyRec = 'Go small — #20-24 Zebra Midge or Griffith\'s Gnat. Tiny. Slow. Patient.';
+      response += '🪰 Midge activity noted. ';
+    } else if (lowerReport.match(/stonefl/)) {
+      newFlyRec = 'Big meal — #8-12 Pat\'s Rubber Legs or Golden Stone nymph. Fish the edges.';
+      response += '🪨 Stonefly activity! ';
+    } else {
+      newFlyRec = 'Match what you see hatching. Go one size smaller than what\'s on the water.';
+      response += '🦟 Hatch activity reported. ';
+    }
+  }
+
+  // Fish behavior detection
+  if (lowerReport.match(/ris(e|ing|er)|sip|splash|boil|strike|hit|took|eat|feed/)) {
+    response += '🐟 Fish are actively feeding — great sign! Switch to dry flies or emergers if you\'re not already on them. ';
+    if (!newFlyRec) newFlyRec = 'Fish are rising — go topwater. Try a #16 Parachute Adams or #14 Elk Hair Caddis.';
+  }
+
+  if (lowerReport.match(/nothing|slow|dead|quiet|no fish|no strike|no bite|no luck|not work/)) {
+    response += '🤔 Slow fishing — let\'s adapt. ';
+    newFlyRec = 'Try going deeper — add weight and switch to a #14 beadhead Pheasant Tail or #12 Woolly Bugger (olive). Change your drift line — move 10 feet upstream and try a new angle.';
+  }
+
+  if (lowerReport.match(/refuse|short strike|look|follow|inspect|turn away|won.t take/)) {
+    response += '🧐 Fish are interested but refusing — they\'re being selective. ';
+    newFlyRec = 'Go smaller — drop down 2 sizes. Try a #18-20 RS2 or a sparse emerger. Extend your tippet to 6X or 7X. Drag-free drift is critical.';
+  }
+
+  // Water/condition reports
+  if (lowerReport.match(/muddy|murky|stain|dirty|high water|fast|flood/)) {
+    response += '🌊 Poor visibility — heavy patterns and bright colors. ';
+    if (!newFlyRec) newFlyRec = 'In dirty water: #10-12 San Juan Worm (red), #8 Woolly Bugger (black), or bright egg patterns. Strip streamers slow.';
+  }
+
+  if (lowerReport.match(/clear|crystal|gin|low water|skinny/)) {
+    response += '💎 Clear water — stealth mode. ';
+    if (!newFlyRec) newFlyRec = 'Clear water demands finesse. Long leaders (12-14ft), small flies (#18-22), and a drag-free drift. Keep low.';
+  }
+
+  if (lowerReport.match(/wind|windy|gust/)) {
+    response += '💨 Windy conditions — adjust your casting. ';
+    if (!newFlyRec) newFlyRec = 'In wind: shorten your leader, use heavier flies, and tuck your casts. Double-haul if you can. Fish sheltered banks.';
+  }
+
+  // Default response
+  if (!response) {
+    response = '📝 Report logged. ';
+    newFlyRec = 'Keep observing. Watch for any changes in hatching, feeding behavior, or water conditions. Report back when you notice something new.';
+  }
+
+  response += newFlyRec;
+
+  _aiCoachState.currentStrategy = response;
+  _aiCoachState.currentFlyRec = newFlyRec;
+  _aiCoachState.lastUpdate = Date.now();
+
+  // Show the AI coach response
+  _showCoachResponse(response);
+}
+
+function _showCoachResponse(responseText) {
+  var existing = document.getElementById('ht-coach-response');
+  if (existing) existing.remove();
+
+  var el = document.createElement('div');
+  el.id = 'ht-coach-response';
+  el.className = 'ht-coach-response-overlay';
+  el.innerHTML = `
+    <div class="ht-coach-response-card">
+      <div class="ht-coach-response-header">
+        <span class="ht-coach-avatar-small">🎣</span>
+        <span class="ht-coach-response-title">AI FLY COACH</span>
+        <button class="ht-spot-info-close" type="button" onclick="document.getElementById('ht-coach-response').remove()">✕</button>
+      </div>
+      <div class="ht-coach-response-body">${escapeHtml(responseText)}</div>
+      <div class="ht-coach-response-actions">
+        <button class="ht-mission-btn ht-mission-btn--listen" type="button" onclick="if(typeof speakText==='function')speakText(document.querySelector('.ht-coach-response-body').textContent)">🔊 Listen</button>
+        <button class="ht-mission-btn ht-mission-btn--voice" type="button" onclick="document.getElementById('ht-coach-response').remove();window._startVoiceReport()">🎙️ Report More</button>
+        <button class="ht-mission-btn ht-mission-btn--close" type="button" onclick="document.getElementById('ht-coach-response').remove()">OK</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(el);
+  requestAnimationFrame(function() { el.classList.add('is-visible'); });
+
+  // Auto-speak the response
+  if (typeof window.speakText === 'function') {
+    window.speakText(responseText);
+  }
+}
+
+/* ── Cleanup when session ends ── */
+window._cleanupAiGuide = function() {
+  _stopProximityWatch();
+  _aiFishingPins.forEach(function(m) { try { map.removeLayer(m); } catch {} });
+  _aiFishingPins = [];
+  _aiFishingSpots = [];
+  _activeMicroPins.forEach(function(m) { try { map.removeLayer(m); } catch {} });
+  _activeMicroPins = [];
+  _activeMicroPolygons.forEach(function(p) { try { map.removeLayer(p); } catch {} });
+  _activeMicroPolygons = [];
+  if (_activeZonePolygon) { try { map.removeLayer(_activeZonePolygon); } catch {} _activeZonePolygon = null; }
+  if (_missionSummaryEl) { try { _missionSummaryEl.remove(); } catch {} _missionSummaryEl = null; }
+  if (_spotInfoTrayEl) { try { _spotInfoTrayEl.remove(); } catch {} _spotInfoTrayEl = null; }
+  _checkedInPinIdx = -1;
+  _checkedInMicroIdx = -1;
+  _aiCoachState = { reports: [], currentStrategy: null, currentFlyRec: null, lastUpdate: 0 };
+};
 window.flyAddInventoryItem = function(kind, entryOverride) {
   if (!isFlyModule()) return;
   const inv = loadFlyInventory();

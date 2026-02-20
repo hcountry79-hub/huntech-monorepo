@@ -16166,19 +16166,36 @@ document.addEventListener('DOMContentLoaded', () => {
         showNotice('Select a water first.', 'error', 2500);
         return;
       }
-      showNotice('\u2705 Checked in at ' + water.name, 'success', 2500);
+
+      // Initialize zone selection state
+      fishFlow.selectedZoneIdx = 0;
+      fishFlow.selectedZone = null;
+
+      showNotice('✅ Checked in at ' + water.name, 'success', 2500);
+
       // Zoom to area level on check-in so user sees zone/amenity pins
       if (typeof map !== 'undefined' && map && water.lat && water.lng) {
         map.setView([water.lat, water.lng], 16, { animate: true, duration: 1.0 });
       }
+
+      // Deploy zone access points on the map
       if (typeof window.addAccessPointsForWater === 'function') {
         window.addAccessPointsForWater(water);
       }
+
+      // Close the initial action bar, then show the Stream Command Tray
       if (typeof closeFlyWaterActionBar === 'function') {
         try { closeFlyWaterActionBar(); } catch(ex) {}
       }
-      fishShowStep(2);
-      console.log('HUNTECH: fishStepCheckIn complete, advanced to step 2');
+
+      // Show the Stream Command Tray with zone pills + user inputs
+      setTimeout(function() {
+        if (typeof window.showFlyCheckInForm === 'function') {
+          window.showFlyCheckInForm(water);
+        }
+      }, 400);
+
+      console.log('HUNTECH: fishStepCheckIn complete, Stream Command Tray shown');
     } catch (e) {
       console.error('HUNTECH: fishStepCheckIn error:', e);
       showNotice('Check-in error: ' + e.message, 'error', 4000);
