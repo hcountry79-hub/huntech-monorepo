@@ -3188,6 +3188,23 @@ function _autoCheckInToPin(pinIdx) {
     // Random swimming direction variation
     var swimDelay = (i * 0.4).toFixed(1);
 
+    // ── Perpendicular offset: move fish OFF the stream centerline ──
+    // so trout icons never sit on top of the ranked location pills.
+    var prevPt = mc.segIdx > 0 ? seg[mc.segIdx - 1] : seg[mc.segIdx];
+    var nextPt = mc.segIdx < seg.length - 1 ? seg[mc.segIdx + 1] : seg[mc.segIdx];
+    var sdLat = nextPt[0] - prevPt[0];
+    var sdLng = nextPt[1] - prevPt[1];
+    var sLen = Math.sqrt(sdLat * sdLat + sdLng * sdLng);
+    if (sLen < 1e-9) sLen = 1e-9;
+    // Perpendicular unit vector (rotate stream direction 90°)
+    var perpLat = -sdLng / sLen;
+    var perpLng =  sdLat / sLen;
+    // Alternate sides so fish don't all clump one side
+    var side = (i % 2 === 0) ? 1 : -1;
+    var offsetDeg = 0.00009; // ~10 meters perpendicular offset
+    var placeLat = mc.lat + perpLat * offsetDeg * side;
+    var placeLng = mc.lng + perpLng * offsetDeg * side;
+
     var mIcon = L.divIcon({
       className: 'ht-micro-trout-pin ' + envClass,
       html: '<div class="ht-trout-swim-wrap" style="animation-delay:' + swimDelay + 's">' +
@@ -3198,7 +3215,7 @@ function _autoCheckInToPin(pinIdx) {
       iconAnchor: [21, 10]
     });
 
-    var mMarker = L.marker([mc.lat, mc.lng], { icon: mIcon, zIndexOffset: 500 }).addTo(map);
+    var mMarker = L.marker([placeLat, placeLng], { icon: mIcon, zIndexOffset: 500 }).addTo(map);
     mMarker.__microType = mType;
     mMarker.__microIdx = i;
     (function(mk, mt, mi) {
@@ -3207,7 +3224,7 @@ function _autoCheckInToPin(pinIdx) {
       });
     })(mMarker, mType, i);
     _activeMicroPins.push(mMarker);
-    microCoords.push([mc.lat, mc.lng]);
+    microCoords.push([placeLat, placeLng]);
   });
 
   // Zoom to fit the main pin + micro spots
