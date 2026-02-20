@@ -2,8 +2,8 @@
 // HUNTECH — Service Worker with Offline Tile Caching
 // ═══════════════════════════════════════════════════════════════════════
 
-const SW_VERSION = 'huntech-sw-v4';
-const APP_SHELL_CACHE = 'huntech-shell-v4';
+const SW_VERSION = 'huntech-sw-v5';
+const APP_SHELL_CACHE = 'huntech-shell-v5';
 const TILE_CACHE = 'huntech-tiles-v1';
 
 // Max tile cache size (~500 MB at ~30KB avg/tile ≈ 16 000 tiles)
@@ -13,8 +13,11 @@ const MAX_TILE_ENTRIES = 16000;
 const APP_SHELL = [
   './',
   './index.html',
+  './fly-fishing.html',
   './app.css',
   './main.js', 
+  './ht-fly-fishing.js',
+  './fly-fishing-data.js',
   './config.js',
   './api.js',
   './regulations.js',

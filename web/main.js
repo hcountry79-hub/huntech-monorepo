@@ -16148,10 +16148,15 @@ document.addEventListener('DOMContentLoaded', () => {
   window.fishStepCheckIn = function(waterId) {
     try {
       console.log('HUNTECH: fishStepCheckIn called, waterId=', waterId, 'fishFlow.area=', fishFlow.area);
-      // Accept waterId param OR fall back to fishFlow.area
+      // Accept waterId param OR fall back to fishFlow.area, then try Bennett Spring
       var water = fishFlow.area;
       if (waterId && (!water || water.id !== waterId)) {
         water = window.TROUT_WATERS && window.TROUT_WATERS.find(function(w) { return w.id === waterId; });
+        if (water) fishFlow.area = water;
+      }
+      // Last resort: auto-pick Bennett Spring if nothing set
+      if (!water && window.TROUT_WATERS) {
+        water = window.TROUT_WATERS.find(function(w) { return w.id === 'bennett-spring'; });
         if (water) fishFlow.area = water;
       }
       if (!water) {
@@ -16164,14 +16169,13 @@ document.addEventListener('DOMContentLoaded', () => {
       if (typeof window.addAccessPointsForWater === 'function') {
         window.addAccessPointsForWater(water);
       }
-      // Expand the unified tray to show preferences + LET'S GO
-      if (typeof window.showFlyCheckInForm === 'function') {
-        console.log('HUNTECH: calling showFlyCheckInForm');
-        window.showFlyCheckInForm(water);
-      } else {
-        console.log('HUNTECH: showFlyCheckInForm not found, falling back to step 2');
-        fishShowStep(2);
+      // Close the floating action bar if open
+      if (typeof closeFlyWaterActionBar === 'function') {
+        try { closeFlyWaterActionBar(); } catch(ex) {}
       }
+      // Advance directly to Mission Setup (Step 2) in the tray
+      fishShowStep(2);
+      console.log('HUNTECH: fishStepCheckIn complete, advanced to step 2');
     } catch (e) {
       console.error('HUNTECH: fishStepCheckIn error:', e);
       showNotice('Check-in error: ' + e.message, 'error', 4000);
