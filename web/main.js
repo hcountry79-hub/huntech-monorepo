@@ -16109,17 +16109,30 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   /* ═══ Step 1 actions ═══ */
-  window.fishStepCheckIn = function() {
-    if (!fishFlow.area) return;
-    showNotice('\u2705 Checked in at ' + fishFlow.area.name, 'success', 2500);
+  window.fishStepCheckIn = function(waterId) {
+    console.log('HUNTECH: fishStepCheckIn called, waterId=', waterId, 'fishFlow.area=', fishFlow.area);
+    // Accept waterId param OR fall back to fishFlow.area
+    var water = fishFlow.area;
+    if (waterId && (!water || water.id !== waterId)) {
+      water = window.TROUT_WATERS && window.TROUT_WATERS.find(function(w) { return w.id === waterId; });
+      if (water) fishFlow.area = water;
+    }
+    if (!water) {
+      console.warn('HUNTECH: fishStepCheckIn — no water found');
+      showNotice('Select a water first.', 'error', 2500);
+      return;
+    }
+    showNotice('\u2705 Checked in at ' + water.name, 'success', 2500);
     // Deploy the area's access/zone pins now that user checked in
     if (typeof window.addAccessPointsForWater === 'function') {
-      window.addAccessPointsForWater(fishFlow.area);
+      window.addAccessPointsForWater(water);
     }
     // Expand the unified tray to show preferences + LET'S GO
     if (typeof window.showFlyCheckInForm === 'function') {
-      window.showFlyCheckInForm(fishFlow.area);
+      console.log('HUNTECH: calling showFlyCheckInForm');
+      window.showFlyCheckInForm(water);
     } else {
+      console.log('HUNTECH: showFlyCheckInForm not found, falling back to step 2');
       fishShowStep(2);
     }
   };
@@ -16142,8 +16155,13 @@ document.addEventListener('DOMContentLoaded', () => {
     fishShowStep(3);
   };
 
-  window.fishStepSaveSpot = function() {
-    if (!fishFlow.area) return;
+  window.fishStepSaveSpot = function(waterId) {
+    var water = fishFlow.area;
+    if (waterId && (!water || water.id !== waterId)) {
+      water = window.TROUT_WATERS && window.TROUT_WATERS.find(function(w) { return w.id === waterId; });
+      if (water) fishFlow.area = water;
+    }
+    if (!water) return;
     // Save to localStorage
     try {
       const key = 'huntech_saved_fishing_spots_v1';

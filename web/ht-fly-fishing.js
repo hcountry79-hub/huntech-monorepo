@@ -457,8 +457,8 @@ function showFlyWaterActionBar(water) {
       <button class="ht-fly-water-bar-close" type="button" onclick="closeFlyWaterActionBar()">X</button>
     </div>
     <div class="ht-fly-water-bar-actions">
-      <button class="ht-fly-pill ht-fly-pill--primary" type="button" onclick="fishStepCheckIn()">Check In to Area</button>
-      <button class="ht-fly-pill" type="button" onclick="fishStepSaveSpot()">Add to My Spots</button>
+      <button class="ht-fly-pill ht-fly-pill--primary" type="button" onclick="fishStepCheckIn('${escapeHtml(water.id)}')">Check In to Area</button>
+      <button class="ht-fly-pill" type="button" onclick="fishStepSaveSpot('${escapeHtml(water.id)}')">Add to My Spots</button>
       <button class="ht-fly-pill ht-fly-pill--ghost" type="button" onclick="openFlyWaterRegulations('${escapeHtml(water.id)}')">Area Rules + Regs</button>
       <button class="${stampClass}" type="button" aria-label="${stampLabel}" disabled>${stampPill}</button>
     </div>
