@@ -15708,9 +15708,27 @@ document.addEventListener('DOMContentLoaded', () => {
       if (map && typeof map.invalidateSize === 'function') map.invalidateSize();
     }, 320);
     setTimeout(() => centerOnMyLocationInternal(), 500);
-  } else if (isFly || isTurk) {
-    if (isFly) flyMapPending = true;
-    if (isTurk) turkeyMapPending = true;
+  } else if (isFly) {
+    /* Fly-fishing: skip hero, load map immediately, default to Montauk */
+    flyMapPending = false;
+    document.body.classList.remove('ht-map-pending');
+    document.body.classList.add('ht-map-active');
+    document.body.classList.add('ht-hero-dismissed');
+    initializeMap();
+    updateFilterChips();
+    updateWorkflowUI();
+    updateLocateMeOffset();
+    setTimeout(() => {
+      if (map && typeof map.invalidateSize === 'function') map.invalidateSize();
+    }, 320);
+    // Default to Montauk State Park on launch
+    setTimeout(() => {
+      if (typeof window.loadFavoriteWater === 'function') {
+        window.loadFavoriteWater('montauk');
+      }
+    }, 600);
+  } else if (isTurk) {
+    turkeyMapPending = true;
     document.body.classList.add('ht-map-pending');
     document.body.classList.remove('ht-map-active');
     // Start hero slideshow — rotate images every 6s
