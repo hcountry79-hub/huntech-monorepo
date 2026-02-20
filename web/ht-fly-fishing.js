@@ -1784,9 +1784,10 @@ window.flyCheckInAtAccess = function(waterId, lat, lng, accessName) {
   const latlng = L.latLng(lat, lng);
   showFlyCheckInZone(latlng);
   if (map) map.setView(latlng, Math.max(map.getZoom(), 14));
-  showFlyCoachPanel();
+  // Close any open popups so the map stays clean
+  if (map) map.closePopup();
   const label = accessName || 'access point';
-  updateFlyCoachFeed(`Checked in at ${label}. Scouting zone deployed. Fish smart.`);
+  showNotice('✅ Checked in at ' + label, 'success', 2500);
   if (flyLiveSessionActive) {
     showFlyLiveCommandTray();
   }

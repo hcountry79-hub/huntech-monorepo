@@ -218,12 +218,12 @@ window.TROUT_WATERS = [
     seasonDates: { open: 'March 1', close: 'October 31', catchRelease: 'Nov 1 - Feb 28' },
     regulations: { method: 'Three regulated zones. Zone 1 fly only, Zone 2 flies & artificial lures, Zone 3 bait only.', dailyLimit: 4, minSize: null, gearRestrictions: 'Zone 1: fly only. Zone 2: flies & artificial lures. Zone 3: bait ONLY — no flies or lures.', specialRules: 'Daily tag required ($3). Hours 6:30am–30min after sunset. No fishing from bridge. Winter C&R: flies/artificial lures only, entire stream.' },
     access: [
-      { name: 'Zone 1 — Fly Only', lat: 37.7189, lng: -92.8585, type: 'zone', notes: 'Spring pool to hatchery dam (~300ft). Fly fishing ONLY. Crystal clear sight fishing — long leaders, small flies. Shortest zone, most technical.' },
-      { name: 'Zone 2 — Flies & Lures', lat: 37.7248, lng: -92.8544, type: 'zone', notes: 'Hatchery dam to Whistle Bridge (~0.5mi). Flies and artificial lures allowed. Most popular section — arrive early on weekends.' },
-      { name: 'Zone 3 — Bait Only', lat: 37.7300, lng: -92.8575, type: 'zone', notes: 'Whistle Bridge to Niangua River (~0.7mi). BAIT ONLY — no flies or artificial lures permitted. Family friendly, least crowded.' },
-      { name: 'Main Parking', lat: 37.7170, lng: -92.8555, type: 'parking', notes: 'Main lot near spring. Walk to all zones. Tag office and store nearby.' },
-      { name: 'Store / Tag Office', lat: 37.7168, lng: -92.8558, type: 'parking', notes: 'Park store, concession, daily tag office. Tackle, snacks, fly lessons.' },
-      { name: 'Restrooms', lat: 37.7169, lng: -92.8556, type: 'parking', notes: 'Main restroom facility near parking and store.' }
+      { name: 'Zone 1 — Fly Only', lat: 37.7189, lng: -92.8585, type: 'zone', notes: 'Spring pool to hatchery dam. Fly fishing ONLY. Crystal clear sight fishing — long leaders, small flies. Shortest zone, most technical.' },
+      { name: 'Zone 2 — Flies & Lures', lat: 37.7260, lng: -92.8550, type: 'zone', notes: 'Hatchery dam to Whistle Bridge. Flies and artificial lures allowed. Most popular section — arrive early on weekends.' },
+      { name: 'Zone 3 — Bait Only', lat: 37.7310, lng: -92.8574, type: 'zone', notes: 'Whistle Bridge to Niangua River. BAIT ONLY — no flies or artificial lures permitted. Family friendly, least crowded.' },
+      { name: 'Main Parking', lat: 37.7255, lng: -92.8560, type: 'parking', notes: 'Main lot near store and hatchery on MO 64A. Walk to all zones.' },
+      { name: 'Store / Tag Office', lat: 37.7257, lng: -92.8558, type: 'parking', notes: 'Park store on MO 64A near hatchery. Daily tags, concession, tackle, snacks, fly lessons.' },
+      { name: 'Restrooms', lat: 37.7248, lng: -92.8565, type: 'parking', notes: 'CCC-built restroom facility near parking and store.' }
     ],
     solitude: 'low', difficulty: 'easy', wadingRequired: false, familyFriendly: true,
     bestSeasons: ['spring', 'fall'],
@@ -252,9 +252,9 @@ window.TROUT_WATERS = [
       { name: 'Zone 1 — C&R Fly Only', lat: 37.4590, lng: -91.6816, type: 'zone', notes: 'Catch-and-release only, flies only. Near spring pool on Current River — big resident trout. Most technical water.' },
       { name: 'Zone 2 — Fly Only', lat: 37.4557, lng: -91.6821, type: 'zone', notes: 'Fly fishing only. Middle Current River section. Good hatches in riffles and runs.' },
       { name: 'Zone 3 — All Methods', lat: 37.4536, lng: -91.6848, type: 'zone', notes: 'All legal methods including bait. Lower Current River section. Best for families.' },
-      { name: 'Lodge Parking', lat: 37.4555, lng: -91.6700, type: 'parking', notes: 'Montauk Lodge main lot. Walk to spring and stream. Tag office inside.' },
-      { name: 'Store / Tag Office', lat: 37.4553, lng: -91.6704, type: 'parking', notes: 'Park store near lodge. Daily tags, tackle, supplies.' },
-      { name: 'Hatchery / Mill', lat: 37.4600, lng: -91.6828, type: 'parking', notes: 'Historic 1896 gristmill and trout hatchery near spring. Educational stop.' }
+      { name: 'Lodge Parking', lat: 37.4525, lng: -91.6815, type: 'parking', notes: 'Montauk Lodge main lot. Walk to spring and stream. Tag office inside.' },
+      { name: 'Store / Tag Office', lat: 37.4523, lng: -91.6813, type: 'parking', notes: 'Park store inside Dorman L. Steelman Lodge. Daily tags, tackle, supplies.' },
+      { name: 'Hatchery / Mill', lat: 37.4549, lng: -91.6855, type: 'parking', notes: 'Historic 1896 gristmill and trout hatchery near spring. Educational stop.' }
     ],
     solitude: 'low', difficulty: 'easy', wadingRequired: false, familyFriendly: true,
     bestSeasons: ['spring', 'fall'],
@@ -283,9 +283,9 @@ window.TROUT_WATERS = [
       { name: 'Zone 1 — Lures & Flies', lat: 36.5901, lng: -93.8351, type: 'zone', notes: 'Hatchery to Dry Hollow Creek. Artificial lures, soft plastic and flies. Near spring — cold clear water.' },
       { name: 'Zone 2 — Flies Only', lat: 36.5865, lng: -93.8363, type: 'zone', notes: 'Dry Hollow to old dam (Campground 3). FLIES ONLY. C&R sub-section above Hwy F bridge. Best zone for skilled fly anglers.' },
       { name: 'Zone 3 — All Methods', lat: 36.5821, lng: -93.8344, type: 'zone', notes: 'Old dam to park boundary. All methods including natural bait. Near campground — family friendly.' },
-      { name: 'Main Parking', lat: 36.5892, lng: -93.8280, type: 'parking', notes: 'Valley floor parking near CCC Lodge. Walk to Zone 1 and stream.' },
-      { name: 'Park Store', lat: 36.5955, lng: -93.8245, type: 'parking', notes: 'Store at Rte F / Hwy 112. Tags, tackle, groceries.' },
-      { name: 'Restrooms', lat: 36.5890, lng: -93.8278, type: 'parking', notes: 'Main restroom facility near parking area.' }
+      { name: 'Main Parking', lat: 36.5891, lng: -93.8347, type: 'parking', notes: 'Valley floor parking near hatchery and stream. Walk to Zone 1 and fishing areas.' },
+      { name: 'Park Store', lat: 36.5843, lng: -93.8371, type: 'parking', notes: 'Store at Rte F / Hwy 112 intersection. Tags, tackle, groceries.' },
+      { name: 'Restrooms', lat: 36.5843, lng: -93.8359, type: 'parking', notes: 'Main restroom facility near store and parking area.' }
     ],
     solitude: 'low', difficulty: 'easy', wadingRequired: false, familyFriendly: true,
     bestSeasons: ['spring', 'fall'],
@@ -315,7 +315,7 @@ window.TROUT_WATERS = [
       { name: 'Zone 1 — Fly Area', lat: 37.9553, lng: -91.5329, type: 'zone', notes: 'Near spring pool. Sight fishing for large trout in crystal-clear water. Fly area — most technical.' },
       { name: 'Zone 2 — Flies & Lures', lat: 37.9579, lng: -91.5368, type: 'zone', notes: 'Middle Spring Branch. Good riffle water for nymphing. Flies and artificial lures.' },
       { name: 'Zone 3 — All Methods', lat: 37.9603, lng: -91.5365, type: 'zone', notes: 'Northern section near Meramec River confluence. All methods including bait. Family friendly.' },
-      { name: 'Main Parking / Gate', lat: 37.9540, lng: -91.5315, type: 'parking', notes: 'Entrance gate — pay $5/vehicle. Parking near spring, museum, and stream.' },
+      { name: 'Main Parking / Gate', lat: 37.9551, lng: -91.5318, type: 'parking', notes: 'Entrance gate — pay $5/vehicle. Parking near spring, museum, and stream.' },
       { name: 'Store / Museum', lat: 37.9539, lng: -91.5345, type: 'parking', notes: 'James Foundation Iron Works Museum near spring pool. Tags and supplies.' },
       { name: 'Restrooms', lat: 37.9542, lng: -91.5320, type: 'parking', notes: 'Main restrooms near parking area.' }
     ],
