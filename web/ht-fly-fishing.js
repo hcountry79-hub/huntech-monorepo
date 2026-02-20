@@ -452,27 +452,17 @@ function showFlyWaterActionBar(water) {
 function getFlyPinIcon(labelText) {
   const label = String(labelText || '').trim();
   return L.divIcon({
-    className: 'ht-pin-wrapper ht-pin-wrapper--fly',
-    html: `
-      <div class="ht-pin ht-pin--fly">
-        <div class="ht-pin-inner ht-fly-pin-inner">
-          <span class="ht-fly-pin-label">${escapeHtml(label)}</span>
-        </div>
-      </div>
-    `,
-    iconSize: [48, 58],
-    iconAnchor: [24, 52]
+    className: 'ht-fly-area-pin',
+    html: `<div class="ht-fly-area-pill"><img class="ht-fly-area-pill-icon" src="assets/trout-logo.png" alt="">${escapeHtml(label)}</div>`,
+    iconSize: [0, 0],
+    iconAnchor: [0, 16]
   });
 }
 
 function getFlyWaterMarkerLabel(water) {
   const name = String(water?.name || '').trim();
-  const lower = name.toLowerCase();
-  if (lower.includes('montauk')) return 'Montauk';
-  if (lower.includes('bennett') || lower.includes('bennit')) return 'Bennett';
-  if (!name) return 'Water';
-  const token = name.split(/\s+/)[0];
-  return token || name;
+  if (!name) return 'Trout Water';
+  return name;
 }
 
 function getFlyCustomWaters() {
