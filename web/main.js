@@ -15718,15 +15718,18 @@ document.addEventListener('DOMContentLoaded', () => {
     updateFilterChips();
     updateWorkflowUI();
     updateLocateMeOffset();
-    setTimeout(() => {
+    // Fast invalidateSize — just need one rAF for layout to settle
+    requestAnimationFrame(() => {
       if (map && typeof map.invalidateSize === 'function') map.invalidateSize();
-    }, 320);
-    // Default to Montauk State Park on launch
-    setTimeout(() => {
-      if (typeof window.loadFavoriteWater === 'function') {
-        window.loadFavoriteWater('montauk');
-      }
-    }, 600);
+    });
+    // Default to Montauk State Park on launch — triggered after rAF
+    requestAnimationFrame(() => {
+      setTimeout(() => {
+        if (typeof window.loadFavoriteWater === 'function') {
+          window.loadFavoriteWater('montauk');
+        }
+      }, 50);
+    });
   } else if (isTurk) {
     turkeyMapPending = true;
     document.body.classList.add('ht-map-pending');
