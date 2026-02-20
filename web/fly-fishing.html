@@ -70,7 +70,7 @@
         <svg width="20" height="20" viewBox="0 0 24 24" fill="#2bd4ff">
           <path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
         </svg>
-        <input type="text" placeholder="Search town, landmark, or coords (lat,lng)…" class="ht-search-input" id="searchInput" autocomplete="off" spellcheck="false">
+        <input type="text" placeholder="Search any address, business, park, or coords…" class="ht-search-input" id="searchInput" autocomplete="off" spellcheck="false">
         <button class="ht-search-btn" type="button">Search</button>
         <div class="ht-search-results" id="searchResults"></div>
       </div>
@@ -228,70 +228,34 @@
                 <button class="ht-method-btn" data-fish-mode="backcountry" onclick="pickFishMode(this,'backcountry')">🌲 Off the Grid</button>
               </div>
             </div>
-            <!-- Start Point -->
+            <!-- Deploy -->
             <div class="ht-form-row">
-              <div class="ht-form-label">Start Point</div>
-              <div class="ht-method-row">
-                <button class="ht-method-btn ht-method-btn--active" data-fish-start="current" onclick="pickFishStart(this,'current')">📍 My Location</button>
-                <button class="ht-method-btn" data-fish-start="map" onclick="pickFishStart(this,'map')">🗺️ Pick on Map</button>
-              </div>
-            </div>
-            <!-- Route Plan -->
-            <div class="ht-form-row">
-              <div class="ht-form-label">Route Plan</div>
-              <div class="ht-method-row">
-                <button class="ht-method-btn ht-method-btn--active" data-fish-route="build" onclick="pickFishRouteMode(this,'build')">🔀 Build Route</button>
-                <button class="ht-method-btn" data-fish-route="none" onclick="pickFishRouteMode(this,'none')">🎯 No Route</button>
-              </div>
-            </div>
-            <!-- Review -->
-            <div class="ht-form-row">
-              <button class="ht-gold-btn ht-go-btn ht-lets-go-pulse" type="button" onclick="fishStepReview()">
-                📋 REVIEW MY PLAN
+              <button class="ht-gold-btn ht-go-btn ht-lets-go-pulse" type="button" onclick="fishStepDeploy()">
+                🎣 DEPLOY FISHING PINS
               </button>
             </div>
           </div>
         </div>
 
-        <!-- ──── Step 3: Confirm Mission ──── -->
+        <!-- ──── Step 3: Define Fishing Route ──── -->
         <div class="ht-fish-step" id="fishStep2b_summary" style="display:none">
           <div class="ht-accordion-header ht-accordion-header-center">
-            <span class="ht-define-title">📋 CONFIRM YOUR MISSION</span>
+            <span class="ht-define-title">🗺️ DEFINE FISHING ROUTE</span>
           </div>
           <div class="ht-form-grid">
             <div class="ht-form-row">
-              <div class="ht-fish-summary-card" id="fishSummaryCard">
-                <!-- Populated by JS -->
-              </div>
-            </div>
-            <div class="ht-form-row">
               <div class="ht-method-row ht-method-row--stack">
-                <button class="ht-gold-btn ht-go-btn ht-lets-go-pulse" type="button" onclick="fishStepLetsGo()">🎯 LET'S GO</button>
-                <button class="ht-gold-btn ht-go-btn ht-go-btn--ghost" type="button" onclick="fishShowStep(2)">← Edit Plan</button>
-                <button class="ht-gold-btn ht-go-btn ht-go-btn--ghost" type="button" onclick="fishStepStartOver()">✕ Start Over</button>
+                <button class="ht-gold-btn ht-go-btn" type="button" onclick="fishRouteFromMyLocation()">📍 Start From My Location</button>
+                <button class="ht-gold-btn ht-go-btn" type="button" onclick="fishRoutePickOnMap()">🗺️ Pick Starting Point on Map</button>
+                <button class="ht-gold-btn ht-go-btn" type="button" onclick="fishRouteNone()">🚫 No Route</button>
+                <button class="ht-gold-btn ht-go-btn ht-go-btn--ghost" type="button" onclick="fishRouteGoBack()">← Go Back</button>
               </div>
             </div>
           </div>
         </div>
 
-        <!-- ──── Step 4: Define Route (Optional) ──── -->
-        <div class="ht-fish-step" id="fishStep3_route" style="display:none">
-          <div class="ht-accordion-header ht-accordion-header-center">
-            <span class="ht-define-title">🗺️ Define Route</span>
-          </div>
-          <div class="ht-form-grid">
-            <div class="ht-form-row">
-              <div class="ht-fly-note">Tap the map to set your <strong>parking spot</strong>, then tap <strong>turnaround point</strong>. We'll route through your hotspots.</div>
-            </div>
-            <div class="ht-form-row">
-              <div class="ht-method-row ht-method-row--stack">
-                <button class="ht-gold-btn ht-go-btn" type="button" onclick="fishBeginRoute()">📍 Set Parking</button>
-                <button class="ht-gold-btn ht-go-btn" type="button" id="fishRouteLockBtn" style="display:none" onclick="fishLockRoute()">🔒 Lock Route</button>
-                <button class="ht-gold-btn ht-go-btn ht-go-btn--ghost" type="button" onclick="fishClearRoute()">🔄 Reset Route</button>
-              </div>
-            </div>
-          </div>
-        </div>
+        <!-- (fishStep3_route kept as hidden placeholder for step index alignment) -->
+        <div class="ht-fish-step" id="fishStep3_route" style="display:none"></div>
 
         <!-- ──── Step 4: AI Briefing / Trout Summary ──── -->
         <div class="ht-fish-step" id="fishStep4_briefing" style="display:none">

@@ -16150,33 +16150,23 @@ document.addEventListener('DOMContentLoaded', () => {
   /* ═══ Step 1 actions ═══ */
   window.fishStepCheckIn = function() {
     if (!fishFlow.area) return;
-    showNotice('✅ Checked in at ' + fishFlow.area.name + ' — set up your mission below', 'success', 2500);
+    showNotice('✅ Checked in at ' + fishFlow.area.name, 'success', 2500);
     fishShowStep(2);
   };
 
-  /* ═══ Step 2 → 3: Review Plan ═══ */
-  window.fishStepReview = function() {
+  /* ═══ Step 2 → Deploy Pins & Advance to Route Tray ═══ */
+  window.fishStepDeploy = function() {
     if (!fishFlow.area) return;
-    const methodMap = { fly: '🪰 Fly Fishing', spin: '🎣 Lure Fishing', bait: '🪱 Bait Fishing' };
-    const wadeMap = { waders: '🥾 Wading', streamside: '🏖️ Bank Fishing' };
-    const expMap = { new: '🌱 New Angler', learning: '📈 Still Learning', confident: '💪 Confident', advanced: '🏆 Advanced' };
-    const modeMap = { standard: '🚗 Road Ready', backcountry: '🌲 Off the Grid' };
-    const startMap = { current: '📍 My Location', map: '🗺️ Custom Start' };
-    const routeMap = { build: '🔀 Build a Route', none: '🎯 No Route' };
-    const rows = [
-      { label: 'Water', value: fishFlow.area.name },
-      { label: 'Method', value: methodMap[fishFlow.method] || fishFlow.method },
-      { label: 'Access', value: wadeMap[fishFlow.wade] || fishFlow.wade },
-      { label: 'Skill', value: expMap[fishFlow.experience] || fishFlow.experience },
-      { label: 'Expedition', value: modeMap[fishFlow.mode] || fishFlow.mode },
-      { label: 'Start', value: startMap[fishFlow.startFrom] || fishFlow.startFrom },
-      { label: 'Route', value: routeMap[fishFlow.routeMode] || fishFlow.routeMode },
-    ];
-    const html = '<div class="ht-summary-rows">' +
-      rows.map(r => '<div class="ht-summary-row"><span class="ht-summary-label">' + r.label + '</span><span class="ht-summary-value">' + r.value + '</span></div>').join('') +
-      '</div>';
-    const card = document.getElementById('fishSummaryCard');
-    if (card) card.innerHTML = html;
+    // Deploy fishing pins for this water on the map
+    if (typeof showFlyWaterMarkers === 'function') {
+      showFlyWaterMarkers();
+    }
+    // Zoom to the water
+    if (typeof map !== 'undefined' && map && fishFlow.area.lat && fishFlow.area.lng) {
+      map.setView([fishFlow.area.lat, fishFlow.area.lng], 15, { animate: true, duration: 0.8 });
+    }
+    showNotice('📍 Fishing pins deployed at ' + fishFlow.area.name, 'success', 2500);
+    // Advance to routing tray (step 3)
     fishShowStep(3);
   };
 
@@ -16253,16 +16243,86 @@ document.addEventListener('DOMContentLoaded', () => {
     if (typeof map !== 'undefined' && map && fishFlow.area.lat) {
       map.setView([fishFlow.area.lat, fishFlow.area.lng], 16, { animate: true });
     }
+    setTimeout(() => {
+      fishShowStep(5);
+      generateFishBriefing();
+    }, 600);
+  };
 
-    // If user chose to skip route-building, jump straight to briefing
-    if (fishFlow.routeMode === 'none') {
-      setTimeout(() => {
-        fishShowStep(5);
-        generateFishBriefing();
-      }, 600);
+  /* ═══ Routing tray actions ═══ */
+  window.fishRouteFromMyLocation = function() {
+    fishFlow.startFrom = 'current';
+    showNotice('📍 Route will start from your current location', 'success', 2500);
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(function(pos) {
+        const startLatLng = L.latLng(pos.coords.latitude, pos.coords.longitude);
+        // Place start marker
+        if (fishFlow.routeStartMarker && map) map.removeLayer(fishFlow.routeStartMarker);
+        fishFlow.routeStartMarker = L.marker(startLatLng, {
+          icon: L.divIcon({ className: 'ht-route-pin ht-route-pin-start', html: '📍', iconSize: [28, 28], iconAnchor: [14, 14] })
+        }).addTo(map);
+        showNotice('📍 Start point set — tap the map to set your destination', 'info', 4000);
+        map.once('click', function(e) {
+          if (fishFlow.routeEndMarker) map.removeLayer(fishFlow.routeEndMarker);
+          fishFlow.routeEndMarker = L.marker(e.latlng, {
+            icon: L.divIcon({ className: 'ht-route-pin ht-route-pin-end', html: '🏁', iconSize: [28, 28], iconAnchor: [14, 14] })
+          }).addTo(map);
+          if (fishFlow.routePolyline) map.removeLayer(fishFlow.routePolyline);
+          fishFlow.routePolyline = L.polyline([startLatLng, e.latlng], {
+            color: '#00FF88', weight: 3, dashArray: '8,8', opacity: 0.8
+          }).addTo(map);
+          showNotice('🏁 Route set! Generating briefing…', 'success', 2500);
+          setTimeout(() => { fishShowStep(5); generateFishBriefing(); }, 800);
+        });
+      }, function() {
+        showNotice('Enable location access to start from your position.', 'error', 3500);
+      }, { enableHighAccuracy: true, maximumAge: 10000, timeout: 15000 });
     } else {
-      fishShowStep(4);
+      showNotice('GPS not available on this device.', 'error', 3500);
     }
+  };
+
+  window.fishRoutePickOnMap = function() {
+    fishFlow.startFrom = 'map';
+    showNotice('📍 Tap the map to set your starting point', 'info', 4000);
+    if (typeof map !== 'undefined' && map) {
+      map.once('click', function(e) {
+        if (fishFlow.routeStartMarker) map.removeLayer(fishFlow.routeStartMarker);
+        fishFlow.routeStartMarker = L.marker(e.latlng, {
+          icon: L.divIcon({ className: 'ht-route-pin ht-route-pin-start', html: '🅿️', iconSize: [28, 28], iconAnchor: [14, 14] })
+        }).addTo(map);
+        showNotice('🅿️ Start set! Now tap your destination', 'success', 3500);
+        map.once('click', function(e2) {
+          if (fishFlow.routeEndMarker) map.removeLayer(fishFlow.routeEndMarker);
+          fishFlow.routeEndMarker = L.marker(e2.latlng, {
+            icon: L.divIcon({ className: 'ht-route-pin ht-route-pin-end', html: '🏁', iconSize: [28, 28], iconAnchor: [14, 14] })
+          }).addTo(map);
+          if (fishFlow.routePolyline) map.removeLayer(fishFlow.routePolyline);
+          fishFlow.routePolyline = L.polyline([e.latlng, e2.latlng], {
+            color: '#00FF88', weight: 3, dashArray: '8,8', opacity: 0.8
+          }).addTo(map);
+          showNotice('🏁 Route set! Generating briefing…', 'success', 2500);
+          setTimeout(() => { fishShowStep(5); generateFishBriefing(); }, 800);
+        });
+      });
+    }
+  };
+
+  window.fishRouteNone = function() {
+    fishFlow.routeMode = 'none';
+    showNotice('🎯 No route — generating briefing…', 'success', 2000);
+    // Clear any existing route markers
+    if (fishFlow.routeStartMarker && map) map.removeLayer(fishFlow.routeStartMarker);
+    if (fishFlow.routeEndMarker && map) map.removeLayer(fishFlow.routeEndMarker);
+    if (fishFlow.routePolyline && map) map.removeLayer(fishFlow.routePolyline);
+    fishFlow.routeStartMarker = null;
+    fishFlow.routeEndMarker = null;
+    fishFlow.routePolyline = null;
+    setTimeout(() => { fishShowStep(5); generateFishBriefing(); }, 600);
+  };
+
+  window.fishRouteGoBack = function() {
+    fishShowStep(2);
   };
 
   /* ═══ Step 3: Define Route ═══ */
