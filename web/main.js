@@ -16112,9 +16112,13 @@ document.addEventListener('DOMContentLoaded', () => {
   window.fishStepCheckIn = function() {
     if (!fishFlow.area) return;
     showNotice('\u2705 Checked in at ' + fishFlow.area.name, 'success', 2500);
+    // Deploy the area's access/zone pins now that user checked in
+    if (typeof window.addAccessPointsForWater === 'function') {
+      window.addAccessPointsForWater(fishFlow.area);
+    }
     // Expand the unified tray to show preferences + LET'S GO
-    if (typeof showFlyCheckInForm === 'function') {
-      showFlyCheckInForm(fishFlow.area);
+    if (typeof window.showFlyCheckInForm === 'function') {
+      window.showFlyCheckInForm(fishFlow.area);
     } else {
       fishShowStep(2);
     }

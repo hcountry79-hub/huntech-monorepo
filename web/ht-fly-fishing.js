@@ -321,7 +321,7 @@ function showFlyWaterMarkersByDistance(center, radiusMiles) {
     if (distance <= radiusMeters) {
       if (water.id) seen.add(water.id);
       addFlyWaterMarker(water);
-      addAccessPointsForWater(water);
+      // Access/zone pins hidden — deployed only on check-in
     }
   });
   getFlyCustomWaters().forEach((water, idx) => {
@@ -332,7 +332,6 @@ function showFlyWaterMarkersByDistance(center, radiusMiles) {
     if (distance <= radiusMeters) {
       seen.add(id);
       addFlyWaterMarker(water, formatFlyWaterShortName(water.name));
-      addAccessPointsForWater(water);
     }
   });
 }
@@ -388,14 +387,33 @@ function setFlyWaterLayerEnabled(isEnabled, options = {}) {
   updateMapToggleButtons();
 }
 
-function isTroutStampRequired(water) {
-  const waterType = String(water?.waterType || '').toLowerCase();
+/* ── Missouri trout permit/tag detection (MDC rules) ──
+   Trout Parks (Bennett, Montauk, Roaring River, Maramec): Daily Trout Tag (bought at park)
+   All other trout waters (Blue/Red/White Ribbon, tailwaters, stocked): Annual Trout Permit ($12 res)
+   Returns: { type: 'tag'|'permit'|'none', label: string, pill: string } */
+function getTroutPermitInfo(water) {
+  const category = String(water?.category || '').toLowerCase();
   const ribbon = String(water?.ribbon || '').toLowerCase();
-  if (waterType.includes('trout')) return true;
-  if (waterType.includes('tailwater')) return true;
-  if (ribbon.includes('trout')) return true;
-  if (ribbon.includes('blue') || ribbon.includes('red') || ribbon.includes('white')) return true;
-  return false;
+  const waterType = String(water?.waterType || '').toLowerCase();
+  // Trout Parks → Daily Trout Tag
+  if (category.includes('trout-park') || ribbon.includes('trout park')) {
+    return { type: 'tag', label: 'Daily Trout Tag Required', pill: 'Trout Tag Required' };
+  }
+  // Blue/Red/White Ribbon, tailwaters, stocked → Annual Trout Permit
+  if (ribbon.includes('blue') || ribbon.includes('red') || ribbon.includes('white')) {
+    return { type: 'permit', label: 'Trout Permit Required', pill: 'Trout Permit Required' };
+  }
+  if (waterType.includes('tailwater') || waterType.includes('stocked') || category.includes('stocked')) {
+    return { type: 'permit', label: 'Trout Permit Required', pill: 'Trout Permit Required' };
+  }
+  if (waterType.includes('trout') || ribbon.includes('trout')) {
+    return { type: 'permit', label: 'Trout Permit Required', pill: 'Trout Permit Required' };
+  }
+  return { type: 'none', label: 'No Additional Permit Needed', pill: 'No Extra Permit' };
+}
+// Legacy compat wrapper
+function isTroutStampRequired(water) {
+  return getTroutPermitInfo(water).type !== 'none';
 }
 
 function ensureFlyWaterActionBar() {
@@ -425,10 +443,10 @@ function showFlyWaterActionBar(water) {
   if (!water) return;
   collapseFlyCommandPanels();
   const bar = ensureFlyWaterActionBar();
-  const stampRequired = isTroutStampRequired(water);
-  const stampLabel = stampRequired ? 'Trout Stamp Required' : 'Trout Stamp Not Required';
-  const stampPill = stampRequired ? 'Stamp Required' : 'Stamp Not Required';
-  const stampClass = stampRequired ? 'ht-fly-pill ht-fly-pill--stamp' : 'ht-fly-pill ht-fly-pill--stamp ht-fly-pill--stamp-optional';
+  const permitInfo = getTroutPermitInfo(water);
+  const stampLabel = permitInfo.label;
+  const stampPill = permitInfo.pill;
+  const stampClass = permitInfo.type !== 'none' ? 'ht-fly-pill ht-fly-pill--stamp' : 'ht-fly-pill ht-fly-pill--stamp ht-fly-pill--stamp-optional';
   const ribbonLabel = water.ribbon ? ` • ${escapeHtml(water.ribbon)}` : '';
   bar.innerHTML = `
     <div class="ht-fly-water-bar-header">
@@ -452,8 +470,8 @@ function showFlyWaterActionBar(water) {
 function showFlyCheckInForm(water) {
   if (!water) return;
   const bar = ensureFlyWaterActionBar();
-  const stampRequired = isTroutStampRequired(water);
-  const stampNote = stampRequired ? '⚠️ Trout Stamp Required' : '✅ No Stamp Required';
+  const permitInfo = getTroutPermitInfo(water);
+  const stampNote = permitInfo.type !== 'none' ? '⚠️ ' + permitInfo.pill : '✅ No Extra Permit';
   const ribbonLabel = water.ribbon ? ` • ${escapeHtml(water.ribbon)}` : '';
   bar.innerHTML = `
     <div class="ht-fly-water-bar-header">
@@ -643,6 +661,7 @@ function addAccessPointsForWater(water) {
   if (!water || !Array.isArray(water.access)) return;
   water.access.forEach((ap) => addFlyAccessPointMarker(water, ap));
 }
+window.addAccessPointsForWater = addAccessPointsForWater;
 /* ── end access point helpers ───────────────────────── */
 
 function showFlyWaterMarkers() {
@@ -652,14 +671,13 @@ function showFlyWaterMarkers() {
     if (!water || !water.id) return;
     seen.add(water.id);
     addFlyWaterMarker(water);
-    addAccessPointsForWater(water);
+    // Access/zone pins hidden by default — deployed only on check-in
   });
   getFlyCustomWaters().forEach((water, idx) => {
     const id = water.id || `custom_${idx}`;
     if (seen.has(id)) return;
     seen.add(id);
     addFlyWaterMarker(water, formatFlyWaterShortName(water.name));
-    addAccessPointsForWater(water);
   });
 }
 
