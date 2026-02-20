@@ -824,7 +824,7 @@ function getMicroFeatureTemplates() {
 const UI_POPUPS_ENABLED = window.HUNTECH_MAP_POPUPS_ENABLED !== undefined
   ? Boolean(window.HUNTECH_MAP_POPUPS_ENABLED)
   : true;
-const UI_NOTICES_ENABLED = false;
+const UI_NOTICES_ENABLED = true;
 const WIND_OVERLAY_ENABLED = window.HUNTECH_WIND_OVERLAY_ENABLED !== undefined
   ? Boolean(window.HUNTECH_WIND_OVERLAY_ENABLED)
   : true;
@@ -15704,6 +15704,7 @@ window.showStreamPanel = function showStreamPanel(panelId) {
 
 // Initialize on load
 document.addEventListener('DOMContentLoaded', () => {
+  try {
   const updateTopbarHeight = () => {
     const topbar = document.querySelector('.ht-topbar');
     if (!topbar) return;
@@ -16144,17 +16145,15 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   };
 
-  /* ═══ Step 1 actions ═══ */
+  /* ═══ Step 1 actions — fishStepCheckIn override (replaces inline failsafe) ═══ */
   window.fishStepCheckIn = function(waterId) {
     try {
       console.log('HUNTECH: fishStepCheckIn called, waterId=', waterId, 'fishFlow.area=', fishFlow.area);
-      // Accept waterId param OR fall back to fishFlow.area, then try Bennett Spring
       var water = fishFlow.area;
       if (waterId && (!water || water.id !== waterId)) {
         water = window.TROUT_WATERS && window.TROUT_WATERS.find(function(w) { return w.id === waterId; });
         if (water) fishFlow.area = water;
       }
-      // Last resort: auto-pick Bennett Spring if nothing set
       if (!water && window.TROUT_WATERS) {
         water = window.TROUT_WATERS.find(function(w) { return w.id === 'bennett-spring'; });
         if (water) fishFlow.area = water;
@@ -16165,15 +16164,12 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
       showNotice('\u2705 Checked in at ' + water.name, 'success', 2500);
-      // Deploy the area's access/zone pins now that user checked in
       if (typeof window.addAccessPointsForWater === 'function') {
         window.addAccessPointsForWater(water);
       }
-      // Close the floating action bar if open
       if (typeof closeFlyWaterActionBar === 'function') {
         try { closeFlyWaterActionBar(); } catch(ex) {}
       }
-      // Advance directly to Mission Setup (Step 2) in the tray
       fishShowStep(2);
       console.log('HUNTECH: fishStepCheckIn complete, advanced to step 2');
     } catch (e) {
@@ -16181,6 +16177,8 @@ document.addEventListener('DOMContentLoaded', () => {
       showNotice('Check-in error: ' + e.message, 'error', 4000);
     }
   };
+  // Expose fishFlow on window so the inline failsafe can access it
+  window._fishFlow = fishFlow;
 
   /* ═══ Step 2 → Deploy Pins & Advance to Route Tray ═══ */
   window.fishStepDeploy = function() {
@@ -16681,6 +16679,14 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     }
   }, 1000);
+  } catch (e) {
+    console.error('HUNTECH: DOMContentLoaded FATAL ERROR:', e);
+    // Show a visible error banner so user knows something broke
+    var errBanner = document.createElement('div');
+    errBanner.style.cssText = 'position:fixed;bottom:0;left:0;right:0;background:#ef4444;color:white;padding:10px;z-index:99999;font-size:12px;text-align:center';
+    errBanner.textContent = 'Init error: ' + e.message;
+    document.body.appendChild(errBanner);
+  }
 });
 
 // Close navigation panels

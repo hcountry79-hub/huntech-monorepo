@@ -516,9 +516,74 @@
     }
   </script>
 
-  <script src="regulations.js?v=20260220i"></script>
-  <script src="fly-fishing-data.js?v=20260220i"></script>
-  <script src="ht-fly-fishing.js?v=20260220i"></script>
-  <script src="main.js?v=20260220i"></script>
+  <script>
+    // Global error handler — catch initialization errors visibly
+    window.onerror = function(msg, src, line) {
+      console.error('HUNTECH JS ERROR:', msg, src, line);
+      var el = document.createElement('div');
+      el.style.cssText = 'position:fixed;top:0;left:0;right:0;background:#ef4444;color:white;padding:8px 12px;z-index:99999;font-size:11px;text-align:center';
+      el.textContent = 'JS: ' + msg + ' (' + (src||'').split('/').pop() + ':' + line + ')';
+      document.body.appendChild(el);
+      setTimeout(function() { el.remove(); }, 8000);
+    };
+  </script>
+
+  <script src="regulations.js?v=20260220j"></script>
+  <script src="fly-fishing-data.js?v=20260220j"></script>
+  <script src="ht-fly-fishing.js?v=20260220j"></script>
+  <script src="main.js?v=20260220j"></script>
+
+  <script>
+    // ═══ FAILSAFE fishStepCheckIn ═══
+    // If main.js DOMContentLoaded didn't define it (due to init error),
+    // this standalone version still works.
+    (function() {
+      var existing = window.fishStepCheckIn;
+      if (typeof existing === 'function') {
+        console.log('HUNTECH: fishStepCheckIn defined by main.js OK');
+        return; // main.js already defined it during parse (unlikely, it's in DOMContentLoaded)
+      }
+      console.warn('HUNTECH: fishStepCheckIn NOT yet defined — installing failsafe');
+      window.fishStepCheckIn = function(waterId) {
+        try {
+          console.log('HUNTECH FAILSAFE: fishStepCheckIn called', waterId);
+          var water = null;
+          if (window.TROUT_WATERS && window.TROUT_WATERS.length) {
+            if (waterId) water = window.TROUT_WATERS.find(function(w) { return w.id === waterId; });
+            if (!water) water = window.TROUT_WATERS.find(function(w) { return w.id === 'bennett-spring'; });
+          }
+          if (water) window._fishFlowArea = water;
+          // Show success toast directly (bypass showNotice in case it's broken)
+          var toast = document.createElement('div');
+          toast.style.cssText = 'position:fixed;top:70px;left:50%;transform:translateX(-50%);background:#22c55e;color:white;padding:12px 20px;border-radius:8px;z-index:50000;font-size:14px;font-weight:500;box-shadow:0 4px 12px rgba(0,0,0,0.15)';
+          toast.textContent = '\u2705 Checked in at ' + (water ? water.name : 'water');
+          document.body.appendChild(toast);
+          setTimeout(function() { toast.remove(); }, 2500);
+          // Close action bar
+          if (typeof window.closeFlyWaterActionBar === 'function') {
+            try { window.closeFlyWaterActionBar(); } catch(ex) {}
+          }
+          // Deploy access points
+          if (water && typeof window.addAccessPointsForWater === 'function') {
+            window.addAccessPointsForWater(water);
+          }
+          // Advance to step 2 via window.fishShowStep or direct DOM
+          if (typeof window.fishShowStep === 'function') {
+            window.fishShowStep(2);
+          } else {
+            // Direct DOM manipulation fallback
+            var ids = ['fishStep0_loading','fishStep1_areaAction','fishStep2_strategy','fishStep2b_summary','fishStep3_route','fishStep4_briefing','fishStep5_live'];
+            ids.forEach(function(id) {
+              var el = document.getElementById(id);
+              if (el) el.style.display = (id === 'fishStep2_strategy') ? '' : 'none';
+            });
+          }
+        } catch(e) {
+          console.error('HUNTECH FAILSAFE fishStepCheckIn error:', e);
+          alert('Check-in error: ' + e.message);
+        }
+      };
+    })();
+  </script>
 </body>
 </html>
