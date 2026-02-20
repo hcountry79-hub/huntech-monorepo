@@ -1832,6 +1832,9 @@ function bindToolbarToggleButtons() {
 }
 
 let shedMapPending = false;
+/* updateWorkflowUI was removed — stub prevents crashes in activate*Map / init */
+function updateWorkflowUI() { /* no-op stub */ }
+
 function activateShedMap() {
   if (!isShedModule()) return;
   if (!mapInitialized) {
@@ -16164,6 +16167,10 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
       showNotice('\u2705 Checked in at ' + water.name, 'success', 2500);
+      // Zoom to area level on check-in so user sees zone/amenity pins
+      if (typeof map !== 'undefined' && map && water.lat && water.lng) {
+        map.setView([water.lat, water.lng], 16, { animate: true, duration: 1.0 });
+      }
       if (typeof window.addAccessPointsForWater === 'function') {
         window.addAccessPointsForWater(water);
       }

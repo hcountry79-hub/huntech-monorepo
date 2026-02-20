@@ -659,7 +659,14 @@ function addFlyAccessPointMarker(water, accessPt) {
 
 function addAccessPointsForWater(water) {
   if (!water || !Array.isArray(water.access)) return;
-  water.access.forEach((ap) => addFlyAccessPointMarker(water, ap));
+  water.access.forEach((ap) => {
+    // Quality gate: zone pins always render; amenity pins require verified === true
+    if (ap.type !== 'zone' && ap.verified !== true) {
+      console.warn('HUNTECH PIN-QC: Skipping unverified amenity pin "' + ap.name + '" at ' + ap.lat + ',' + ap.lng);
+      return;
+    }
+    addFlyAccessPointMarker(water, ap);
+  });
 }
 window.addAccessPointsForWater = addAccessPointsForWater;
 /* ── end access point helpers ───────────────────────── */

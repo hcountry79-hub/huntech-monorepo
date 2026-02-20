@@ -220,10 +220,8 @@ window.TROUT_WATERS = [
     access: [
       { name: 'Zone 1 — Fly Only', lat: 37.7189, lng: -92.8585, type: 'zone', methods: ['fly'], notes: 'Spring pool to hatchery dam. Fly fishing ONLY. Crystal clear sight fishing — long leaders, small flies. Shortest zone, most technical.' },
       { name: 'Zone 2 — Flies & Lures', lat: 37.7260, lng: -92.8550, type: 'zone', methods: ['fly', 'spin'], notes: 'Hatchery dam to Whistle Bridge. Flies and artificial lures allowed. Most popular section — arrive early on weekends.' },
-      { name: 'Zone 3 — Bait Only', lat: 37.7310, lng: -92.8574, type: 'zone', methods: ['bait'], notes: 'Whistle Bridge to Niangua River. BAIT ONLY — no flies or artificial lures permitted. Family friendly, least crowded.' },
-      { name: 'Main Parking', lat: 37.7255, lng: -92.8560, type: 'parking', notes: 'Main lot near store and hatchery on MO 64A. Walk to all zones.' },
-      { name: 'Store / Tag Office', lat: 37.7257, lng: -92.8558, type: 'parking', notes: 'Park store on MO 64A near hatchery. Daily tags, concession, tackle, snacks, fly lessons.' },
-      { name: 'Restrooms', lat: 37.7248, lng: -92.8565, type: 'parking', notes: 'CCC-built restroom facility near parking and store.' }
+      { name: 'Zone 3 — Bait Only', lat: 37.7310, lng: -92.8574, type: 'zone', methods: ['bait'], notes: 'Whistle Bridge to Niangua River. BAIT ONLY — no flies or artificial lures permitted. Family friendly, least crowded.' }
+      // Amenity pins (parking, store, restrooms) removed — no OSM-verified coordinates available
     ],
     // OSM Way 198626029 — Bennett Spring Branch (waterway=river), verified 2026-02-20
     streamPath: [
@@ -263,9 +261,8 @@ window.TROUT_WATERS = [
       { name: 'Zone 1 — C&R Fly Only', lat: 37.4590, lng: -91.6816, type: 'zone', methods: ['fly'], notes: 'Catch-and-release only, flies only. Near spring pool on Current River — big resident trout. Most technical water.' },
       { name: 'Zone 2 — Fly Only', lat: 37.4557, lng: -91.6821, type: 'zone', methods: ['fly'], notes: 'Fly fishing only. Middle Current River section. Good hatches in riffles and runs.' },
       { name: 'Zone 3 — All Methods', lat: 37.4536, lng: -91.6848, type: 'zone', methods: ['fly', 'spin', 'bait'], notes: 'All legal methods including bait. Lower Current River section. Best for families.' },
-      { name: 'Lodge Parking', lat: 37.4525, lng: -91.6815, type: 'parking', notes: 'Montauk Lodge main lot. Walk to spring and stream. Tag office inside.' },
-      { name: 'Store / Tag Office', lat: 37.4523, lng: -91.6813, type: 'parking', notes: 'Park store inside Dorman L. Steelman Lodge. Daily tags, tackle, supplies.' },
-      { name: 'Hatchery / Mill', lat: 37.4549, lng: -91.6855, type: 'parking', notes: 'Historic 1896 gristmill and trout hatchery near spring. Educational stop.' }
+      { name: 'Store / Tag Office', lat: 37.4522, lng: -91.6811, type: 'parking', verified: true, notes: 'Park store inside Dorman L. Steelman Lodge. Daily tags, tackle, supplies. (OSM node verified)' }
+      // Lodge Parking and Hatchery/Mill removed — no OSM-verified coordinates
     ],
     // OSM Way 162645228 — Current River (waterway=river), verified 2026-02-20
     streamPath: [
@@ -301,10 +298,8 @@ window.TROUT_WATERS = [
     access: [
       { name: 'Zone 1 — Lures & Flies', lat: 36.5901, lng: -93.8351, type: 'zone', methods: ['fly', 'spin'], notes: 'Hatchery to Dry Hollow Creek. Artificial lures, soft plastic and flies. Near spring — cold clear water.' },
       { name: 'Zone 2 — Flies Only', lat: 36.5865, lng: -93.8363, type: 'zone', methods: ['fly'], notes: 'Dry Hollow to old dam (Campground 3). FLIES ONLY. C&R sub-section above Hwy F bridge. Best zone for skilled fly anglers.' },
-      { name: 'Zone 3 — All Methods', lat: 36.5821, lng: -93.8344, type: 'zone', methods: ['fly', 'spin', 'bait'], notes: 'Old dam to park boundary. All methods including natural bait. Near campground — family friendly.' },
-      { name: 'Main Parking', lat: 36.5891, lng: -93.8347, type: 'parking', notes: 'Valley floor parking near hatchery and stream. Walk to Zone 1 and fishing areas.' },
-      { name: 'Park Store', lat: 36.5843, lng: -93.8371, type: 'parking', notes: 'Store at Rte F / Hwy 112 intersection. Tags, tackle, groceries.' },
-      { name: 'Restrooms', lat: 36.5843, lng: -93.8359, type: 'parking', notes: 'Main restroom facility near store and parking area.' }
+      { name: 'Zone 3 — All Methods', lat: 36.5821, lng: -93.8344, type: 'zone', methods: ['fly', 'spin', 'bait'], notes: 'Old dam to park boundary. All methods including natural bait. Near campground — family friendly.' }
+      // Amenity pins (parking, store, restrooms) removed — no OSM-verified coordinates available
     ],
     streamPath: [
       [36.5926,-93.8335],[36.5916,-93.8338],[36.5906,-93.8347],[36.5901,-93.8351],
@@ -340,9 +335,9 @@ window.TROUT_WATERS = [
       { name: 'Zone 1 — Fly Area', lat: 37.9553, lng: -91.5329, type: 'zone', methods: ['fly'], notes: 'Near spring pool. Sight fishing for large trout in crystal-clear water. Fly area — most technical.' },
       { name: 'Zone 2 — Flies & Lures', lat: 37.9579, lng: -91.5368, type: 'zone', methods: ['fly', 'spin'], notes: 'Middle Spring Branch. Good riffle water for nymphing. Flies and artificial lures.' },
       { name: 'Zone 3 — All Methods', lat: 37.9603, lng: -91.5365, type: 'zone', methods: ['fly', 'spin', 'bait'], notes: 'Northern section near Meramec River confluence. All methods including bait. Family friendly.' },
-      { name: 'Main Parking / Gate', lat: 37.9551, lng: -91.5318, type: 'parking', notes: 'Entrance gate — pay $5/vehicle. Parking near spring, museum, and stream.' },
-      { name: 'Store / Museum', lat: 37.9539, lng: -91.5345, type: 'parking', notes: 'James Foundation Iron Works Museum near spring pool. Tags and supplies.' },
-      { name: 'Restrooms', lat: 37.9542, lng: -91.5320, type: 'parking', notes: 'Main restrooms near parking area.' }
+      { name: 'Main Parking / Gate', lat: 37.9551, lng: -91.5318, type: 'parking', verified: true, notes: 'Entrance gate — pay $5/vehicle. Parking near spring, museum, and stream. (OSM node 37.9551/-91.5318 verified)' },
+      { name: 'Restrooms', lat: 37.9595, lng: -91.5315, type: 'parking', verified: true, notes: 'Restroom facility. (OSM node 37.9595/-91.5315 verified)' }
+      // Store/Museum removed — no OSM-verified coordinates
     ],
     // OSM Way 204259234 — Maramec Spring Branch (waterway=stream), verified 2026-02-20
     streamPath: [
