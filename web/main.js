@@ -77,6 +77,7 @@ let lastGpsFiltered = null;
 let lastGpsFixAt = 0;
 let lastGpsFilteredAt = 0;
 let lastGpsAccuracyNoticeAt = 0;
+let defaultLocationAreaSet = false;
 // Global timer and handler tracking for cleanup
 let activeTimers = new Set();
 let activeHandlers = new Map();
