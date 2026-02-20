@@ -2889,7 +2889,7 @@ function _autoCheckInToPin(pinIdx) {
   var zone = fishFlow ? fishFlow.selectedZone : null;
   if (!water || !zone) return;
 
-  showNotice('Arrived at Spot #' + spot.rank + ' — ' + _capitalize(spot.habitat) + '. Deploying micro-spots...', 'success', 3500);
+  showNotice('Arrived at Spot #' + spot.rank + ' — ' + _capitalize(spot.habitat), 'success', 3500);
 
   // Clear previous micro pins & polygons
   _activeMicroPins.forEach(function(m) { try { map.removeLayer(m); } catch {} });
@@ -2900,7 +2900,6 @@ function _autoCheckInToPin(pinIdx) {
   // Build micro-area polygon around this spot (small radius)
   var segment = getZoneStreamSegment(water, zone);
   if (segment && segment.length >= 2) {
-    // Extract nearby segment points
     var centerIdx = spot.segmentIdx;
     var start = Math.max(0, centerIdx - 2);
     var end = Math.min(segment.length - 1, centerIdx + 2);
@@ -2917,65 +2916,106 @@ function _autoCheckInToPin(pinIdx) {
           dashArray: '4 3'
         }).addTo(map);
         _activeMicroPolygons.push(microPoly);
-
-        // Flash then fade
         setTimeout(function() { microPoly.setStyle({ fillOpacity: 0.10 }); }, 2000);
         setTimeout(function() { microPoly.setStyle({ fillOpacity: 0.04, opacity: 0.3 }); }, 4000);
       }
     }
   }
 
-  // Deploy 3 micro cast-to spots on the stream segment near this spot
-  var microTypes = ['primary-lie', 'seam-edge', 'pocket-water'];
-  var microLabels = ['Primary Lie', 'Seam Edge', 'Pocket Water'];
+  // ── Smart micro-spot deployment ──
+  // Quality gate: spot score determines max micro-spots allowed
+  var maxMicros = spot.score >= 70 ? 3 : spot.score >= 50 ? 2 : 1;
 
-  // Calculate micro positions along the actual stream segment
-  var cIdx = spot.segmentIdx;
+  var microTypes = ['primary-lie', 'seam-edge', 'pocket-water'];
   var seg = getZoneStreamSegment(water, zone) || [];
-  var microCoords = [];
-  // Place micro spots at segment points near the main pin: -1, 0, +1 indices
-  var microOffsets = [-1, 0, 1];
-  for (var i = 0; i < 3; i++) {
-    var sIdx = Math.max(0, Math.min(seg.length - 1, cIdx + microOffsets[i]));
-    // Tiny perpendicular nudge (3m) to spread them visually but keep on/near water
-    var nudgeLat = 0, nudgeLng = 0;
-    if (seg.length >= 2) {
-      var R = Math.PI / 180;
-      var mPerLat = 111000, mPerLng = 111000 * Math.cos(seg[0][0] * R);
-      var prevI = Math.max(0, sIdx - 1), nextI = Math.min(seg.length - 1, sIdx + 1);
-      var dy = seg[nextI][0] - seg[prevI][0], dx = seg[nextI][1] - seg[prevI][1];
-      var dyM = dy * mPerLat, dxM = dx * mPerLng;
-      var len = Math.sqrt(dyM * dyM + dxM * dxM);
-      if (len > 0.01) {
-        var perpDist = (i - 1) * 3; // -3m, 0m, +3m
-        nudgeLat = (-dxM / len) * perpDist / mPerLat;
-        nudgeLng = (dyM / len) * perpDist / mPerLng;
+  var cIdx = spot.segmentIdx;
+
+  // Distance helper (meters between two lat/lng points)
+  var _dist = function(lat1, lng1, lat2, lng2) {
+    var R = Math.PI / 180;
+    var dLat = (lat2 - lat1) * 111000;
+    var dLng = (lng2 - lng1) * 111000 * Math.cos(lat1 * R);
+    return Math.sqrt(dLat * dLat + dLng * dLng);
+  };
+
+  // Search nearby segment points for valid micro-spot candidates
+  // Scan a window of ±4 indices from the main pin's segment index
+  var candidates = [];
+  var scanRadius = 4;
+  for (var offset = -scanRadius; offset <= scanRadius; offset++) {
+    if (offset === 0) continue; // skip main pin's own position
+    var sIdx = cIdx + offset;
+    if (sIdx < 0 || sIdx >= seg.length) continue;
+    var cLat = seg[sIdx][0];
+    var cLng = seg[sIdx][1];
+
+    // Must be at least 8m from main pin to avoid overlap
+    var distFromMain = _dist(spot.lat, spot.lng, cLat, cLng);
+    if (distFromMain < 8) continue;
+
+    // Must be at least 6m from any already-accepted candidate
+    var tooClose = false;
+    for (var c = 0; c < candidates.length; c++) {
+      if (_dist(candidates[c].lat, candidates[c].lng, cLat, cLng) < 6) {
+        tooClose = true;
+        break;
       }
     }
-    var mLat = seg[sIdx][0] + nudgeLat;
-    var mLng = seg[sIdx][1] + nudgeLng;
-    microCoords.push([mLat, mLng]);
-    var mIcon = L.divIcon({
-      className: 'ht-micro-cast-pin',
-      html: '<div class="ht-micro-cast-pill">' + microLabels[i] + '</div>',
-      iconSize: [72, 18],
-      iconAnchor: [36, 9]
+    if (tooClose) continue;
+
+    // Score this micro-position: prefer downstream (positive offset) and closer
+    var microScore = 50;
+    microScore += Math.max(0, 20 - distFromMain); // closer = better (within reason)
+    if (offset > 0) microScore += 5; // slight downstream preference
+    microScore -= Math.abs(offset) * 2; // penalize distant indices
+
+    candidates.push({
+      lat: cLat,
+      lng: cLng,
+      segIdx: sIdx,
+      score: microScore,
+      distFromMain: distFromMain
     });
-    var mMarker = L.marker([mLat, mLng], { icon: mIcon, zIndexOffset: 500 }).addTo(map);
-    mMarker.__microType = microTypes[i];
-    mMarker.__microIdx = i;
-    (function(mk, mType, mIdx) {
-      mk.on('click', function() {
-        _showSpotInfoTray(water, zone, spot, mType, mIdx);
-      });
-    })(mMarker, microTypes[i], i);
-    _activeMicroPins.push(mMarker);
   }
 
-  // Zoom to fit the main pin + all micro spots
+  // Sort by micro score, take top N up to maxMicros
+  candidates.sort(function(a, b) { return b.score - a.score; });
+  var accepted = candidates.slice(0, maxMicros);
+
+  // Deploy accepted micro-spots as small trout pin icons
+  var microCoords = [];
+  accepted.forEach(function(mc, i) {
+    var mType = microTypes[i] || 'primary-lie';
+    var mLabel = _capitalize(mType.replace(/-/g, ' '));
+
+    var mIcon = L.divIcon({
+      className: 'ht-micro-trout-pin',
+      html: '<img src="assets/trout-pin.svg" width="16" height="16" alt="">' +
+        '<span class="ht-micro-trout-label">' + mLabel + '</span>',
+      iconSize: [16, 16],
+      iconAnchor: [8, 8]
+    });
+
+    var mMarker = L.marker([mc.lat, mc.lng], { icon: mIcon, zIndexOffset: 500 }).addTo(map);
+    mMarker.__microType = mType;
+    mMarker.__microIdx = i;
+    (function(mk, mt, mi) {
+      mk.on('click', function() {
+        _showSpotInfoTray(water, zone, spot, mt, mi);
+      });
+    })(mMarker, mType, i);
+    _activeMicroPins.push(mMarker);
+    microCoords.push([mc.lat, mc.lng]);
+  });
+
+  // Zoom to fit the main pin + micro spots
   var allPts = [[spot.lat, spot.lng]].concat(microCoords);
   var zbounds = L.latLngBounds(allPts);
   map.fitBounds(zbounds.pad(0.3), { animate: true, duration: 0.8, maxZoom: 19 });
+
+  if (accepted.length === 0) {
+    showNotice('This spot is best fished right here — no micro-spots needed', 'info', 3000);
+  }
 }
 window._autoCheckInToPin = _autoCheckInToPin;
 
