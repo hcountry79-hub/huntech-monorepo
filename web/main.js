@@ -10554,6 +10554,14 @@ window.toggleToolbar = function() {
         }
       }, 100);
     }
+
+    // Fly module: auto-launch Fish Now workflow when tray opens
+    if (isFlyModule() && typeof window.showStreamPanel === 'function') {
+      // Slight delay so the tray animation settles first
+      setTimeout(function() {
+        window.showStreamPanel('fishNowPanel');
+      }, 120);
+    }
   } else {
     toolbar.classList.add('collapsed');
     document.body.classList.add('ht-toolbar-collapsed');
@@ -16138,30 +16146,35 @@ document.addEventListener('DOMContentLoaded', () => {
 
   /* ═══ Step 1 actions ═══ */
   window.fishStepCheckIn = function(waterId) {
-    console.log('HUNTECH: fishStepCheckIn called, waterId=', waterId, 'fishFlow.area=', fishFlow.area);
-    // Accept waterId param OR fall back to fishFlow.area
-    var water = fishFlow.area;
-    if (waterId && (!water || water.id !== waterId)) {
-      water = window.TROUT_WATERS && window.TROUT_WATERS.find(function(w) { return w.id === waterId; });
-      if (water) fishFlow.area = water;
-    }
-    if (!water) {
-      console.warn('HUNTECH: fishStepCheckIn — no water found');
-      showNotice('Select a water first.', 'error', 2500);
-      return;
-    }
-    showNotice('\u2705 Checked in at ' + water.name, 'success', 2500);
-    // Deploy the area's access/zone pins now that user checked in
-    if (typeof window.addAccessPointsForWater === 'function') {
-      window.addAccessPointsForWater(water);
-    }
-    // Expand the unified tray to show preferences + LET'S GO
-    if (typeof window.showFlyCheckInForm === 'function') {
-      console.log('HUNTECH: calling showFlyCheckInForm');
-      window.showFlyCheckInForm(water);
-    } else {
-      console.log('HUNTECH: showFlyCheckInForm not found, falling back to step 2');
-      fishShowStep(2);
+    try {
+      console.log('HUNTECH: fishStepCheckIn called, waterId=', waterId, 'fishFlow.area=', fishFlow.area);
+      // Accept waterId param OR fall back to fishFlow.area
+      var water = fishFlow.area;
+      if (waterId && (!water || water.id !== waterId)) {
+        water = window.TROUT_WATERS && window.TROUT_WATERS.find(function(w) { return w.id === waterId; });
+        if (water) fishFlow.area = water;
+      }
+      if (!water) {
+        console.warn('HUNTECH: fishStepCheckIn — no water found');
+        showNotice('Select a water first.', 'error', 2500);
+        return;
+      }
+      showNotice('\u2705 Checked in at ' + water.name, 'success', 2500);
+      // Deploy the area's access/zone pins now that user checked in
+      if (typeof window.addAccessPointsForWater === 'function') {
+        window.addAccessPointsForWater(water);
+      }
+      // Expand the unified tray to show preferences + LET'S GO
+      if (typeof window.showFlyCheckInForm === 'function') {
+        console.log('HUNTECH: calling showFlyCheckInForm');
+        window.showFlyCheckInForm(water);
+      } else {
+        console.log('HUNTECH: showFlyCheckInForm not found, falling back to step 2');
+        fishShowStep(2);
+      }
+    } catch (e) {
+      console.error('HUNTECH: fishStepCheckIn error:', e);
+      showNotice('Check-in error: ' + e.message, 'error', 4000);
     }
   };
 

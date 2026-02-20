@@ -20,11 +20,11 @@
   <link rel="dns-prefetch" href="https://server.arcgisonline.com">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css" />
-  <link rel="stylesheet" href="app.css?v=20260220g">
+  <link rel="stylesheet" href="app.css?v=20260220h">
 
   <!-- AWS Backend Configuration -->
-  <script src="config.js?v=20260220g"></script>
-  <script src="api.js?v=20260220g"></script>
+  <script src="config.js?v=20260220h"></script>
+  <script src="api.js?v=20260220h"></script>
 </head>
 <body class="module-fly">
   <header class="ht-topbar">
@@ -185,7 +185,9 @@
             <div class="ht-fish-welcome-ribbon" id="fishAreaRibbon">🎣 Trout Water</div>
             <div class="ht-fish-welcome-name" id="fishAreaTitle">Welcome to the Water</div>
             <div class="ht-fish-welcome-detail" id="fishAreaDesc">Locating nearest trout water…</div>
-            <div style="font-size:11px;color:#7cffc7;margin-top:10px;text-align:center;">Use the action bar below to check in and start fishing.</div>
+            <div style="margin-top:12px;text-align:center;">
+              <button class="ht-gold-btn ht-go-btn" type="button" onclick="fishStepCheckIn()" style="font-size:14px;padding:10px 22px;">✅ CHECK IN TO AREA</button>
+            </div>
           </div>
         </div>
 
@@ -514,9 +516,9 @@
     }
   </script>
 
-  <script src="regulations.js?v=20260220g"></script>
-  <script src="fly-fishing-data.js?v=20260220g"></script>
-  <script src="ht-fly-fishing.js?v=20260220g"></script>
-  <script src="main.js?v=20260220g"></script>
+  <script src="regulations.js?v=20260220h"></script>
+  <script src="fly-fishing-data.js?v=20260220h"></script>
+  <script src="ht-fly-fishing.js?v=20260220h"></script>
+  <script src="main.js?v=20260220h"></script>
 </body>
 </html>
