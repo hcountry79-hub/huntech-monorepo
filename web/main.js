@@ -4626,7 +4626,8 @@ async function analyzeSelectedAreaTerrain(bounds, areaLayer, areaType, windDir, 
   const grid = buildTerrainSampleGrid(bounds, areaLayer, areaType, spacingBase, maxPoints, options);
   if (!grid || !grid.points.length) return { features: [], coreZones: [], hotspotSeeds: [] };
 
-  showNotice(`Deep scan: sampling ${grid.points.length} terrain points…`, 'info', 2400);
+  // showNotice(`Deep scan: sampling ${grid.points.length} terrain points…`, 'info', 2400);
+  console.log('HUNTECH: Deep scan sampling ' + grid.points.length + ' points');
 
   let elevations = [];
   try {
@@ -4636,7 +4637,8 @@ async function analyzeSelectedAreaTerrain(bounds, areaLayer, areaType, windDir, 
       elevations = await fetchElevationsForPointsBatched(grid.points, true);
     } catch (fallbackErr) {
       const msg = fallbackErr && fallbackErr.message ? fallbackErr.message : 'Elevation lookup failed.';
-      showNotice(`Deep scan limited: ${msg}`, 'warning', 5200);
+      // showNotice(`Deep scan limited: ${msg}`, 'warning', 5200);
+      console.warn('HUNTECH: Deep scan limited: ' + msg);
       const hydroOnly = await fetchHydroFeatures(bounds);
       if (!hydroOnly.length) return { features: [], coreZones: [], hotspotSeeds: [] };
       return {
@@ -9341,7 +9343,8 @@ function maybeWarnLowAccuracy(accuracy) {
   const noticeGap = Number(window.HUNTECH_GPS_ACCURACY_NOTICE_MS || 60000);
   if (now - lastGpsAccuracyNoticeAt < noticeGap) return;
   lastGpsAccuracyNoticeAt = now;
-  showNotice(`Low GPS accuracy (~${Math.round(accuracy)}m). Enable Precise Location for a tighter lock.`, 'warning', 5200);
+  // showNotice(`Low GPS accuracy (~${Math.round(accuracy)}m). Enable Precise Location for a tighter lock.`, 'warning', 5200);
+  console.warn('HUNTECH: Low GPS accuracy ~' + Math.round(accuracy) + 'm');
 }
 
 
@@ -9379,7 +9382,8 @@ function startLocationWatch() {
           if (dist <= featureGeofence) {
             terrainFeatureVisited.add(feature.id);
             const name = feature.label || feature.type || 'Terrain Feature';
-            showNotice(`${name} nearby (${Math.round(dist)}m)`, 'info', 5200);
+            // showNotice(`${name} nearby (${Math.round(dist)}m)`, 'info', 5200);
+            console.log('HUNTECH: ' + name + ' nearby ' + Math.round(dist) + 'm');
             if (UI_POPUPS_ENABLED) {
               try {
                 if (feature.marker && feature.marker.openPopup) feature.marker.openPopup();
@@ -9863,7 +9867,8 @@ function setPrivateParcelsEnabled(enabled) {
 function enablePrivateParcelsLayer() {
   const tileUrl = (window.PRIVATE_PARCELS_TILE_URL || '').trim();
   if (!tileUrl) {
-    showNotice('Private parcels not configured. Set PRIVATE_PARCELS_TILE_URL in config.js.', 'warning', 5200);
+    // showNotice('Private parcels not configured. Set PRIVATE_PARCELS_TILE_URL in config.js.', 'warning', 5200);
+    console.warn('HUNTECH: Private parcels tile URL not set');
     const toggle = document.getElementById('privateParcelsToggle');
     if (toggle) toggle.checked = false;
     privateParcelsEnabled = false;
@@ -10317,11 +10322,13 @@ async function updateWeather() {
     
     // Show location-based feedback
     if (location.source === 'gps') {
-      showNotice('📍 Weather updated using your GPS location', 'success', 2000);
+      // showNotice('📍 Weather updated using your GPS location', 'success', 2000);
+      console.log('HUNTECH: Weather updated via GPS');
     }
   } catch (error) {
     console.error('Weather update failed:', error);
-    showNotice('⚠️ Weather update failed - check connection', 'warning', 3000);
+    // showNotice('⚠️ Weather update failed - check connection', 'warning', 3000);
+    console.warn('HUNTECH: Weather update failed');
   }
 }
 
@@ -16397,7 +16404,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.body.classList.add('ht-hero-dismissed');
     initializeMap();
     restoreLastKnownLocation();
-    setDefaultAreaFromLocation();
+    // No default area circle — user defines their own hunt area
     updateFilterChips();
     updateWorkflowUI();
     updateLocateMeOffset();
