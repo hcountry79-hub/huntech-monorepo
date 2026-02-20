@@ -621,8 +621,8 @@ function getAccessPinIcon(accessPt) {
     return L.divIcon({
       className: 'ht-fly-area-pin',
       html: `<div class="ht-fly-zone-pill">${escapeHtml(zoneName)}</div>`,
-      iconSize: [0, 0],
-      iconAnchor: [0, 16]
+      iconSize: [120, 20],
+      iconAnchor: [60, -8]
     });
   }
 
@@ -2922,9 +2922,9 @@ function _autoCheckInToPin(pinIdx) {
 
   // ── Smart micro-spot deployment ──
   // Quality gate: spot score determines max micro-spots allowed
-  var maxMicros = spot.score >= 70 ? 3 : spot.score >= 50 ? 2 : 1;
+  var maxMicros = spot.score >= 70 ? 5 : spot.score >= 50 ? 4 : 2;
 
-  var microTypes = ['primary-lie', 'seam-edge', 'pocket-water'];
+  var microTypes = ['primary-lie', 'seam-edge', 'pocket-water', 'undercut-bank', 'feeding-lane'];
   var seg = getZoneStreamSegment(water, zone) || [];
   var cIdx = spot.segmentIdx;
 
@@ -2937,9 +2937,9 @@ function _autoCheckInToPin(pinIdx) {
   };
 
   // Search nearby segment points for valid micro-spot candidates
-  // Scan a window of ±4 indices from the main pin's segment index
+  // Scan a window of ±6 indices from the main pin's segment index
   var candidates = [];
-  var scanRadius = 4;
+  var scanRadius = 6;
   for (var offset = -scanRadius; offset <= scanRadius; offset++) {
     if (offset === 0) continue; // skip main pin's own position
     var sIdx = cIdx + offset;
@@ -2947,14 +2947,14 @@ function _autoCheckInToPin(pinIdx) {
     var cLat = seg[sIdx][0];
     var cLng = seg[sIdx][1];
 
-    // Must be at least 8m from main pin to avoid overlap
+    // Must be at least 6m from main pin to avoid overlap
     var distFromMain = _dist(spot.lat, spot.lng, cLat, cLng);
-    if (distFromMain < 8) continue;
+    if (distFromMain < 6) continue;
 
-    // Must be at least 6m from any already-accepted candidate
+    // Must be at least 5m from any already-accepted candidate
     var tooClose = false;
     for (var c = 0; c < candidates.length; c++) {
-      if (_dist(candidates[c].lat, candidates[c].lng, cLat, cLng) < 6) {
+      if (_dist(candidates[c].lat, candidates[c].lng, cLat, cLng) < 5) {
         tooClose = true;
         break;
       }
@@ -2988,10 +2988,10 @@ function _autoCheckInToPin(pinIdx) {
 
     var mIcon = L.divIcon({
       className: 'ht-micro-trout-pin',
-      html: '<img src="assets/trout-pin.svg" width="16" height="16" alt="">' +
+      html: '<img src="assets/trout-pin.svg" width="28" height="14" alt="">' +
         '<span class="ht-micro-trout-label">' + mLabel + '</span>',
-      iconSize: [16, 16],
-      iconAnchor: [8, 8]
+      iconSize: [28, 14],
+      iconAnchor: [14, 7]
     });
 
     var mMarker = L.marker([mc.lat, mc.lng], { icon: mIcon, zIndexOffset: 500 }).addTo(map);
@@ -3054,7 +3054,9 @@ function _showSpotInfoTray(water, zone, spot, microType, microIdx) {
   var microAdvice = {
     'primary-lie': 'This is the main holding position. Trout actively feed here. Your first cast should target this spot. Deliver your fly 3-4 feet upstream and let it drift naturally into the strike zone.',
     'seam-edge': 'The seam between fast and slow water. Trout hold just inside the slow side, picking off food from the fast current. Cast to the fast side and let your offering drift into the seam.',
-    'pocket-water': 'Protected pocket behind structure. Trout rest here between feeding runs. Short, accurate casts directly into the pocket. Let your fly sink 2-3 seconds before any retrieval.'
+    'pocket-water': 'Protected pocket behind structure. Trout rest here between feeding runs. Short, accurate casts directly into the pocket. Let your fly sink 2-3 seconds before any retrieval.',
+    'undercut-bank': 'Undercut bank where trout shelter from current and predators. Cast parallel to the bank, tight to the edge. Let your fly drift underneath the overhang. Big trout hide here.',
+    'feeding-lane': 'A natural conveyor belt of food funneling through a narrow channel. Position yourself downstream and cast upstream into the lane. Dead-drift is critical — any drag spooks fish.'
   };
 
   var el = document.createElement('div');
