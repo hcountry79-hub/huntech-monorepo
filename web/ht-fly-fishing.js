@@ -1521,6 +1521,8 @@ function clearMicroPins() {
   microPinMarkers = [];
   if (zonePolygonLayer) { try { map.removeLayer(zonePolygonLayer); } catch {} zonePolygonLayer = null; }
   if (anglerPinMarker) { try { map.removeLayer(anglerPinMarker); } catch {} anglerPinMarker = null; }
+  // Clear flow overlay
+  if (typeof clearFlowOverlay === 'function') try { clearFlowOverlay(); } catch {}
 }
 
 /* Zone pin icon */
@@ -2458,6 +2460,7 @@ var _aiFishingSpots = [];       // spot data objects
 var _activeZonePolygon = null;  // current zone polygon layer
 var _activeMicroPolygons = [];  // micro-area polygons
 var _activeMicroPins = [];      // micro-spot pins within a pin area
+var _activeFlowLayers = [];     // water flow simulation overlay layers
 var _missionSummaryEl = null;   // mission summary overlay DOM
 var _spotInfoTrayEl = null;     // spot info tray DOM
 var _proximityWatchId = null;   // geolocation watch for auto-checkin
@@ -2515,6 +2518,160 @@ window.deployZonePolygonWithFade = function(water, zone) {
     }
   }, 7000);
 };
+
+/* ═══════════════════════════════════════════════════════════════════
+   WATER FLOW SIMULATION OVERLAY
+   Draws animated current/flow lines along the stream segment so
+   the user can visualize how water moves around rocks and structure.
+   ═══════════════════════════════════════════════════════════════════ */
+function clearFlowOverlay() {
+  _activeFlowLayers.forEach(function(l) { try { map.removeLayer(l); } catch {} });
+  _activeFlowLayers = [];
+}
+
+function deployFlowOverlay(water, zone) {
+  clearFlowOverlay();
+  var seg = getZoneStreamSegment(water, zone);
+  if (!seg || seg.length < 3 || !map) return;
+
+  var R = Math.PI / 180;
+  var mPerLat = 111000;
+  var mPerLng = 111000 * Math.cos(seg[0][0] * R);
+
+  // Main current flow line — animated dashed polyline along stream center
+  var mainFlow = L.polyline(seg, {
+    color: '#2bd4ff',
+    weight: 3,
+    opacity: 0.45,
+    dashArray: '8 14',
+    className: 'ht-flow-line ht-flow-main',
+    interactive: false
+  }).addTo(map);
+  _activeFlowLayers.push(mainFlow);
+
+  // Secondary flow lines — offset ±3m from center for stream width feel
+  var leftBank = [], rightBank = [];
+  for (var i = 0; i < seg.length; i++) {
+    var lat = seg[i][0], lng = seg[i][1];
+    var dy, dx;
+    if (i === 0) { dy = seg[1][0] - lat; dx = seg[1][1] - lng; }
+    else if (i === seg.length - 1) { dy = lat - seg[i-1][0]; dx = lng - seg[i-1][1]; }
+    else { dy = seg[i+1][0] - seg[i-1][0]; dx = seg[i+1][1] - seg[i-1][1]; }
+    var dyM = dy * mPerLat, dxM = dx * mPerLng;
+    var len = Math.sqrt(dyM * dyM + dxM * dxM);
+    if (len < 0.01) { leftBank.push([lat, lng]); rightBank.push([lat, lng]); continue; }
+    var pLat = (-dxM / len) / mPerLat;
+    var pLng = (dyM / len) / mPerLng;
+    // ±4m offset
+    leftBank.push([lat + pLat * 4, lng + pLng * 4]);
+    rightBank.push([lat - pLat * 4, lng - pLng * 4]);
+  }
+
+  var leftFlow = L.polyline(leftBank, {
+    color: '#7cffc7',
+    weight: 1.5,
+    opacity: 0.3,
+    dashArray: '4 10',
+    className: 'ht-flow-line ht-flow-side',
+    interactive: false
+  }).addTo(map);
+  _activeFlowLayers.push(leftFlow);
+
+  var rightFlow = L.polyline(rightBank, {
+    color: '#7cffc7',
+    weight: 1.5,
+    opacity: 0.3,
+    dashArray: '4 10',
+    className: 'ht-flow-line ht-flow-side',
+    interactive: false
+  }).addTo(map);
+  _activeFlowLayers.push(rightFlow);
+
+  // Obstacle flow-around indicators — place eddies/splits at structure points
+  // Every 3rd segment node represents a potential obstacle (rock/log)
+  for (var k = 2; k < seg.length - 1; k += 3) {
+    var oLat = seg[k][0], oLng = seg[k][1];
+    var oDy, oDx;
+    if (k < seg.length - 1) { oDy = seg[k+1][0] - seg[k-1][0]; oDx = seg[k+1][1] - seg[k-1][1]; }
+    else { oDy = seg[k][0] - seg[k-1][0]; oDx = seg[k][1] - seg[k-1][1]; }
+    var oDyM = oDy * mPerLat, oDxM = oDx * mPerLng;
+    var oLen = Math.sqrt(oDyM * oDyM + oDxM * oDxM);
+    if (oLen < 0.01) continue;
+    var opLat = (-oDxM / oLen) / mPerLat;
+    var opLng = (oDyM / oLen) / mPerLng;
+    // Flow direction vector (normalized, in degrees)
+    var flowDirLat = oDy / oLen * 111000;
+    var flowDirLng = oDx / oLen * 111000;
+
+    // V-shaped flow diversion lines around obstacle
+    var obstacleOffset = 3; // 3m perpendicular
+    var vLen = 6; // 6m downstream spread
+    var upLat = oLat - (oDy / oLen / mPerLat * 2);
+    var upLng = oLng - (oDx / oLen / mPerLng * 2);
+    var downLeftLat = oLat + opLat * obstacleOffset + (oDy / oLen / mPerLat * vLen);
+    var downLeftLng = oLng + opLng * obstacleOffset + (oDx / oLen / mPerLng * vLen);
+    var downRightLat = oLat - opLat * obstacleOffset + (oDy / oLen / mPerLat * vLen);
+    var downRightLng = oLng - opLng * obstacleOffset + (oDx / oLen / mPerLng * vLen);
+
+    // Left diversion
+    var divLeft = L.polyline([[upLat, upLng], [oLat + opLat * 1.5, oLng + opLng * 1.5], [downLeftLat, downLeftLng]], {
+      color: '#ffe082',
+      weight: 1.5,
+      opacity: 0.35,
+      dashArray: '3 6',
+      className: 'ht-flow-line ht-flow-eddy',
+      interactive: false
+    }).addTo(map);
+    _activeFlowLayers.push(divLeft);
+
+    // Right diversion
+    var divRight = L.polyline([[upLat, upLng], [oLat - opLat * 1.5, oLng - opLng * 1.5], [downRightLat, downRightLng]], {
+      color: '#ffe082',
+      weight: 1.5,
+      opacity: 0.35,
+      dashArray: '3 6',
+      className: 'ht-flow-line ht-flow-eddy',
+      interactive: false
+    }).addTo(map);
+    _activeFlowLayers.push(divRight);
+
+    // Small obstacle marker (rock/log icon)
+    var obstacleIcon = L.divIcon({
+      className: 'ht-flow-obstacle',
+      html: '<div class="ht-flow-rock"></div>',
+      iconSize: [10, 10],
+      iconAnchor: [5, 5]
+    });
+    var obsMarker = L.marker([oLat, oLng], {
+      icon: obstacleIcon,
+      zIndexOffset: 300,
+      interactive: false
+    }).addTo(map);
+    _activeFlowLayers.push(obsMarker);
+  }
+
+  // Flow arrow indicators — small chevrons showing direction
+  for (var a = 1; a < seg.length - 1; a += 2) {
+    var aLat = seg[a][0], aLng = seg[a][1];
+    var aDy = seg[a+1][0] - seg[a-1][0];
+    var aDx = seg[a+1][1] - seg[a-1][1];
+    var aAngle = Math.atan2(aDx * mPerLng, aDy * mPerLat) * 180 / Math.PI;
+    // CSS rotation: 0° = North, clockwise
+    var arrowIcon = L.divIcon({
+      className: 'ht-flow-arrow-pin',
+      html: '<div class="ht-flow-arrow" style="transform:rotate(' + (aAngle - 90) + 'deg)">›</div>',
+      iconSize: [12, 12],
+      iconAnchor: [6, 6]
+    });
+    var arrowMarker = L.marker([aLat, aLng], {
+      icon: arrowIcon,
+      zIndexOffset: 290,
+      interactive: false
+    }).addTo(map);
+    _activeFlowLayers.push(arrowMarker);
+  }
+}
+window.deployFlowOverlay = deployFlowOverlay;
 
 /* ── AI Fishing Pin Calculator — ranks spots by user inputs ── */
 window.deployAiFishingPins = function(water, zone, fishFlow) {
@@ -3103,11 +3260,12 @@ function _autoCheckInToPin(pinIdx) {
     }
   }
 
-  // ── Smart micro-spot deployment ──
-  // Quality gate: spot score determines max micro-spots allowed
-  var maxMicros = spot.score >= 70 ? 5 : spot.score >= 50 ? 4 : 2;
+  // ── Smart micro-spot deployment — HIGH DENSITY ──
+  // More spots = more killer locations identified
+  var maxMicros = spot.score >= 70 ? 10 : spot.score >= 50 ? 8 : 5;
 
-  var microTypes = ['primary-lie', 'seam-edge', 'pocket-water', 'undercut-bank', 'feeding-lane'];
+  var microTypes = ['primary-lie', 'seam-edge', 'pocket-water', 'undercut-bank', 'feeding-lane',
+                    'tail-glide', 'riffle-drop', 'eddy-pocket', 'bank-shadow', 'deep-slot'];
   var seg = getZoneStreamSegment(water, zone) || [];
   var cIdx = spot.segmentIdx;
 
@@ -3119,44 +3277,65 @@ function _autoCheckInToPin(pinIdx) {
     return Math.sqrt(dLat * dLat + dLng * dLng);
   };
 
-  // Search nearby segment points for valid micro-spot candidates
-  // Scan a window of ±6 indices from the main pin's segment index
+  // ── Build dense candidate list by scanning wider + interpolating ──
+  // Scan ±12 segment indices AND interpolate midpoints for 3× density
   var candidates = [];
-  var scanRadius = 6;
+  var scanRadius = 12;
   for (var offset = -scanRadius; offset <= scanRadius; offset++) {
-    if (offset === 0) continue; // skip main pin's own position
+    if (offset === 0) continue;
     var sIdx = cIdx + offset;
     if (sIdx < 0 || sIdx >= seg.length) continue;
     var cLat = seg[sIdx][0];
     var cLng = seg[sIdx][1];
 
-    // Must be at least 6m from main pin to avoid overlap
-    var distFromMain = _dist(spot.lat, spot.lng, cLat, cLng);
-    if (distFromMain < 6) continue;
-
-    // Must be at least 5m from any already-accepted candidate
-    var tooClose = false;
-    for (var c = 0; c < candidates.length; c++) {
-      if (_dist(candidates[c].lat, candidates[c].lng, cLat, cLng) < 5) {
-        tooClose = true;
-        break;
-      }
+    // Also generate interpolated midpoints between this and previous segment node
+    var interpPoints = [[cLat, cLng, sIdx]];
+    if (sIdx > 0 && sIdx < seg.length) {
+      var pLat = seg[sIdx - 1][0], pLng = seg[sIdx - 1][1];
+      interpPoints.push([(cLat + pLat) / 2, (cLng + pLng) / 2, sIdx]);
+      // Quarter points for extra density
+      interpPoints.push([(cLat * 0.75 + pLat * 0.25), (cLng * 0.75 + pLng * 0.25), sIdx]);
+      interpPoints.push([(cLat * 0.25 + pLat * 0.75), (cLng * 0.25 + pLng * 0.75), sIdx]);
     }
-    if (tooClose) continue;
 
-    // Score this micro-position: prefer downstream (positive offset) and closer
-    var microScore = 50;
-    microScore += Math.max(0, 20 - distFromMain); // closer = better (within reason)
-    if (offset > 0) microScore += 5; // slight downstream preference
-    microScore -= Math.abs(offset) * 2; // penalize distant indices
+    for (var ip = 0; ip < interpPoints.length; ip++) {
+      var ipLat = interpPoints[ip][0];
+      var ipLng = interpPoints[ip][1];
+      var ipSegIdx = interpPoints[ip][2];
 
-    candidates.push({
-      lat: cLat,
-      lng: cLng,
-      segIdx: sIdx,
-      score: microScore,
-      distFromMain: distFromMain
-    });
+      // Must be at least 4m from main pin to avoid overlap
+      var distFromMain = _dist(spot.lat, spot.lng, ipLat, ipLng);
+      if (distFromMain < 4) continue;
+
+      // Must be at least 3m from any already-accepted candidate
+      var tooClose = false;
+      for (var c = 0; c < candidates.length; c++) {
+        if (_dist(candidates[c].lat, candidates[c].lng, ipLat, ipLng) < 3) {
+          tooClose = true;
+          break;
+        }
+      }
+      if (tooClose) continue;
+
+      // Score: prefer moderate distance, downstream bias, varied spread
+      var microScore = 60;
+      microScore += Math.max(0, 25 - distFromMain * 0.5);
+      if (offset > 0) microScore += 4; // downstream preference
+      if (offset < 0) microScore += 2; // upstream still good
+      microScore -= Math.abs(offset) * 0.8; // mild far-penalty
+      // Bonus for interpolated points (often land at structure transitions)
+      if (ip > 0) microScore += 3;
+      // Small hash-based variation so results aren't identical each load
+      microScore += ((ipLat * 100000 + ipLng * 100000) % 7);
+
+      candidates.push({
+        lat: ipLat,
+        lng: ipLng,
+        segIdx: ipSegIdx,
+        score: microScore,
+        distFromMain: distFromMain
+      });
+    }
   }
 
   // Sort by micro score, take top N up to maxMicros
@@ -3171,14 +3350,24 @@ function _autoCheckInToPin(pinIdx) {
     'seam-edge': 'ht-env-seam',
     'pocket-water': 'ht-env-rock',
     'undercut-bank': 'ht-env-undercut',
-    'feeding-lane': 'ht-env-lane'
+    'feeding-lane': 'ht-env-lane',
+    'tail-glide': 'ht-env-current',
+    'riffle-drop': 'ht-env-seam',
+    'eddy-pocket': 'ht-env-rock',
+    'bank-shadow': 'ht-env-undercut',
+    'deep-slot': 'ht-env-lane'
   };
   var envLabels = {
     'primary-lie': 'Holding in Current',
     'seam-edge': 'Working the Seam',
     'pocket-water': 'Behind Boulder',
     'undercut-bank': 'Under the Bank',
-    'feeding-lane': 'In the Lane'
+    'feeding-lane': 'In the Lane',
+    'tail-glide': 'Tail of Pool',
+    'riffle-drop': 'Riffle Drop-off',
+    'eddy-pocket': 'Eddy Pocket',
+    'bank-shadow': 'Bank Shadow',
+    'deep-slot': 'Deep Slot'
   };
 
   accepted.forEach(function(mc, i) {
@@ -3231,6 +3420,9 @@ function _autoCheckInToPin(pinIdx) {
   var allPts = [[spot.lat, spot.lng]].concat(microCoords);
   var zbounds = L.latLngBounds(allPts);
   map.fitBounds(zbounds.pad(0.3), { animate: true, duration: 0.8, maxZoom: 19 });
+
+  // Deploy water flow simulation overlay
+  try { deployFlowOverlay(water, zone); } catch(fErr) {}
 
   if (accepted.length === 0) {
     // status suppressed
