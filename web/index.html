@@ -9,7 +9,7 @@
   <meta name="apple-mobile-web-app-title" content="HUNTECH">
   <meta name="theme-color" content="#ffc107">
   <meta name="description" content="AI-powered shed hunting and scouting system with GPS tracking">
-  <link rel="manifest" href="manifest.json?v=20260220c">
+  <link rel="manifest" href="manifest.json?v=20260220d">
   <link rel="apple-touch-icon" href="assets/app-icon-180.png">
   <title>HUNTECH - Field Command System</title>
   <script>
@@ -28,11 +28,11 @@
   </script>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" onerror="window.__htLoadStylesheetFallback && window.__htLoadStylesheetFallback(this, 'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css')" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css" onerror="window.__htLoadStylesheetFallback && window.__htLoadStylesheetFallback(this, 'https://cdn.jsdelivr.net/npm/leaflet-draw@1.0.4/dist/leaflet.draw.css')" />
-  <link rel="stylesheet" href="app.css?v=20260220c" />
+  <link rel="stylesheet" href="app.css?v=20260220d" />
 
   <!-- AWS Backend Configuration -->
-  <script src="config.js?v=20260220c"></script>
-  <script src="api.js?v=20260220c"></script>
+  <script src="config.js?v=20260220d"></script>
+  <script src="api.js?v=20260220d"></script>
 </head>
 <body class="module-shed ht-toolbar-collapsed">
   <header class="ht-topbar">
@@ -216,7 +216,7 @@
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js?v=20260220c')
+        navigator.serviceWorker.register('sw.js?v=20260220d')
           .then(() => console.log('HUNTECH: Service Worker registered'))
           .catch(err => console.log('Service Worker registration failed:', err));
       });
@@ -224,14 +224,14 @@
   </script>
 
   <!-- Core modules (load before main.js) -->
-  <script src="ht-errors.js?v=20260220c"></script>
-  <script src="ht-cloud.js?v=20260220c"></script>
-  <script src="regulations.js?v=20260220c"></script>
+  <script src="ht-errors.js?v=20260220d"></script>
+  <script src="ht-cloud.js?v=20260220d"></script>
+  <script src="regulations.js?v=20260220d"></script>
 
   <!-- Main app + extracted modules -->
-  <script src="main.js?v=20260220c"></script>
-  <script src="ht-fly-fishing.js?v=20260220c"></script>
-  <script src="ht-tracking.js?v=20260220c"></script>
+  <script src="main.js?v=20260220d"></script>
+  <script src="ht-fly-fishing.js?v=20260220d"></script>
+  <script src="ht-tracking.js?v=20260220d"></script>
 </body>
 </html>
 

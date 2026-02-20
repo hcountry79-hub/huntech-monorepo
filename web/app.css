@@ -4397,9 +4397,9 @@ body.module-mushroom .ht-map-hero-meta {
 }
 
 .ht-mission-brief-pill {
-  border: 1px solid rgba(255, 193, 7, 0.45);
-  background: rgba(255, 193, 7, 0.12);
-  color: #ffe8a8;
+  border: 1px solid rgba(255, 193, 7, 0.7);
+  background: #ffc107;
+  color: #0a0a0a;
   padding: 6px 12px;
   border-radius: 999px;
   font-size: 13px;
@@ -4430,9 +4430,9 @@ body.module-mushroom .ht-map-hero-meta {
 }
 
 .ht-mission-brief-pill--ghost {
-  background: rgba(0, 0, 0, 0.55);
-  color: #ffe8a8;
-  border-color: rgba(255, 193, 7, 0.35);
+  background: #ffc107;
+  color: #0a0a0a;
+  border-color: rgba(255, 193, 7, 0.7);
 }
 
 .ht-mission-brief-meta {

@@ -3456,7 +3456,8 @@ function setSelectedArea(layer, type, options = {}) {
     navigator.vibrate(15);
   }
   
-  showNotice('Area selected. Building plan...', 'success', 2000);
+  // showNotice('Area selected. Building plan...', 'success', 2000);
+  console.log('HUNTECH: Area selected. Building plan...');
 
   if (layer && drawnItems && !drawnItems.hasLayer(layer)) {
     drawnItems.addLayer(layer);
@@ -11685,7 +11686,8 @@ window.startHuntFromCriteria = function(options = {}) {
     fieldCommandFlowActive = true;
   }
   if (options.skipStrategyPanel) {
-    showNotice(isMushroomModule() ? 'Building forage plan…' : 'Building hunt plan…', 'info', 2200);
+    // showNotice(isMushroomModule() ? 'Building forage plan…' : 'Building hunt plan…', 'info', 2200);
+    console.log('HUNTECH: Building plan…');
   }
   huntCriteria = getHuntCriteriaFromUI();
   document.body.classList.add('ht-hunt-active');
@@ -12094,7 +12096,8 @@ window.startShedHunt = async function(options = {}) {
       setFieldCommandStep(2);
       focusPlanRoutePanel();
       setLockInAreaStatus('Plan ready. Pick route.', 'success');
-      showNotice('Plan ready. Pick route.', 'success', 3200);
+      // showNotice('Plan ready. Pick route.', 'success', 3200);
+      console.log('HUNTECH: Plan ready. Pick route.');
     } else if (pendingFieldCommandAdvance) {
       pendingFieldCommandAdvance = false;
       setFieldCommandStep(2);
@@ -12158,7 +12161,8 @@ function setSelectedRoutingMode(mode) {
 window.selectRoutingMode = function(mode) {
   setSelectedRoutingMode('linear');
   createOptimalRoute('linear');
-  showNotice('Previewing Linear route. Tap LET\'S GO to start alerts.', 'success', 4200);
+  // showNotice('Previewing Linear route. Tap LET\'S GO to start alerts.', 'success', 4200);
+  console.log('HUNTECH: Previewing Linear route.');
 };
 
 // ═══════════════════════════════════════════════════════════════════
@@ -12463,7 +12467,8 @@ window.startWhitetailHunt = async function(options = {}) {
       setFieldCommandStep(2);
       focusPlanRoutePanel();
       setLockInAreaStatus('2 elite stands locked. Pick access route.', 'success');
-      showNotice('2 elite stands ready. Define your access route.', 'success', 4200);
+      // showNotice('2 elite stands ready. Define your access route.', 'success', 4200);
+      console.log('HUNTECH: 2 elite stands ready.');
 
       // Auto-build route if start point was already set (from whitetail pre-lock-in flow)
       if (startPoint && hotspots.length >= 1) {
@@ -12472,7 +12477,8 @@ window.startWhitetailHunt = async function(options = {}) {
         updateRoutePinStatus();
         if (typeof window.buildRoutePreview === 'function') {
           window.buildRoutePreview();
-          showNotice('Access route auto-built from start to primary stand. Tap LET\'S GO to launch.', 'success', 4200);
+          // showNotice('Access route auto-built from start to primary stand. Tap LET\'S GO to launch.', 'success', 4200);
+          console.log('HUNTECH: Access route auto-built.');
         }
       }
     } else if (pendingFieldCommandAdvance) {
@@ -15512,7 +15518,8 @@ async function analyzeTerrainAlongRoute(latlngs) {
   const routePoints = Array.isArray(latlngs) ? latlngs : [];
   if (routePoints.length < 2) return;
 
-  showNotice('Scanning terrain along route…', 'info', 2400);
+  // showNotice('Scanning terrain along route…', 'info', 2400);
+  console.log('HUNTECH: Scanning terrain along route…');
 
   const samples = densifyLatLngs(routePoints, spacing);
   let elevations;
@@ -15926,7 +15933,8 @@ window.createOptimalRoute = function(type) {
     }).addTo(map);
   }
   
-  showNotice(`${type === 'loop' ? 'Loop' : 'Linear'} route created. Follow the highlighted path.`, 'success', 4200);
+  // showNotice(`${type === 'loop' ? 'Loop' : 'Linear'} route created. Follow the highlighted path.`, 'success', 4200);
+  console.log('HUNTECH: Route created.');
 };
 
 // Custom route selection
