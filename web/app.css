@@ -5652,6 +5652,8 @@ body.module-mushroom .ht-map-hero-meta {
   background: transparent;
   border: none;
   box-shadow: none;
+  /* Hard-pin: never move with scroll or layout shifts */
+  will-change: transform;
 }
 
 /* Hide old compass visuals — replaced by simple pill */
@@ -5673,7 +5675,7 @@ body.module-mushroom .ht-map-hero-meta {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 3px 8px;
+  padding: 6px 10px;
   border-radius: 999px;
   border: 1px solid rgba(255, 212, 0, 0.5);
   background: rgba(8, 8, 8, 0.85);
@@ -5684,6 +5686,12 @@ body.module-mushroom .ht-map-hero-meta {
   transition: border-color 0.3s ease, box-shadow 0.3s ease, background 0.3s ease;
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
+  white-space: nowrap;
+  width: auto;
+  height: auto;
+  min-width: 0;
+  min-height: 0;
+  overflow: visible;
 }
 
 .ht-compass-lock:active {
@@ -5691,7 +5699,7 @@ body.module-mushroom .ht-map-hero-meta {
 }
 
 .ht-compass-lock-text {
-  font-size: 7px;
+  font-size: 9px;
   font-weight: 800;
   letter-spacing: 0.5px;
   line-height: 1;
@@ -5796,14 +5804,13 @@ body.module-mushroom .ht-map-hero-meta {
 
 @media (max-width: 520px) {
   .ht-compass-lock {
-    top: calc(var(--topbar-height) + 6px);
-    right: calc(10px + env(safe-area-inset-right));
-    width: 46px;
-    height: 46px;
+    padding: 5px 8px;
+    width: auto;
+    height: auto;
   }
 
   .ht-compass-lock-text {
-    font-size: 7px;
+    font-size: 8px;
   }
 
   .ht-map-locate-btn {
@@ -5814,9 +5821,9 @@ body.module-mushroom .ht-map-hero-meta {
   }
 
   .ht-compass {
-    left: calc(10px + env(safe-area-inset-left));
-    right: auto;
-    top: calc(var(--topbar-height) + 42px);
+    right: calc(10px + env(safe-area-inset-right));
+    left: auto;
+    top: calc(var(--topbar-height) + 8px);
     padding: 0;
   }
 
@@ -6550,6 +6557,14 @@ body.module-fly .leaflet-control-layers-toggle {
   text-overflow: ellipsis;
 }
 
+/* Start Over pill: allow stacked text (START / OVER) */
+.ht-toolbar-mini-btn-startover {
+  white-space: normal;
+  line-height: 1.15;
+  overflow: hidden;
+  text-overflow: clip;
+}
+
 @media (hover: hover) and (pointer: fine) {
   .ht-toolbar-mini-btn:hover {
     border-color: var(--gold);
@@ -6673,6 +6688,9 @@ body.ht-strategy-open .ht-toolbar {
 
 .ht-toolbar.collapsed .ht-toolbar-mini-btn-startover {
   font-size: 9px;
+  white-space: normal;
+  line-height: 1.15;
+  overflow: hidden;
 }
 
 .ht-toolbar.collapsed .ht-toolbar-tab-btn {
@@ -7152,6 +7170,7 @@ body.ht-saved-hunt-preview #planRoutePanel {
 }
 
 .ht-bubble-toggle {
+  display: none !important;
   position: fixed;
   right: calc(16px + env(safe-area-inset-right));
   bottom: calc(16px + env(safe-area-inset-bottom));

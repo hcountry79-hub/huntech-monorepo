@@ -20,11 +20,11 @@
   <link rel="dns-prefetch" href="https://server.arcgisonline.com">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css" />
-  <link rel="stylesheet" href="app.css?v=20260220f">
+  <link rel="stylesheet" href="app.css?v=20260220g">
 
   <!-- AWS Backend Configuration -->
-  <script src="config.js?v=20260220f"></script>
-  <script src="api.js?v=20260220f"></script>
+  <script src="config.js?v=20260220g"></script>
+  <script src="api.js?v=20260220g"></script>
 </head>
 <body class="module-fly">
   <header class="ht-topbar">
@@ -73,7 +73,7 @@
         <svg width="20" height="20" viewBox="0 0 24 24" fill="#2bd4ff">
           <path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
         </svg>
-        <input type="text" placeholder="Search any address, business, park, or coordsâ€¦" class="ht-search-input" id="searchInput" autocomplete="off" spellcheck="false">
+        <input type="text" placeholder="Search anything: address, business, park, water, or GPS coordsâ€¦" class="ht-search-input" id="searchInput" autocomplete="off" spellcheck="false">
         <button class="ht-search-btn" type="button">Search</button>
         <div class="ht-search-results" id="searchResults"></div>
       </div>
@@ -134,15 +134,15 @@
     <div class="ht-toolbar-tab">
       <!-- Collapsed 3-column header row -->
       <div class="ht-toolbar-tab-row">
-        <button class="ht-toolbar-mini-btn ht-toolbar-mini-btn-startover" type="button" onclick="window.startOver()" data-full-label="START OVER" data-short-label="START OVER">START OVER</button>
+        <button class="ht-toolbar-mini-btn ht-toolbar-mini-btn-startover" type="button" onclick="window.startOver()" data-full-label="START OVER" data-short-label="START OVER">START<br>OVER</button>
         <button class="ht-toolbar-tab-btn ht-toolbar-toggle-btn ht-field-command-btn" type="button" aria-label="Toggle Stream Command">
-          <span class="ht-toolbar-tab-label" data-full-label="STREAM COMMAND" data-short-label="STREAM">STREAM COMMAND</span>
+          <span class="ht-toolbar-tab-label" data-full-label="STREAM COMMAND" data-short-label="STREAM COMMAND">STREAM COMMAND</span>
         </button>
         <button class="ht-toolbar-mini-btn" type="button" onclick="showAdvancedToolsTray()" data-full-label="TOOLS" data-short-label="TOOLS">TOOLS</button>
       </div>
       <!-- Solo toggle when expanded -->
       <button class="ht-toolbar-tab-btn ht-toolbar-tab-btn-solo ht-toolbar-toggle-btn ht-field-command-btn" type="button" aria-label="Toggle Stream Command">
-        <span class="ht-toolbar-tab-label" data-full-label="STREAM COMMAND" data-short-label="STREAM">STREAM COMMAND</span>
+        <span class="ht-toolbar-tab-label" data-full-label="STREAM COMMAND" data-short-label="STREAM COMMAND">STREAM COMMAND</span>
       </button>
     </div>
 
@@ -496,9 +496,7 @@
     </div>
   </div>
 
-  <button class="ht-bubble-toggle" type="button" onclick="toggleTray()" aria-label="Toggle Stream Command">
-    CMD
-  </button>
+  <!-- CMD bubble removed — user requested removal -->
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
@@ -516,9 +514,9 @@
     }
   </script>
 
-  <script src="regulations.js?v=20260220f"></script>
-  <script src="fly-fishing-data.js?v=20260220f"></script>
-  <script src="ht-fly-fishing.js?v=20260220f"></script>
-  <script src="main.js?v=20260220f"></script>
+  <script src="regulations.js?v=20260220g"></script>
+  <script src="fly-fishing-data.js?v=20260220g"></script>
+  <script src="ht-fly-fishing.js?v=20260220g"></script>
+  <script src="main.js?v=20260220g"></script>
 </body>
 </html>

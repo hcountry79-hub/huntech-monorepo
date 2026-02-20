@@ -2535,7 +2535,13 @@ function updateTrayMiniLabels() {
   targets.forEach((el) => {
     const fullLabel = el.getAttribute('data-full-label') || '';
     const shortLabel = el.getAttribute('data-short-label') || fullLabel;
-    el.textContent = isCollapsed ? shortLabel : fullLabel;
+    const label = isCollapsed ? shortLabel : fullLabel;
+    // Start Over: use innerHTML to preserve <br> stacking
+    if (el.classList.contains('ht-toolbar-mini-btn-startover')) {
+      el.innerHTML = label.replace(' ', '<br>');
+    } else {
+      el.textContent = label;
+    }
   });
 }
 
@@ -10218,6 +10224,22 @@ function initializeSearch() {
       });
     }
 
+    // Search local trout waters first (instant, no network)
+    if (window.TROUT_WATERS && Array.isArray(window.TROUT_WATERS)) {
+      const q = query.toLowerCase();
+      window.TROUT_WATERS.forEach(w => {
+        if (w.name && w.name.toLowerCase().includes(q) && w.lat && w.lng) {
+          items.push({
+            type: 'water',
+            title: w.name,
+            meta: (w.ribbon || w.category || 'Trout Water') + (w.county ? ' · ' + w.county : ''),
+            latlng: L.latLng(w.lat, w.lng),
+            waterId: w.id
+          });
+        }
+      });
+    }
+
     try {
       // Search in parallel: geocode (addresses/businesses), MDC conservation areas, MO state parks
       const stateParks = searchMoStateParks(query);
@@ -15709,7 +15731,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }, 320);
     setTimeout(() => centerOnMyLocationInternal(), 500);
   } else if (isFly) {
-    /* Fly-fishing: skip hero, load map immediately, center on user GPS */
+    /* Fly-fishing: skip hero, load map immediately, default to Bennett Spring */
     flyMapPending = false;
     document.body.classList.remove('ht-map-pending');
     document.body.classList.add('ht-map-active');
@@ -15722,10 +15744,16 @@ document.addEventListener('DOMContentLoaded', () => {
     requestAnimationFrame(() => {
       if (map && typeof map.invalidateSize === 'function') map.invalidateSize();
     });
-    // Center on user's GPS location on launch (tray stays closed)
+    // Default to Bennett Spring on launch
     requestAnimationFrame(() => {
       setTimeout(() => {
-        centerOnMyLocationInternal();
+        var bennettSpring = window.TROUT_WATERS && window.TROUT_WATERS.find(function(w) { return w.id === 'bennett-spring'; });
+        if (bennettSpring && map) {
+          map.setView([bennettSpring.lat, bennettSpring.lng], 14, { animate: false });
+          console.log('HUNTECH: Defaulted map to Bennett Spring');
+        } else {
+          centerOnMyLocationInternal();
+        }
       }, 50);
     });
   } else if (isTurk) {
