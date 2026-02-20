@@ -4175,6 +4175,30 @@ body.module-mushroom .ht-map-hero-meta {
   filter: drop-shadow(0 0 4px rgba(43, 212, 255, 0.5));
   flex-shrink: 0;
 }
+/* Zone sub-pill — regulation boundary markers */
+.ht-fly-zone-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+  background: linear-gradient(135deg, rgba(6, 14, 22, 0.90), rgba(4, 10, 16, 0.86));
+  color: #8ae6ff;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  padding: 3px 10px;
+  border-radius: 14px;
+  border: 1px solid rgba(43, 212, 255, 0.30);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.45), 0 0 8px rgba(43, 212, 255, 0.10);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  backdrop-filter: blur(6px);
+}
+.ht-fly-zone-pill:hover {
+  transform: scale(1.06);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.55), 0 0 14px rgba(43, 212, 255, 0.2);
+}
 
 .ht-fly-pin-logo {
   width: 20px;

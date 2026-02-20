@@ -503,7 +503,22 @@ function addFlyWaterMarker(water, labelOverride) {
 
 /* ── Access Point Pin helpers ───────────────────────── */
 function getAccessPinIcon(accessPt) {
-  const isParking = String(accessPt.type || '').toLowerCase() === 'parking';
+  const apType = String(accessPt.type || '').toLowerCase();
+  const isParking = apType === 'parking';
+  const isZone = apType === 'zone';
+
+  // Zone pins use the pill style — same shape as main water pin but with zone name
+  if (isZone) {
+    const zoneName = String(accessPt.name || 'Zone').trim();
+    return L.divIcon({
+      className: 'ht-fly-area-pin',
+      html: `<div class="ht-fly-zone-pill">${escapeHtml(zoneName)}</div>`,
+      iconSize: [0, 0],
+      iconAnchor: [0, 16]
+    });
+  }
+
+  // Parking / amenity pins — small compact marker
   const shortLabel = getAccessPinLabel(accessPt.name);
   const wrapperClass = isParking
     ? 'ht-pin-wrapper ht-pin-wrapper--access ht-pin-wrapper--access-parking'
@@ -525,30 +540,43 @@ function getAccessPinIcon(accessPt) {
 function getAccessPinLabel(name) {
   const n = String(name || '').trim();
   if (!n) return 'Access';
-  // Short-circuit well-known labels
   const lower = n.toLowerCase();
-  if (lower.includes('parking') || lower.includes('main lot')) return 'P';
-  if (lower.includes('concession') || lower.includes('store')) return 'Store';
-  if (lower.includes('nature center')) return 'Visitor';
-  if (lower.includes('hatchery')) return 'Hatch';
-  if (lower.includes('campground')) return 'Camp';
-  // Take first meaningful word(s), max ~8 chars
-  const words = n.replace(/\b(access|area|entry|point)\b/gi, '').trim().split(/\s+/);
-  const token = words.slice(0, 2).join(' ');
-  return token.length > 10 ? token.substring(0, 9) + '…' : (token || 'Access');
+  if (lower.includes('parking') || lower.includes('main lot') || lower.includes('main parking')) return 'P';
+  if (lower.includes('store') || lower.includes('tag office') || lower.includes('concession')) return 'Store';
+  if (lower.includes('restroom') || lower.includes('bathroom')) return 'WC';
+  if (lower.includes('hatchery') || lower.includes('mill')) return 'Hatch';
+  if (lower.includes('museum')) return 'Museum';
+  // Compact: take first meaningful word
+  const words = n.replace(/\b(access|area|entry|point|parking)\b/gi, '').trim().split(/\s+/);
+  const token = words.slice(0, 1).join(' ');
+  return token.length > 8 ? token.substring(0, 7) + '…' : (token || 'Info');
 }
 
 function openAccessPointPopup(marker, water, accessPt) {
   if (!marker || !accessPt) return;
-  const isParking = String(accessPt.type || '').toLowerCase() === 'parking';
-  const typeBadge = isParking ? '🅿️ Parking' : '🎣 Entry';
+  const apType = String(accessPt.type || '').toLowerCase();
+  const isParking = apType === 'parking';
+  const isZone = apType === 'zone';
   const waterName = water ? escapeHtml(water.name || 'Trout Water') : 'Trout Water';
   const waterId = water ? escapeHtml(water.id || '') : '';
+
+  let typeBadge, titleColor;
+  if (isZone) {
+    typeBadge = '📍 Regulation Zone';
+    titleColor = '#2bd4ff';
+  } else if (isParking) {
+    typeBadge = '🅿️ Parking / Amenity';
+    titleColor = '#ffe082';
+  } else {
+    typeBadge = '🎣 Access';
+    titleColor = '#7cffc7';
+  }
+
   const popup = `
-    <div style="min-width:210px;">
-      <div style="font-weight:700;color:#7cffc7;font-size:14px;">${escapeHtml(accessPt.name)}</div>
+    <div style="min-width:220px;">
+      <div style="font-weight:700;color:${titleColor};font-size:14px;">${escapeHtml(accessPt.name)}</div>
       <div style="font-size:12px;color:#ddd;margin-top:3px;">${typeBadge} • ${waterName}</div>
-      <div style="font-size:11px;color:#b8d8c8;margin-top:6px;">${escapeHtml(accessPt.notes || 'Public access point.')}</div>
+      <div style="font-size:11px;color:#b8d8c8;margin-top:6px;">${escapeHtml(accessPt.notes || '')}</div>
       <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;">
         <button style="padding:4px 10px;border-radius:6px;border:1px solid #7cffc7;background:rgba(124,255,199,0.12);color:#7cffc7;font-size:11px;font-weight:700;cursor:pointer;"
           onclick="flyCheckInAtAccess('${waterId}',${accessPt.lat},${accessPt.lng},'${escapeHtml(accessPt.name)}')">Check In Here</button>
