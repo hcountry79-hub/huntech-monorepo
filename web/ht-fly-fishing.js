@@ -1793,61 +1793,123 @@ async function fetchFlyFlowForWater(water) {
 
 function buildFlyStrategyHtml(water, prefs, flow) {
   const snapshot = getFlyWeatherSnapshot();
-  const temp = Number.isFinite(snapshot.temp) ? `${snapshot.temp}F` : 'Pending';
-  const wind = Number.isFinite(snapshot.wind) ? `${snapshot.wind} mph` : 'Pending';
-  const windDir = snapshot.windDir || 'Pending';
-  const flowCfs = Number.isFinite(flow?.flowCfs) ? `${Math.round(flow.flowCfs)} cfs` : 'Pending';
-  const gageFt = Number.isFinite(flow?.gageFt) ? `${flow.gageFt.toFixed(2)} ft` : 'Pending';
-  const flowSite = flow?.siteName ? `(${escapeHtml(flow.siteName)})` : '';
-  const picks = getFlyInventoryRecommendations(3);
-  const pickHtml = picks.length
-    ? picks.map((pick) => `
-        <div class="ht-fly-strategy-fly">
-          <div class="ht-fly-strategy-fly-thumb">${pick.imageUrl ? `<img src="${pick.imageUrl}" alt="${escapeHtml(pick.name)}">` : 'Fly'}</div>
-          <div>
-            <div class="ht-fly-strategy-fly-name">${escapeHtml(pick.name)}</div>
-            <div class="ht-fly-strategy-fly-meta">${escapeHtml(pick.color)} • ${escapeHtml(pick.size)}</div>
-          </div>
-        </div>
-      `).join('')
-    : '<div class="ht-fly-note">No fly box scans yet. Use Scan Fly Box to add photos.</div>';
+  const season = getCurrentSeason();
+  const period = getTimePeriod();
+  const method = prefs.rod || 'fly';
+  const seasonLabel = season.charAt(0).toUpperCase() + season.slice(1);
+  const periodLabel = period.replace(/-/g, ' ').replace(/\b\w/g, function(c) { return c.toUpperCase(); });
+  const methodIcons = { fly: '🪶', spin: '🎣', bait: '🪱' };
+  const methodLabels = { fly: 'Fly Fishing', spin: 'Spin Fishing', bait: 'Bait Fishing' };
+  const methodIcon = methodIcons[method] || '🎣';
 
-  return `
-    <div class="ht-fly-strategy-block">
-      <div class="ht-fly-strategy-title">Strategy Inputs</div>
-      <div class="ht-fly-strategy-row">Water: ${escapeHtml(water?.name || 'Selected Water')}</div>
-      <div class="ht-fly-strategy-row">Waders: ${escapeHtml(prefs.waders)}</div>
-      <div class="ht-fly-strategy-row">Rod: ${escapeHtml(prefs.rod)}</div>
-      <div class="ht-fly-strategy-row">Level: ${escapeHtml(prefs.level)}</div>
-    </div>
-    <div class="ht-fly-strategy-block">
-      <div class="ht-fly-strategy-title">Live Conditions</div>
-      <div class="ht-fly-strategy-row">Temp: ${temp}</div>
-      <div class="ht-fly-strategy-row">Wind: ${wind} ${windDir}</div>
-      <div class="ht-fly-strategy-row">Flow: ${flowCfs} ${flowSite}</div>
-      <div class="ht-fly-strategy-row">Gage: ${gageFt}</div>
-    </div>
-    <div class="ht-fly-strategy-block">
-      <div class="ht-fly-strategy-title">Initial Approach</div>
-      <div class="ht-fly-note">Start in the tailout seam, then work the inside bend slow water with short downstream casts.</div>
-      <div class="ht-fly-note">Move to the boulder pocket line once the sun hits the water. Adjust depth every 3-4 drifts.</div>
-    </div>
-    <div class="ht-fly-strategy-block">
-      <div class="ht-fly-strategy-title">Recommended Flies</div>
-      <div class="ht-fly-strategy-fly-list">${pickHtml}</div>
-    </div>
-    <div class="ht-fly-strategy-block">
-      <div class="ht-fly-strategy-title">Data Sources (Planned)</div>
-      <div class="ht-fly-note">USGS NWIS (flows), NOAA NWS (weather), USGS 3DEP/LiDAR, NHD flowlines, state trout regulations.</div>
-    </div>
-  `;
+  // --- Header ---
+  var html = '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">';
+  html += '<div style="font-size:22px;">' + methodIcon + '</div>';
+  html += '<div>';
+  html += '<div style="font-weight:800;color:#2bd4ff;font-size:14px;line-height:1.2;">' + escapeHtml(water?.name || 'Trout Water') + '</div>';
+  html += '<div style="font-size:10px;color:#7cffc7;text-transform:uppercase;letter-spacing:1px;">' + escapeHtml(seasonLabel) + ' • ' + escapeHtml(periodLabel) + ' • ' + escapeHtml(methodLabels[method] || method) + '</div>';
+  html += '</div></div>';
+
+  // --- Conditions (only show what we actually have) ---
+  var condParts = [];
+  if (Number.isFinite(snapshot.temp)) condParts.push('🌡 ' + snapshot.temp + '°F');
+  if (Number.isFinite(snapshot.wind)) condParts.push('💨 ' + snapshot.wind + ' mph' + (snapshot.windDir ? ' ' + snapshot.windDir : ''));
+  if (Number.isFinite(flow?.flowCfs)) condParts.push('🌊 ' + Math.round(flow.flowCfs) + ' cfs');
+  if (Number.isFinite(flow?.gageFt)) condParts.push('📏 ' + flow.gageFt.toFixed(1) + ' ft');
+  if (condParts.length) {
+    html += '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px;padding:6px 8px;border-radius:8px;background:rgba(43,212,255,0.08);border:1px solid rgba(43,212,255,0.15);">';
+    condParts.forEach(function(p) {
+      html += '<span style="font-size:11px;color:#bcd5df;white-space:nowrap;">' + escapeHtml(p) + '</span>';
+    });
+    html += '</div>';
+  }
+
+  // --- Hatch Report ---
+  var hatches = (water && water.hatches && water.hatches[season]) || [];
+  if (hatches.length) {
+    html += '<div class="ht-fly-strategy-block">';
+    html += '<div class="ht-fly-strategy-title">🦟 ' + escapeHtml(seasonLabel) + ' Hatch Report</div>';
+    html += '<div style="display:flex;flex-wrap:wrap;gap:4px;">';
+    hatches.forEach(function(h) {
+      html += '<span style="padding:2px 8px;border-radius:6px;font-size:11px;background:rgba(124,255,199,0.12);color:#7cffc7;border:1px solid rgba(124,255,199,0.2);">' + escapeHtml(h) + '</span>';
+    });
+    html += '</div>';
+    var hatchEdu = {
+      spring: 'Spring runoff warms the water into the low 50s triggering BWO and midge emergences. Watch for rises in overcast drizzle — prime dry fly conditions.',
+      summer: 'Warm months bring caddis and terrestrials. Early and late sessions are best. Midday trout go deep — switch to weighted nymphs or streamers.',
+      fall: 'Cooling water triggers aggressive feeding before winter. BWO hatches return strong. Big fish move to shallower riffles.',
+      winter: 'Cold water means slow metabolisms. Tiny midges (#20-26) dominate. Fish deep, slow, and small. Trout hold in the slowest water.'
+    };
+    if (hatchEdu[season]) {
+      html += '<div style="font-size:10px;color:#89b5a2;margin-top:6px;line-height:1.4;font-style:italic;">' + escapeHtml(hatchEdu[season]) + '</div>';
+    }
+    html += '</div>';
+  }
+
+  // --- Arsenal: method-specific tackle ---
+  var tackleName = method === 'fly' ? 'Top Flies' : (method === 'spin' ? 'Top Lures' : 'Top Bait');
+  var tackleIcon = method === 'fly' ? '🪶' : (method === 'spin' ? '🎣' : '🪱');
+  var tackleList = method === 'fly' ? (water?.topFlies || []) : (method === 'spin' ? (water?.topLures || []) : (water?.topBait || []));
+  if (tackleList.length) {
+    html += '<div class="ht-fly-strategy-block">';
+    html += '<div class="ht-fly-strategy-title">' + tackleIcon + ' ' + escapeHtml(tackleName) + ' — ' + escapeHtml(water?.name || '') + '</div>';
+    html += '<div style="display:grid;gap:3px;">';
+    tackleList.forEach(function(t, i) {
+      html += '<div style="font-size:12px;color:#e8fbff;padding:3px 0;border-bottom:1px solid rgba(255,255,255,0.05);">';
+      html += '<span style="color:#ffe082;font-weight:700;margin-right:6px;">' + (i + 1) + '.</span>' + escapeHtml(t);
+      html += '</div>';
+    });
+    html += '</div></div>';
+  }
+
+  // --- Time-of-Day Approach ---
+  var timeAdvice = {
+    'early-morning': { title: 'Dawn Strategy', icon: '🌅', text: 'Low light is prime time. Trout feed aggressively near the surface. Use dark nymphs or streamers. Position upstream and make short, accurate casts. Fish are less spooky now.' },
+    'morning': { title: 'Morning Window', icon: '☀️', text: 'Peak feeding continues. Watch for hatch activity — rising fish mean switch to emergers or dries. Nymph under an indicator through riffles and runs. Work systematically upstream.' },
+    'midday': { title: 'Midday Approach', icon: '🔆', text: 'Sun pushes trout to shade and depth. Target undercut banks, deep pools, and boulder shadows. Drop weight and go deeper. Slow your presentation — fish are less active.' },
+    'afternoon': { title: 'Afternoon Transition', icon: '🌤', text: 'Caddis activity often picks up. Try a dry-dropper rig to cover both surface and subsurface. Swing soft hackles through tailouts. Watch for pod risers.' },
+    'evening': { title: 'Evening Prime Time', icon: '🌇', text: 'The golden hour. Spinner falls and emerging caddis bring big fish to the surface. Fish tailouts and riffles. Match the hatch precisely — trout get selective in calm water.' },
+    'night': { title: 'After Dark', icon: '🌙', text: 'Big trout are most active now. Strip large dark streamers slow along structure. Use heavy tippet — night fish fights are chaotic. Know the water before dark.' }
+  };
+  var ta = timeAdvice[period] || timeAdvice['morning'];
+  html += '<div class="ht-fly-strategy-block">';
+  html += '<div class="ht-fly-strategy-title">' + ta.icon + ' ' + escapeHtml(ta.title) + ' (' + escapeHtml(periodLabel) + ')</div>';
+  html += '<div style="font-size:11px;color:#c8e6d5;line-height:1.5;">' + escapeHtml(ta.text) + '</div>';
+  html += '</div>';
+
+  // --- Regulations Quick Ref ---
+  if (water?.regulations) {
+    html += '<div class="ht-fly-strategy-block">';
+    html += '<div class="ht-fly-strategy-title">📋 Regulations</div>';
+    if (water.regulations.dailyLimit) {
+      html += '<div class="ht-fly-strategy-row">Daily Limit: <strong style="color:#ffe082;">' + water.regulations.dailyLimit + ' trout</strong></div>';
+    }
+    if (water.regulations.gearRestrictions) {
+      html += '<div class="ht-fly-strategy-row" style="line-height:1.4;">' + escapeHtml(water.regulations.gearRestrictions) + '</div>';
+    }
+    if (water.regulations.specialRules) {
+      html += '<div style="font-size:10px;color:#d4a57f;margin-top:4px;line-height:1.4;">⚠️ ' + escapeHtml(water.regulations.specialRules) + '</div>';
+    }
+    html += '</div>';
+  }
+
+  // --- Coach Tip ---
+  if (water?.coachTips && water.coachTips.length) {
+    var tipIdx = Math.floor(Math.random() * water.coachTips.length);
+    html += '<div style="padding:8px 10px;border-radius:8px;background:rgba(255,224,130,0.08);border:1px solid rgba(255,224,130,0.2);margin-top:8px;">';
+    html += '<div style="font-size:10px;color:#ffe082;font-weight:800;margin-bottom:3px;">🎓 LOCAL KNOWLEDGE</div>';
+    html += '<div style="font-size:11px;color:#c8e6d5;line-height:1.4;">' + escapeHtml(water.coachTips[tipIdx]) + '</div>';
+    html += '</div>';
+  }
+
+  return html;
 }
 
 function openFlyStrategyModal(water, prefs, flow) {
   openInfoModal({
-    title: 'Huntech Trout Strategy',
+    title: '🐟 Trout Briefing',
     bodyHtml: buildFlyStrategyHtml(water, prefs, flow),
-    confirmLabel: 'Close'
+    confirmLabel: 'Got It'
   });
 }
 
