@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" role="img" aria-label="Fly fishing module logo">
+  <defs>
+    <linearGradient id="ring" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#2bd4ff"/>
+      <stop offset="1" stop-color="#7cffc7"/>
+    </linearGradient>
+    <clipPath id="cc"><circle cx="32" cy="32" r="29.5"/></clipPath>
+  </defs>
+
+  <!-- Background -->
+  <circle cx="32" cy="32" r="31" fill="#06111a"/>
+  <circle cx="32" cy="32" r="30" fill="#081a24" stroke="url(#ring)" stroke-width="1.5"/>
+
+  <g clip-path="url(#cc)">
+    <!-- Water surface -->
+    <ellipse cx="32" cy="50" rx="28" ry="6" fill="#0a2233" opacity=".6"/>
+    <path d="M4 50 Q16 47 28 50 Q40 53 52 50 Q58 48 60 50" stroke="#2bd4ff" stroke-width=".6" fill="none" opacity=".2"/>
+
+    <!-- Fisherman silhouette — wading, casting overhead -->
+    <!-- Legs / wading in water -->
+    <path d="M28 50 L27 56 L25 56 L26.5 50 Z" fill="#e8fbff" opacity=".9"/>
+    <path d="M34 50 L35 56 L37 56 L35.5 50 Z" fill="#e8fbff" opacity=".9"/>
+    <!-- Water splash at legs -->
+    <ellipse cx="31" cy="50.5" rx="7" ry="2" fill="#2bd4ff" opacity=".1"/>
+
+    <!-- Body -->
+    <path d="M27 50 C27 46, 27.5 41, 28 38 C28.5 36, 29 35, 30 34.5 L34 34.5 C35 35, 35.5 36, 36 38 C36.5 41, 37 46, 37 50 Z" fill="#e8fbff" opacity=".92"/>
+    <!-- Vest line -->
+    <path d="M29 39 L30 44 L34 44 L35 39" stroke="#081a24" stroke-width=".4" fill="none" opacity=".3"/>
+
+    <!-- Head -->
+    <ellipse cx="32" cy="33" rx="3" ry="3.2" fill="#e8fbff" opacity=".92"/>
+    <!-- Hat brim -->
+    <path d="M28 32 C28 31, 30 30, 32 30 C34 30, 36 31, 36 32 C35 31.7, 33 31.3, 32 31.3 C31 31.3, 29 31.7, 28 32 Z" fill="#e8fbff"/>
+    <!-- Hat crown -->
+    <path d="M29.5 31.8 C29.5 30.2, 30.5 29.2, 32 29.2 C33.5 29.2, 34.5 30.2, 34.5 31.8" fill="#e8fbff"/>
+
+    <!-- Back arm holding rod — extended up-right -->
+    <path d="M36 36 C38 34, 39.5 31, 41 28" stroke="#e8fbff" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+    <!-- Hand -->
+    <circle cx="41" cy="27.8" r="1.1" fill="#e8fbff"/>
+
+    <!-- Fly rod — sweeping up to top-right -->
+    <line x1="41" y1="27.8" x2="54" y2="10" stroke="#e8fbff" stroke-width="1.6" stroke-linecap="round" opacity=".9"/>
+    <line x1="54" y1="10" x2="57" y2="6" stroke="#e8fbff" stroke-width=".8" stroke-linecap="round" opacity=".7"/>
+
+    <!-- Fly line — big elegant casting loop overhead -->
+    <path d="M57 6 C60 4, 62 5, 60 9 C57 15, 50 22, 42 26 C36 29, 28 32, 20 30 C14 28, 10 24, 8 20 C6 16, 8 12, 12 10 C16 8, 22 8, 28 12"
+          stroke="#e8fbff" stroke-width=".9" fill="none" stroke-linecap="round" opacity=".7"/>
+    <!-- Leader + tippet -->
+    <path d="M28 12 C26 14, 24 16, 22 18" stroke="#e8fbff" stroke-width=".5" fill="none" opacity=".5"/>
+    <!-- Fly -->
+    <circle cx="22" cy="18.5" r="1" fill="#e8fbff" opacity=".6"/>
+    <path d="M22 18 L20 16.5 M22 17.5 L20.5 16" stroke="#e8fbff" stroke-width=".4" fill="none" opacity=".5"/>
+  </g>
+
+  <circle cx="32" cy="32" r="30" fill="none" stroke="url(#ring)" stroke-width="1.5"/>
+</svg>

@@ -568,6 +568,12 @@ const NLCD_HABITAT_RULES = {
   turkey_roostZone:    { allow: new Set([41,42,43,90]), label: 'mature timber roost' },
   turkey_strutZone:    { allow: new Set([41,42,43,52,71,81,21]), label: 'open strutting area' },
   turkey_travelCorridor: { allow: new Set([41,42,43,52,71,90]), label: 'travel corridor' },
+  // Whitetail overrides
+  whitetail_bedding:    { allow: new Set([41,42,43,52,90]), label: 'thick bedding cover' },
+  whitetail_transition: { allow: new Set([41,42,43,51,52,71,90,95]), label: 'edge / transition cover' },
+  whitetail_feeding:    { allow: new Set([41,42,43,52,71,81,90,95]), label: 'browse / food source' },
+  whitetail_water:      { allow: new Set([11,41,42,43,52,90,95]), label: 'water or riparian' },
+  whitetail_open:       { allow: new Set([41,42,43,52,71,81,90,95,21]), label: 'field edge or opening' },
 };
 
 // BLOCKED list — pins are NEVER placed on these, regardless of habitat
@@ -624,8 +630,10 @@ async function validatePinLandCover(latlng, habitatType) {
   // 2. HABITAT MATCH: Check if this land cover is appropriate for the habitat type
   const isMush = isMushroomModule();
   const isTurk = isTurkeyModule();
+  const isWhitetail = isWhitetailModule();
   const ruleKey = isMush ? `mushroom_${habitatType}` :
-                  isTurk ? `turkey_${habitatType}` : habitatType;
+                  isTurk ? `turkey_${habitatType}` :
+                  isWhitetail ? `whitetail_${habitatType}` : habitatType;
   const rule = NLCD_HABITAT_RULES[ruleKey] || NLCD_HABITAT_RULES[habitatType];
 
   if (rule && !rule.allow.has(code)) {
@@ -1164,6 +1172,10 @@ function isShedModule() {
   return Boolean(document.body && document.body.classList.contains('module-shed'));
 }
 
+function isWhitetailModule() {
+  return Boolean(document.body && document.body.classList.contains('module-whitetail'));
+}
+
 // ===================================================================
 //   Mushroom Foraging — Education & Habitat Data
 //   Based on Missouri morel research, mycological field guides,
@@ -1541,26 +1553,33 @@ const MUSHROOM_SEASON_STAGES = {
 // ===================================================================
 
 function getActiveEducationSet() {
+  if (isWhitetailModule() && window.WHITETAIL_EDUCATION) return window.WHITETAIL_EDUCATION;
   if (isTurkeyModule() && window.TURKEY_EDUCATION) return window.TURKEY_EDUCATION;
   return isMushroomModule() ? MUSHROOM_EDUCATION : SHED_EDUCATION;
 }
 
 function getActiveFlavorSet() {
+  if (isWhitetailModule() && window.WHITETAIL_HOTSPOT_FLAVOR) return window.WHITETAIL_HOTSPOT_FLAVOR;
   if (isTurkeyModule() && window.TURKEY_HOTSPOT_FLAVOR) return window.TURKEY_HOTSPOT_FLAVOR;
   return isMushroomModule() ? MUSHROOM_FLAVOR : HOTSPOT_FLAVOR;
 }
 
 function getActiveHabitatOverview() {
+  if (isWhitetailModule() && window.WHITETAIL_HABITAT_OVERVIEW) return window.WHITETAIL_HABITAT_OVERVIEW;
   if (isTurkeyModule() && window.TURKEY_HABITAT_OVERVIEW) return window.TURKEY_HABITAT_OVERVIEW;
   return isMushroomModule() ? MUSHROOM_HABITAT_OVERVIEW : HABITAT_OVERVIEW;
 }
 
 function getActiveHabitatLookFor() {
+  if (isWhitetailModule() && window.WHITETAIL_HABITAT_LOOK_FOR) return window.WHITETAIL_HABITAT_LOOK_FOR;
   if (isTurkeyModule() && window.TURKEY_HABITAT_LOOK_FOR) return window.TURKEY_HABITAT_LOOK_FOR;
   return isMushroomModule() ? MUSHROOM_HABITAT_LOOK_FOR : HABITAT_LOOK_FOR;
 }
 
 function getModuleEducationLabels() {
+  if (isWhitetailModule() && window.WHITETAIL_EDUCATION_LABELS) {
+    return window.WHITETAIL_EDUCATION_LABELS;
+  }
   if (isTurkeyModule() && window.TURKEY_EDUCATION_LABELS) {
     return window.TURKEY_EDUCATION_LABELS;
   }
@@ -1589,11 +1608,13 @@ function getModuleEducationLabels() {
 }
 
 function getModulePinLabel() {
+  if (isWhitetailModule()) return 'stand site';
   if (isTurkeyModule()) return 'setup';
   return isMushroomModule() ? 'forage pin' : 'pin';
 }
 
 function getModuleSweepVerb() {
+  if (isWhitetailModule()) return 'hunt';
   if (isTurkeyModule()) return 'hunt';
   return isMushroomModule() ? 'work' : 'sweep';
 }
@@ -1944,6 +1965,32 @@ function activateTurkeyMap() {
   // setTimeout(() => centerOnMyLocationInternal(), 500);
 }
 window.activateTurkeyMap = activateTurkeyMap;
+
+let whitetailMapPending = false;
+function activateWhitetailMap() {
+  if (!isWhitetailModule()) return;
+  if (!mapInitialized) {
+    whitetailMapPending = false;
+    document.body.classList.remove('ht-map-pending');
+    document.body.classList.add('ht-map-active');
+    initializeMap();
+    restoreLastKnownLocation();
+    setDefaultAreaFromLocation();
+    updateFilterChips();
+    updateWorkflowUI();
+    updateLocateMeOffset();
+    setTimeout(() => {
+      if (map && typeof map.invalidateSize === 'function') map.invalidateSize();
+    }, 320);
+  } else {
+    document.body.classList.remove('ht-map-pending');
+    document.body.classList.add('ht-map-active');
+    setTimeout(() => {
+      if (map && typeof map.invalidateSize === 'function') map.invalidateSize();
+    }, 320);
+  }
+}
+window.activateWhitetailMap = activateWhitetailMap;
 
 // Initialize map
 function initializeMap() {
@@ -3589,6 +3636,9 @@ function getHotspotCountFromCriteria(criteria) {
 }
 
 function buildHabitatPool(criteria) {
+  if (isWhitetailModule()) {
+    return ['bedding', 'transition', 'transition', 'bedding', 'feeding', 'feeding', 'water', 'open'];
+  }
   if (isTurkeyModule()) {
     return ['roostZone', 'strutZone', 'travelCorridor', 'roostZone', 'feedingArea', 'travelCorridor', 'loafingArea', 'waterSource'];
   }
@@ -3657,6 +3707,19 @@ function getLiveSignalEntries() {
 
 function getLiveSignalWeight(entry) {
   const sign = String(entry?.signType || entry?.type || '').toLowerCase();
+  // Whitetail-specific signal weights
+  if (isWhitetailModule()) {
+    if (window.WHITETAIL_SIGNAL_WEIGHTS) {
+      for (const [key, weight] of Object.entries(window.WHITETAIL_SIGNAL_WEIGHTS)) {
+        if (sign.includes(key.toLowerCase())) return weight;
+      }
+    }
+    if (sign.includes('rub') || sign.includes('scrape')) return 4.5;
+    if (sign.includes('bed')) return 4.2;
+    if (sign.includes('trail') || sign.includes('track')) return 3.0;
+    if (sign.includes('sighting')) return 5.0;
+    return 2.0;
+  }
   // Turkey-specific signal weights
   if (isTurkeyModule()) {
     if (window.TURKEY_SIGNAL_WEIGHTS) {
@@ -5531,6 +5594,78 @@ function handleMapClick(e) {
         queueLiveStrategyUpdate('turkey-pin');
       }
     });
+  }
+
+  if (mapClickMode === 'whitetail-pin') {
+    mapClickMode = null;
+    if (typeof window.openWhitetailPinModal === 'function') {
+      window.openWhitetailPinModal({
+        onSubmit: ({ type, confidence, notes }) => {
+          const entry = {
+            id: `wt_${Date.now()}`,
+            type: 'whitetail_pin',
+            coords: [e.latlng.lat, e.latlng.lng],
+            signType: type,
+            confidence,
+            notes,
+            timestamp: new Date().toISOString()
+          };
+          huntJournalEntries.unshift(entry);
+          saveHuntJournal();
+          if (typeof window.registerWhitetailPinMarker === 'function') {
+            window.registerWhitetailPinMarker(entry);
+          } else {
+            L.marker(e.latlng, { icon: getBrandedPinIcon('D') }).addTo(map);
+          }
+          showNotice('Whitetail pin logged.', 'success', 3200);
+          queueLiveStrategyUpdate('whitetail-pin');
+        }
+      });
+    } else {
+      // Fallback if whitetail-data.js not loaded — use generic deer pin modal
+      openDeerPinModal(e.latlng, {
+        onSubmit: ({ type, confidence, notes }) => {
+          const entry = {
+            id: `wt_${Date.now()}`,
+            type: 'whitetail_pin',
+            coords: [e.latlng.lat, e.latlng.lng],
+            signType: type,
+            confidence,
+            notes,
+            timestamp: new Date().toISOString()
+          };
+          huntJournalEntries.unshift(entry);
+          saveHuntJournal();
+          L.marker(e.latlng, { icon: getBrandedPinIcon('D') }).addTo(map);
+          showNotice('Whitetail pin logged.', 'success', 3200);
+          queueLiveStrategyUpdate('whitetail-pin');
+        }
+      });
+    }
+  }
+
+  // Whitetail start point selection — set access starting point before lock-in
+  if (mapClickMode === 'whitetail-start-point') {
+    mapClickMode = null;
+    if (e && e.latlng) {
+      setStartPoint(e.latlng);
+      showNotice('Access start point set. Analyzing wind-safe stands...', 'success', 3200);
+
+      // Now continue with the lock-in flow that was deferred
+      if (window._whitetailPendingLockIn) {
+        window._whitetailPendingLockIn = false;
+        fieldCommandFlowActive = true;
+        pendingFieldCommandAdvance = true;
+        updateLockInAreaState(false);
+        setLockInAreaStatus('Building plan with wind analysis...', null);
+        updateTrayToggleButton();
+        window.startHuntFromCriteria({
+          panelMode: 'route',
+          fieldCommandFlow: true
+        });
+      }
+    }
+    return;
   }
 }
 
@@ -8340,6 +8475,81 @@ function openTurkeyPinModal({ onSubmit }) {
   document.body.appendChild(backdrop);
 }
 
+// ── Whitetail Pin Modal ──
+function openWhitetailPinModal({ onSubmit }) {
+  const backdrop = document.createElement('div');
+  backdrop.className = 'ht-modal-backdrop';
+  backdrop.style.display = 'flex';
+
+  // Build pin type options dynamically from whitetail-data.js if available
+  let pinTypeOptions = '';
+  if (typeof WHITETAIL_PIN_TYPES !== 'undefined' && WHITETAIL_PIN_TYPES) {
+    const types = Object.entries(WHITETAIL_PIN_TYPES);
+    types.forEach(([key, pt], i) => {
+      pinTypeOptions += `<option value="${key}"${i === 0 ? ' selected' : ''}>${pt.label}</option>\n`;
+    });
+  } else {
+    // Fallback
+    pinTypeOptions = `
+        <option value="rub" selected>Rub</option>
+        <option value="scrape">Scrape</option>
+        <option value="bed">Bed</option>
+        <option value="trail">Trail / runway</option>
+        <option value="tracks">Tracks</option>
+        <option value="droppings">Droppings</option>
+        <option value="sighting">Visual sighting</option>
+        <option value="standSite">Stand site</option>
+        <option value="foodSource">Food source</option>
+        <option value="stagingArea">Staging area</option>
+        <option value="waterHole">Water hole</option>
+        <option value="pressure">Hunter pressure</option>
+        <option value="access">Access / parking</option>
+        <option value="cameraSpot">Trail camera</option>`;
+  }
+
+  const modal = document.createElement('div');
+  modal.className = 'ht-modal ht-whitetail-pin-popup';
+  modal.innerHTML = `
+    <h3 style="color:#8b6914;">Drop Whitetail Pin</h3>
+    <div style="display:grid;gap:8px;">
+      <label style="font-size:12px;color:rgba(232,220,200,0.7);">Pin Type</label>
+      <select id="wtpType" class="ht-select">
+        ${pinTypeOptions}
+      </select>
+      <label style="font-size:12px;color:rgba(232,220,200,0.7);">Confidence</label>
+      <select id="wtpConfidence" class="ht-select">
+        <option value="low">Low — guessing</option>
+        <option value="medium" selected>Medium — likely</option>
+        <option value="high">High — confirmed</option>
+      </select>
+      <label style="font-size:12px;color:rgba(232,220,200,0.7);">Notes</label>
+      <textarea id="wtpNotes" rows="4" style="width:100%;background:rgba(42,35,25,0.6);border:1px solid rgba(139,105,20,0.3);color:#e8dcc8;border-radius:10px;padding:10px;font-size:14px;outline:none;" placeholder="What did you see or find? Rub size, scrape freshness, track direction…"></textarea>
+    </div>
+    <div class="ht-modal-actions">
+      <button class="ht-modal-btn ghost" id="wtpCancel">Cancel</button>
+      <button class="ht-modal-btn primary" id="wtpSave">Save Whitetail Pin</button>
+    </div>
+  `;
+
+  const closeModal = () => backdrop.remove();
+  modal.querySelector('#wtpCancel')?.addEventListener('click', closeModal);
+  backdrop.addEventListener('click', (event) => {
+    if (event.target === backdrop) closeModal();
+  });
+
+  modal.querySelector('#wtpSave')?.addEventListener('click', () => {
+    const type = modal.querySelector('#wtpType')?.value || 'rub';
+    const confidence = modal.querySelector('#wtpConfidence')?.value || 'medium';
+    const notes = modal.querySelector('#wtpNotes')?.value || '';
+    if (typeof onSubmit === 'function') onSubmit({ type, confidence, notes });
+    closeModal();
+  });
+
+  backdrop.appendChild(modal);
+  document.body.appendChild(backdrop);
+}
+window.openWhitetailPinModal = openWhitetailPinModal;
+
 
 // ===================================================================
 //   Search System
@@ -10534,6 +10744,10 @@ window.toggleToolbar = function() {
         console.log('Activating fly map');
         activateFlyMap(); 
       }
+      else if (isWhitetailModule()) {
+        console.log('Activating whitetail map');
+        activateWhitetailMap();
+      }
       else if (isTurkeyModule()) { 
         console.log('Activating turkey map');
         activateTurkeyMap(); 
@@ -10696,6 +10910,17 @@ window.lockInArea = function() {
     showNotice(areaMsg, 'warning', 3200);
     return;
   }
+
+  // Whitetail module: prompt for start point BEFORE running algorithm
+  // so wind-safe access validation can disqualify bad stands
+  if (isWhitetailModule() && !startPoint) {
+    window._whitetailPendingLockIn = true;
+    mapClickMode = 'whitetail-start-point';
+    showNotice('Tap the map to set your ACCESS STARTING POINT (parking lot, trailhead, etc.). This enables wind-safe route analysis.', 'info', 6000);
+    if (toolbarOpen) window.toggleToolbar();
+    return;
+  }
+
   fieldCommandFlowActive = true;
   pendingFieldCommandAdvance = true;
   updateLockInAreaState(false);
@@ -10736,6 +10961,33 @@ window.showMissionSummary = function() {
   const planTemp = lastPlanSnapshot?.temperature ?? null;
   const planWindSpeed = lastPlanSnapshot?.windSpeed ?? null;
   const planWindDir = lastPlanSnapshot?.wind ?? activeWindDir ?? null;
+
+  // Whitetail module: show tactical mission brief
+  if (isWhitetailModule() && typeof window.buildWhitetailMissionBrief === 'function') {
+    const rutPhase = typeof window.getWhitetailRutPhaseDetailed === 'function'
+      ? window.getWhitetailRutPhaseDetailed() : null;
+    const weapon = window._whitetailWeapon || 'rifle';
+    const briefHtml = window.buildWhitetailMissionBrief(planHotspots, planWindDir, planWindSpeed, planTemp, rutPhase, weapon);
+
+    // Show in a modal overlay
+    let overlay = document.getElementById('whitetailMissionOverlay');
+    if (!overlay) {
+      overlay = document.createElement('div');
+      overlay.id = 'whitetailMissionOverlay';
+      overlay.className = 'ht-whitetail-mission-overlay';
+      document.body.appendChild(overlay);
+    }
+    overlay.innerHTML = '<div class="ht-whitetail-mission-modal">' +
+      '<button class="ht-mission-close-btn" onclick="document.getElementById(\'whitetailMissionOverlay\').style.display=\'none\'">&times;</button>' +
+      briefHtml +
+      '<div class="ht-mission-footer">' +
+        '<button class="ht-gold-btn ht-go-btn" onclick="document.getElementById(\'whitetailMissionOverlay\').style.display=\'none\';letsGoFollowRoute();">LAUNCH HUNT</button>' +
+      '</div>' +
+    '</div>';
+    overlay.style.display = 'flex';
+    return;
+  }
+
   showStrategyPanel(planHotspots, planTemp, planWindSpeed, planWindDir, {
     mode: 'brief',
     showMissionBrief: true,
@@ -10939,6 +11191,12 @@ window.logTurkeyPinOnMap = function() {
   if (!map) return;
   mapClickMode = 'turkey-pin';
   showNotice('Tap the map to drop a turkey pin.', 'info', 3200);
+};
+
+window.logWhitetailPinOnMap = function() {
+  if (!map) return;
+  mapClickMode = 'whitetail-pin';
+  showNotice('Tap the map to drop a whitetail pin.', 'info', 3200);
 };
 
 window.openHuntJournal = function() {
@@ -11425,7 +11683,13 @@ window.startHuntFromCriteria = function(options = {}) {
   document.body.classList.add('ht-hunt-active');
   clearSearchHighlight();
   closeEducationTile();
-  startShedHunt(options);
+
+  // Route to whitetail-specific 2-pin algorithm
+  if (isWhitetailModule() && typeof window.startWhitetailHunt === 'function') {
+    window.startWhitetailHunt(options);
+  } else {
+    startShedHunt(options);
+  }
 };
 
 // ENHANCED START SHED HUNT - Education First with Priority Ranking
@@ -11887,6 +12151,343 @@ window.selectRoutingMode = function(mode) {
   setSelectedRoutingMode('linear');
   createOptimalRoute('linear');
   showNotice('Previewing Linear route. Tap LET\'S GO to start alerts.', 'success', 4200);
+};
+
+// ═══════════════════════════════════════════════════════════════════
+//   START WHITETAIL HUNT — 2-Pin Precision Algorithm
+//   Produces exactly 2 elite hunting stand locations using:
+//   - Composite scoring (terrain×wind×rut×access×habitat×pressure)
+//   - 20-yard boundary buffer enforcement
+//   - Wind-safe access route validation (disqualifies bad wind angles)
+//   - NLCD satellite imagery guardrails (no water/structures/fields)
+//   - GPS collar movement data for phase-specific stand placement
+//   - Diverse habitat selection (travel+food, not two of the same)
+// ═══════════════════════════════════════════════════════════════════
+window.startWhitetailHunt = async function(options = {}) {
+  const skipStrategyPanel = Boolean(options && options.skipStrategyPanel);
+  if (skipStrategyPanel && typeof window.closeStrategyPanel === 'function') {
+    window.closeStrategyPanel();
+  }
+
+  // Clear previous
+  clearHunt();
+  clearStartPointSelection();
+  clearEndPointSelection();
+  roadAvoidChecks = 0;
+  roadAvoidCache.clear();
+
+  // Verify hunt area
+  const huntArea = selectedAreaLayer || currentPolygon;
+  if (!huntArea) {
+    handleLockInAreaFailure('Define a hunt area first.');
+    showNotice('Define a hunt area first: radius, draw, or boundary.', 'warning', 4200);
+    return;
+  }
+
+  if (!skipStrategyPanel) {
+    showStrategyLoadingPanel();
+    await new Promise((resolve) => requestAnimationFrame(() => setTimeout(resolve, 0)));
+  }
+
+  try {
+    const bounds = huntArea.getBounds ? huntArea.getBounds() : map.getBounds();
+    const center = bounds.getCenter();
+
+    // ── Phase 1: Weather ──
+    updatePlanLoadingStatus('Checking weather...', 'Fetching live wind and conditions.');
+    let temp = 50;
+    let windSpeed = 6;
+    let windDir = 'N';
+    try {
+      const response = await fetchWithTimeout(
+        `https://api.open-meteo.com/v1/forecast?latitude=${center.lat}&longitude=${center.lng}&current=temperature_2m,wind_speed_10m,wind_direction_10m&temperature_unit=fahrenheit&wind_speed_unit=mph`,
+        {}, 9000
+      );
+      const data = await response.json();
+      const current = data?.current;
+      if (current && current.temperature_2m !== undefined) {
+        temp = Math.round(current.temperature_2m);
+        windSpeed = Math.round(current.wind_speed_10m);
+        windDir = ['N','NE','E','SE','S','SW','W','NW'][Math.round(current.wind_direction_10m / 45) % 8];
+      }
+    } catch (err) {
+      updatePlanLoadingStatus('Weather offline.', 'Using defaults.');
+      showNotice('Weather offline. Using defaults.', 'warning', 3200);
+    }
+    activeWindDir = windDir;
+
+    // ── Phase 2: Rut Phase Detection ──
+    const rutPhase = typeof window.getWhitetailRutPhaseDetailed === 'function'
+      ? window.getWhitetailRutPhaseDetailed()
+      : null;
+    const weapon = window._whitetailWeapon || 'rifle';
+    const weaponSetup = typeof window.getWhitetailWeaponSetup === 'function'
+      ? window.getWhitetailWeaponSetup(weapon)
+      : null;
+
+    // ── Phase 3: Terrain Scan ──
+    updatePlanLoadingStatus('Scanning terrain...', 'Analyzing elevation, habitat, and mature buck signals.');
+    const criteria = getHuntCriteriaFromUI();
+    huntCriteria = criteria;
+    const areaLayer = selectedAreaLayer || huntArea;
+    const areaType = selectedAreaType || (areaLayer instanceof L.Circle
+      ? 'radius'
+      : (areaLayer instanceof L.Rectangle ? 'boundary' : 'polygon'));
+
+    let areaAnalysis = null;
+    try {
+      areaAnalysis = await analyzeSelectedAreaTerrain(bounds, areaLayer, areaType, windDir, 'deep');
+    } catch (err) {
+      areaAnalysis = null;
+      updatePlanLoadingStatus('Terrain scan offline.', 'Using fallback pinning.');
+      showNotice('Terrain scan offline. Using fallback pins.', 'warning', 3200);
+    }
+
+    // ── Phase 4: NLCD Satellite Imagery Pre-Fetch ──
+    updatePlanLoadingStatus('Loading satellite imagery...', 'Downloading land cover data.');
+    nlcdCheckCount = 0;
+    nlcdCache.clear();
+    nlcdGridData = null;
+    let nlcdRejectCount = 0;
+    if (NLCD_ENABLED) {
+      await prefetchNLCDForArea(bounds);
+    }
+
+    // ── Phase 5: Generate Candidate Pins ──
+    updatePlanLoadingStatus('Generating candidate stands...', 'Scoring terrain features for mature buck potential.');
+    const habitatPool = buildHabitatPool(criteria);
+    const seeded = Array.isArray(areaAnalysis?.hotspotSeeds) ? areaAnalysis.hotspotSeeds : [];
+    const candidateScored = [];
+    const chosenPoints = [];
+    const config = window.WHITETAIL_PIN_SELECTION_CONFIG || { maxCandidates: 60, maxAttempts: 200 };
+
+    // A) Score terrain-seeded candidates
+    for (let i = 0; i < seeded.length && candidateScored.length < config.maxCandidates; i++) {
+      const feature = seeded[i];
+      const latlng = feature?.latlng ? L.latLng(feature.latlng) : null;
+      if (!latlng) continue;
+
+      // Boundary check with 20-yard buffer
+      if (!isPointInAreaLayer(latlng, areaLayer, areaType)) continue;
+      if (typeof window.isPointWithinBoundaryBuffer === 'function' &&
+          !window.isPointWithinBoundaryBuffer(latlng, areaLayer, areaType)) {
+        continue; // Too close to boundary edge
+      }
+
+      // Road/structure check
+      const blocked = await isLikelyRoadOrStructureCandidate(latlng);
+      if (blocked) continue;
+
+      // NLCD land cover check — NEVER BYPASSED
+      const lcCheck = await validatePinLandCover(latlng, 'terrain');
+      if (!lcCheck.valid) {
+        nlcdRejectCount++;
+        continue;
+      }
+
+      // Score this candidate
+      const scoreData = typeof window.scoreWhitetailStand === 'function'
+        ? window.scoreWhitetailStand(latlng, windDir, windSpeed, rutPhase, weapon, center, startPoint, feature)
+        : { composite: feature.score || 50, scores: {}, details: {}, tier: 3, tierLabel: 'Solid' };
+
+      // Wind-safe access check (if start point is defined)
+      let windSafe = { safe: true, reason: 'Start point not yet defined' };
+      if (startPoint && typeof window.validateWindSafeAccess === 'function') {
+        windSafe = window.validateWindSafeAccess(startPoint, latlng, windDir, windSpeed);
+        if (!windSafe.safe) {
+          // DISQUALIFIED — wind carries scent along approach
+          console.log('[WHITETAIL] Wind-unsafe pin disqualified:', windSafe.reason);
+          continue;
+        }
+      }
+
+      const edu = buildFeatureHotspotEducation(feature, criteria, windDir, bounds);
+      candidateScored.push({
+        coords: [latlng.lat, latlng.lng],
+        latlng: latlng,
+        composite: scoreData.composite,
+        scoreData: scoreData,
+        tier: scoreData.tier,
+        habitat: feature.type || 'terrain',
+        education: edu,
+        searchFeature: feature,
+        windAccess: windSafe
+      });
+    }
+
+    // B) Generate random candidates to fill pool
+    updatePlanLoadingStatus('Evaluating additional sites...', 'Checking ' + config.maxAttempts + ' candidate locations.');
+    const attempts = Math.max(0, config.maxAttempts - candidateScored.length);
+    for (let i = 0; i < attempts && candidateScored.length < config.maxCandidates; i++) {
+      const lat = bounds.getSouth() + Math.random() * (bounds.getNorth() - bounds.getSouth());
+      const lng = bounds.getWest() + Math.random() * (bounds.getEast() - bounds.getWest());
+      const candidate = L.latLng(lat, lng);
+
+      if (!isPointInAreaLayer(candidate, areaLayer, areaType)) continue;
+      if (typeof window.isPointWithinBoundaryBuffer === 'function' &&
+          !window.isPointWithinBoundaryBuffer(candidate, areaLayer, areaType)) continue;
+
+      // Water and road checks
+      const maybeWater = await isLikelyWaterCandidate(candidate);
+      if (maybeWater) continue;
+      const roadBlocked = await isLikelyRoadOrStructureCandidate(candidate);
+      if (roadBlocked) continue;
+
+      // NLCD
+      const habitat = habitatPool[i % habitatPool.length];
+      const lcCheck = await validatePinLandCover(candidate, habitat);
+      if (!lcCheck.valid) {
+        nlcdRejectCount++;
+        continue;
+      }
+
+      const nearFeature = findNearestTerrainFeature(candidate, areaAnalysis?.features);
+      const scoreData = typeof window.scoreWhitetailStand === 'function'
+        ? window.scoreWhitetailStand(candidate, windDir, windSpeed, rutPhase, weapon, center, startPoint, nearFeature)
+        : { composite: 40 + Math.random() * 30, scores: {}, details: {}, tier: 3, tierLabel: 'Solid' };
+
+      let windSafe = { safe: true, reason: 'Start point not yet defined' };
+      if (startPoint && typeof window.validateWindSafeAccess === 'function') {
+        windSafe = window.validateWindSafeAccess(startPoint, candidate, windDir, windSpeed);
+        if (!windSafe.safe) continue;
+      }
+
+      const eduSet = getActiveEducationSet();
+      const baseEdu = eduSet[habitat];
+      const edu = buildCustomHotspotEducation({ habitat, base: baseEdu, latlng: candidate, bounds, windDir, criteria });
+
+      candidateScored.push({
+        coords: [candidate.lat, candidate.lng],
+        latlng: candidate,
+        composite: scoreData.composite,
+        scoreData: scoreData,
+        tier: scoreData.tier,
+        habitat: habitat,
+        education: edu,
+        searchFeature: nearFeature,
+        windAccess: windSafe
+      });
+
+      if (i % 5 === 4) await new Promise((resolve) => setTimeout(resolve, 0));
+    }
+
+    // ── Phase 6: Select Top 2 Pins ──
+    updatePlanLoadingStatus('Selecting elite stands...', 'Picking TOP 2 from ' + candidateScored.length + ' validated candidates.');
+
+    let selectedPins = [];
+    if (typeof window.selectTopWhitetailPins === 'function') {
+      selectedPins = window.selectTopWhitetailPins(candidateScored);
+    } else {
+      // Fallback — just sort by composite and take top 2
+      candidateScored.sort((a, b) => b.composite - a.composite);
+      selectedPins = candidateScored.slice(0, 2);
+      selectedPins.forEach((p, i) => { p.rank = i + 1; });
+    }
+
+    console.log(`[WHITETAIL] ${candidateScored.length} candidates scored. ${nlcdRejectCount} NLCD rejections. ${selectedPins.length} pins selected.`);
+
+    if (!selectedPins.length) {
+      handleLockInAreaFailure('No safe stand locations found. Try a larger area.');
+      showNotice('No valid stands found. Try a larger area or different wind conditions.', 'error', 5200);
+      return;
+    }
+
+    // ── Phase 7: Place Markers ──
+    const hotspots = selectedPins.map((pin, idx) => ({
+      coords: pin.coords,
+      tier: pin.tier,
+      habitat: pin.habitat,
+      education: pin.education,
+      searchFeature: pin.searchFeature,
+      rank: idx + 1,
+      scoreData: pin.scoreData,
+      windAccess: pin.windAccess
+    }));
+
+    hotspots.forEach((hotspot) => {
+      const marker = createBrandedHotspotMarker(hotspot);
+      hotspotMarkers.push(marker);
+    });
+
+    buildRoutePinOptions(hotspots);
+
+    // Core zones + scouting layers
+    coreAreaEnabled = true;
+    createScoutingLayer(bounds, criteria, windDir, areaAnalysis?.coreZones);
+    const thermalSeeds = Array.isArray(areaAnalysis?.features) && areaAnalysis.features.length
+      ? areaAnalysis.features : seeded;
+    setThermalSeedsFromFeatures(thermalSeeds, { includeCoreZones: true, merge: false });
+    addThermalAnchorsFromHotspots(hotspots);
+
+    // Save plan snapshot
+    lastPlanSnapshot = {
+      criteria,
+      hotspots: hotspots.map((h) => ({ coords: h.coords, tier: h.tier, habitat: h.habitat, rank: h.rank })),
+      coreZones: coreZones.map((z) => ({
+        type: z.type, score: z.score, coords: z.coords, wind: z.wind,
+        radius: z.radius, terrain: z.terrain, cover: z.cover, pressure: z.pressure, access: z.access, sign: z.sign
+      })),
+      areaFeatures: (areaAnalysis?.features || []).map((f) => ({
+        type: f.type, label: f.label, score: f.score, coords: [f.latlng.lat, f.latlng.lng]
+      })),
+      wind: windDir, temperature: temp, windSpeed,
+      rutPhase: rutPhase ? { phase: rutPhase.phase, label: rutPhase.label, intensity: rutPhase.intensity } : null,
+      weapon: weapon,
+      bounds: bounds ? { north: bounds.getNorth(), south: bounds.getSouth(), east: bounds.getEast(), west: bounds.getWest() } : null,
+      timestamp: new Date().toISOString()
+    };
+
+    ensureTrackingArea();
+    renderTrackingCoverage();
+
+    // ── Phase 8: Strategy Panel ──
+    const panelMode = options?.panelMode || 'route';
+    if (!skipStrategyPanel) {
+      showStrategyPanel(hotspots, temp, windSpeed, windDir, {
+        mode: panelMode,
+        showMissionBrief: false
+      });
+    }
+
+    // Advance field command
+    if (options?.fieldCommandFlow) {
+      pendingFieldCommandAdvance = false;
+      setFieldCommandStep(2);
+      focusPlanRoutePanel();
+      setLockInAreaStatus('2 elite stands locked. Pick access route.', 'success');
+      showNotice('2 elite stands ready. Define your access route.', 'success', 4200);
+
+      // Auto-build route if start point was already set (from whitetail pre-lock-in flow)
+      if (startPoint && hotspots.length >= 1) {
+        // Set end point to pin #1 (primary stand)
+        setEndPoint(L.latLng(hotspots[0].coords[0], hotspots[0].coords[1]));
+        updateRoutePinStatus();
+        if (typeof window.buildRoutePreview === 'function') {
+          window.buildRoutePreview();
+          showNotice('Access route auto-built from start to primary stand. Tap LET\'S GO to launch.', 'success', 4200);
+        }
+      }
+    } else if (pendingFieldCommandAdvance) {
+      pendingFieldCommandAdvance = false;
+      setFieldCommandStep(2);
+      focusPlanRoutePanel();
+    }
+
+    // Clear area highlight
+    if (selectedAreaLayer) {
+      if (drawnItems && drawnItems.hasLayer(selectedAreaLayer)) drawnItems.removeLayer(selectedAreaLayer);
+      map.removeLayer(selectedAreaLayer);
+    }
+
+  } catch (error) {
+    if (pendingFieldCommandAdvance) handleLockInAreaFailure('Plan failed. Try again.');
+    const panel = document.getElementById('strategy-panel');
+    if (panel) panel.remove();
+    stopPlanLoadingTicker();
+    setStrategyOpen(false);
+    updateTrayToggleButton();
+    showNotice(`Error: ${error.message}`, 'error', 5200);
+  }
 };
 
 // Get priority color
@@ -13633,6 +14234,7 @@ function ensureAdvancedToolsTray() {
       <button class="ht-tool-btn" id="toolVoiceBtn" onclick="toggleVoiceCommands()" disabled aria-disabled="true">Voice Commands</button>
       <button class="ht-tool-btn" id="toolLogPinBtn" onclick="logPinOnMap()">${isMushroomModule() ? 'Log Forage Pin' : 'Log Deer Pin'}</button>
       <button class="ht-tool-btn" id="toolTurkeyPinBtn" onclick="logTurkeyPinOnMap()">Drop Turkey Pin</button>
+      <button class="ht-tool-btn" id="toolWhitetailPinBtn" onclick="logWhitetailPinOnMap()">Drop Whitetail Pin</button>
       <button class="ht-tool-btn ht-tool-btn-coach" id="toolCoachBtn" onclick="startCoach()">
         <svg viewBox="0 0 64 64" aria-hidden="true">
           <path d="M32 42 C26 38 22 32 20 25 C18 19 16 17 12 15" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
@@ -13658,6 +14260,8 @@ function updateAdvancedToolsTrayState() {
   tray.querySelector('#toolCoachBtn')?.classList.toggle('active', coachActive);
   const turkeyBtn = tray.querySelector('#toolTurkeyPinBtn');
   if (turkeyBtn) turkeyBtn.style.display = isTurkeyModule() ? '' : 'none';
+  const whitetailBtn = tray.querySelector('#toolWhitetailPinBtn');
+  if (whitetailBtn) whitetailBtn.style.display = isWhitetailModule() ? '' : 'none';
 }
 
 function showAdvancedToolsTray() {
@@ -14051,6 +14655,7 @@ function activateMapForDefineArea() {
     // 1. Activate map (dismiss hero) for mushroom / turkey / shed modules
     if (!document.body.classList.contains('ht-map-active')) {
       if (isMushroomModule()) { activateMushroomMap(); }
+      else if (isWhitetailModule()) { activateWhitetailMap(); }
       else if (isTurkeyModule()) { activateTurkeyMap(); }
       else { activateShedMap(); }
     }
@@ -15769,22 +16374,35 @@ document.addEventListener('DOMContentLoaded', () => {
       }, 50);
     });
   } else if (isTurk) {
-    turkeyMapPending = true;
-    document.body.classList.add('ht-map-pending');
-    document.body.classList.remove('ht-map-active');
-    // Start hero slideshow — rotate images every 6s
-    (function initHeroSlideshow() {
-      const slides = document.querySelectorAll('.ht-hero-slide');
-      if (slides.length < 2) return;
-      let current = 0;
-      setInterval(() => {
-        // Don't rotate if hero is already faded out
-        if (document.body.classList.contains('ht-map-active')) return;
-        slides[current].classList.remove('ht-hero-slide--active');
-        current = (current + 1) % slides.length;
-        slides[current].classList.add('ht-hero-slide--active');
-      }, 6000);
-    })();
+    /* Turkey: no hero splash — go straight to map */
+    turkeyMapPending = false;
+    document.body.classList.remove('ht-map-pending');
+    document.body.classList.add('ht-map-active');
+    document.body.classList.add('ht-hero-dismissed');
+    initializeMap();
+    restoreLastKnownLocation();
+    setDefaultAreaFromLocation();
+    updateFilterChips();
+    updateWorkflowUI();
+    updateLocateMeOffset();
+    setTimeout(() => {
+      if (map && typeof map.invalidateSize === 'function') map.invalidateSize();
+    }, 320);
+  } else if (isWhitetailModule()) {
+    /* Whitetail: no hero splash — go straight to map */
+    whitetailMapPending = false;
+    document.body.classList.remove('ht-map-pending');
+    document.body.classList.add('ht-map-active');
+    document.body.classList.add('ht-hero-dismissed');
+    initializeMap();
+    restoreLastKnownLocation();
+    setDefaultAreaFromLocation();
+    updateFilterChips();
+    updateWorkflowUI();
+    updateLocateMeOffset();
+    setTimeout(() => {
+      if (map && typeof map.invalidateSize === 'function') map.invalidateSize();
+    }, 320);
   } else {
     /* Shed module: map initialises immediately, no hero overlay */
     document.body.classList.remove('ht-map-pending');

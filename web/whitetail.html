@@ -2,39 +2,25 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="HUNTECH">
-  <meta name="theme-color" content="#ffc107">
-  <meta name="description" content="AI-powered shed hunting and scouting system with GPS tracking">
-  <link rel="manifest" href="manifest.json?v=20260220b">
+  <meta name="theme-color" content="#8b6914">
+  <meta name="description" content="AI-powered whitetail deer hunting command center — rut prediction, terrain analysis, MDC public land intelligence">
+  <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" href="assets/app-icon-180.png">
-  <title>HUNTECH - Field Command System</title>
-  <script>
-    window.__htLoadStylesheetFallback = function(el, fallbackUrl) {
-      if (!el || !fallbackUrl || el.dataset.htFallbackApplied) return;
-      el.dataset.htFallbackApplied = 'true';
-      el.href = fallbackUrl;
-    };
-    window.__htLoadScriptFallback = function(fallbackUrl) {
-      if (!fallbackUrl) return;
-      var script = document.createElement('script');
-      script.src = fallbackUrl;
-      script.defer = true;
-      document.head.appendChild(script);
-    };
-  </script>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" onerror="window.__htLoadStylesheetFallback && window.__htLoadStylesheetFallback(this, 'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css')" />
-  <link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css" onerror="window.__htLoadStylesheetFallback && window.__htLoadStylesheetFallback(this, 'https://cdn.jsdelivr.net/npm/leaflet-draw@1.0.4/dist/leaflet.draw.css')" />
-  <link rel="stylesheet" href="app.css?v=20260220b" />
+  <title>HUNTECH — Whitetail Hunting Command Center</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css" />
+  <link rel="stylesheet" href="app.css?v=20260220b">
 
   <!-- AWS Backend Configuration -->
   <script src="config.js?v=20260220b"></script>
   <script src="api.js?v=20260220b"></script>
 </head>
-<body class="module-shed ht-toolbar-collapsed">
+<body class="module-whitetail ht-toolbar-collapsed">
   <header class="ht-topbar">
     <div class="ht-header-left">
       <div class="ht-brand">
@@ -47,11 +33,11 @@
       <div class="ht-module-switch" aria-label="Select module">
         <span class="ht-module-label">Module</span>
         <select class="ht-module-select" onchange="window.location.href=this.value">
-          <option value="index.html" selected>Shed</option>
-          <option value="fly-fishing.html">Trout Fishing</option>
+          <option value="index.html">Shed</option>
+          <option value="fly-fishing.html">Fly Fishing</option>
           <option value="mushroom.html">Mushroom</option>
           <option value="turkey.html">Turkey</option>
-          <option value="whitetail.html">Whitetail</option>
+          <option value="whitetail.html" selected>Whitetail</option>
         </select>
       </div>
 
@@ -79,7 +65,7 @@
 
     <div class="ht-header-center">
       <div class="ht-location-search">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="#ffc107">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="#8b6914">
           <path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
         </svg>
         <input type="text" placeholder="Search any address, business, park, or coords…" class="ht-search-input" id="searchInput" autocomplete="off" spellcheck="false">
@@ -90,7 +76,7 @@
 
     <div class="ht-header-right">
       <div class="ht-weather-widget" id="weatherWidget">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="#ffc107" aria-hidden="true">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="#8b6914" aria-hidden="true">
           <path d="M6.76 4.84l-1.8-1.79-1.41 1.41 1.79 1.79 1.42-1.41zM4 10.5H1v2h3v-2zm9-9.95h-2V3.5h2V.55zm7.45 3.91l-1.41-1.41-1.79 1.79 1.41 1.41 1.79-1.79zm-3.21 13.7l1.79 1.8 1.41-1.41-1.8-1.79-1.4 1.4zM20 10.5v2h3v-2h-3zm-8-5c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6-2.69-6-6-6zm-1 16.95h2V19.5h-2v2.95zm-7.45-3.91l1.41 1.41 1.79-1.8-1.41-1.41-1.79 1.8z"/>
         </svg>
         <span class="ht-temp">--</span>
@@ -98,27 +84,63 @@
       </div>
       <div class="ht-user-profile" onclick="toggleUserMenu()">
         <div class="ht-avatar">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="#ffc107">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="#8b6914">
             <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
           </svg>
         </div>
         <span class="ht-username">Hunter</span>
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="#ffc107">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="#8b6914">
           <path d="M7 10l5 5 5-5z"/>
         </svg>
       </div>
     </div>
   </header>
 
+  <!-- Whitetail scenery banner — oak timber aesthetic -->
+  <div class="ht-whitetail-scenery" aria-hidden="true">
+    <svg viewBox="0 0 1200 160" preserveAspectRatio="xMidYMid slice">
+      <!-- Topo contour lines watermark -->
+      <g fill="none" stroke="rgba(139,105,20,0.08)" stroke-width="1">
+        <path d="M0 140 Q100 120 200 130 Q350 110 500 125 Q650 100 800 115 Q950 95 1100 110 L1200 105"/>
+        <path d="M0 120 Q150 100 300 110 Q450 90 600 105 Q750 80 900 95 Q1050 75 1200 88"/>
+        <path d="M0 100 Q200 75 400 90 Q600 65 800 80 Q1000 55 1200 70"/>
+      </g>
+      <!-- Ridge silhouette -->
+      <g fill="none" stroke="rgba(139,105,20,0.15)" stroke-width="2" stroke-linecap="round">
+        <path d="M0 155 L80 120 L160 90 L240 100 L320 75 L400 85 L480 60 L560 70 L640 55 L720 65 L800 50 L880 62 L960 48 L1040 58 L1120 45 L1200 55"/>
+      </g>
+      <!-- Deer silhouette -->
+      <g fill="rgba(139,105,20,0.12)" stroke="rgba(139,105,20,0.2)" stroke-width="1.5">
+        <path d="M560 130 C555 120 550 115 548 105 C546 98 548 92 553 90 C558 89 562 92 563 98 L563 105 C563 105 568 98 573 90 C578 89 582 92 584 98 C586 105 582 115 577 120 L577 130 Z"/>
+        <!-- Antlers -->
+        <path d="M553 90 C548 80 542 72 538 65 C536 60 540 55 545 58 C548 60 550 65 551 70" stroke="rgba(139,105,20,0.2)" stroke-width="1.2" fill="none"/>
+        <path d="M545 58 C542 52 538 48 535 50" stroke="rgba(139,105,20,0.15)" stroke-width="1" fill="none"/>
+        <path d="M584 90 C589 80 595 72 599 65 C601 60 597 55 592 58 C589 60 587 65 586 70" stroke="rgba(139,105,20,0.2)" stroke-width="1.2" fill="none"/>
+        <path d="M592 58 C595 52 599 48 602 50" stroke="rgba(139,105,20,0.15)" stroke-width="1" fill="none"/>
+        <ellipse cx="566" cy="138" rx="12" ry="6"/>
+      </g>
+      <!-- Oak leaves scattered -->
+      <g fill="rgba(107,91,58,0.08)">
+        <ellipse cx="150" cy="70" rx="12" ry="5" transform="rotate(-20 150 70)"/>
+        <ellipse cx="350" cy="45" rx="10" ry="4" transform="rotate(15 350 45)"/>
+        <ellipse cx="850" cy="55" rx="14" ry="5" transform="rotate(-10 850 55)"/>
+        <ellipse cx="1050" cy="40" rx="11" ry="4" transform="rotate(25 1050 40)"/>
+      </g>
+    </svg>
+  </div>
+
   <main class="ht-map-container">
     <div id="map"></div>
 
-    <!-- Hero overlay removed — map shows immediately -->
+    <!-- Hero overlay hidden — map shows immediately -->
     <div class="ht-map-hero" id="mapHero" style="display:none"></div>
   </main>
 
+  <!-- Regulation banner (injected by whitetail-data.js) -->
+  <div id="whitetailRegBanner" class="ht-whitetail-reg-banner-container"></div>
+
   <button class="ht-map-locate-btn" type="button" onclick="centerOnMyLocation()" title="Center on my location" aria-label="Center on my location">
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
       <path d="M12 2a1 1 0 0 1 1 1v1.06a8.01 8.01 0 0 1 6.94 6.94H21a1 1 0 1 1 0 2h-1.06a8.01 8.01 0 0 1-6.94 6.94V21a1 1 0 1 1-2 0v-1.06a8.01 8.01 0 0 1-6.94-6.94H3a1 1 0 1 1 0-2h1.06A8.01 8.01 0 0 1 11 4.06V3a1 1 0 0 1 1-1zm0 4a6 6 0 1 0 0 12a6 6 0 0 0 0-12zm0 3a3 3 0 1 1 0 6a3 3 0 0 1 0-6z"/>
     </svg>
   </button>
@@ -126,22 +148,38 @@
   <div class="ht-toolbar collapsed" id="toolbar">
     <div class="ht-toolbar-tab">
       <div class="ht-toolbar-tab-row">
-        <button class="ht-toolbar-mini-btn ht-toolbar-mini-btn-startover" type="button" onclick="startOver()" data-full-label="START OVER" data-short-label="START OVER">START OVER</button>
+        <button class="ht-toolbar-mini-btn ht-toolbar-mini-btn-startover" type="button" onclick="window.startOver()" data-full-label="START OVER" data-short-label="START OVER">START OVER</button>
         <button class="ht-toolbar-tab-btn ht-toolbar-toggle-btn ht-field-command-btn" type="button" aria-label="Toggle Field Command">
+          <span class="ht-whitetail-brand-label">HUNT<span class="ht-brand-e">E</span>CH WHITETAIL</span>
           <span class="ht-toolbar-tab-label" data-full-label="FIELD COMMAND" data-short-label="FIELD COMMAND">FIELD COMMAND</span>
         </button>
         <button class="ht-toolbar-mini-btn" type="button" onclick="showAdvancedToolsTray()" data-full-label="TOOLS" data-short-label="TOOLS">TOOLS</button>
       </div>
       <button class="ht-toolbar-tab-btn ht-toolbar-tab-btn-solo ht-toolbar-toggle-btn ht-field-command-btn" type="button" aria-label="Toggle Field Command">
-        <span class="ht-toolbar-tab-label" data-full-label="FIELD COMMAND" data-short-label="FIELD">FIELD COMMAND</span>
+        <span class="ht-whitetail-brand-label">HUNT<span class="ht-brand-e">E</span>CH WHITETAIL</span>
+        <span class="ht-toolbar-tab-label" data-full-label="FIELD COMMAND" data-short-label="FIELD COMMAND">FIELD COMMAND</span>
       </button>
     </div>
     <div class="ht-toolbar-content" id="toolbarContent">
+
+      <!-- ── Step 1: Define Hunt Area ── -->
       <div class="ht-accordion ht-accordion-static" id="defineAreaPanel">
         <div class="ht-accordion-header ht-accordion-header-minimal">
           <span class="ht-define-title">Define Hunt Area</span>
         </div>
         <div class="ht-form-grid ht-form-grid-tight">
+
+          <!-- Weapon selector — compact row -->
+          <div class="ht-form-row">
+            <div class="ht-toolbar-btns ht-toolbar-btns-quad">
+              <button class="ht-weapon-btn ht-btn-sm ht-weapon-btn--active" data-weapon="rifle" onclick="selectWhitetailWeapon('rifle')" type="button">Rifle</button>
+              <button class="ht-weapon-btn ht-btn-sm" data-weapon="bow" onclick="selectWhitetailWeapon('bow')" type="button">Bow</button>
+              <button class="ht-weapon-btn ht-btn-sm" data-weapon="muzzleloader" onclick="selectWhitetailWeapon('muzzleloader')" type="button">Muzzle</button>
+              <button class="ht-weapon-btn ht-btn-sm" data-weapon="shotgun" onclick="selectWhitetailWeapon('shotgun')" type="button">Shotgun</button>
+            </div>
+          </div>
+
+          <!-- Area tools — 4-across matching shed exactly -->
           <div class="ht-form-row">
             <div class="ht-toolbar-btns ht-toolbar-btns-quad">
               <button class="ht-gold-btn ht-btn-sm" onclick="drawHuntArea()">Draw Area</button>
@@ -150,29 +188,37 @@
               <button class="ht-gold-btn ht-btn-sm" onclick="startOver()">Start Over</button>
             </div>
           </div>
+
+          <!-- Saved hunts — inline label + select -->
           <div class="ht-form-row ht-form-row-inline">
             <label class="ht-form-label">Saved Hunts</label>
             <select id="savedPropertySelect" class="ht-select ht-select-sm">
               <option value="">Select hunt</option>
             </select>
           </div>
+
+          <!-- Load/Delete/Pin/Log — 4-across matching shed -->
           <div class="ht-form-row">
             <div class="ht-toolbar-btns ht-toolbar-btns-quad">
               <button class="ht-gold-btn ht-btn-sm" type="button" onclick="loadSavedSelectionFromTray()">Load</button>
               <button class="ht-gold-btn ht-btn-sm" type="button" onclick="deleteSelectedSavedHunt()">Delete</button>
-              <button class="ht-gold-btn ht-btn-sm" type="button" onclick="logPinOnMap()">Drop Pin</button>
+              <button class="ht-gold-btn ht-btn-sm" type="button" onclick="logWhitetailPinOnMap()">Drop Pin</button>
               <button class="ht-gold-btn ht-btn-sm" type="button" onclick="logSignVoice()">Log Sign</button>
             </div>
           </div>
+
+          <!-- Clear all — danger button -->
           <div class="ht-form-row">
             <button class="ht-gold-btn ht-btn-sm ht-btn-danger" type="button" onclick="if(confirm('Delete all saved hunts and areas? This cannot be undone.')) clearAllSavedHuntsAndAreas()">CLEAR ALL SAVED</button>
           </div>
+
         </div>
       </div>
 
+      <!-- ── Step 2: Access Route ── -->
       <div class="ht-accordion ht-accordion-static ht-route-panel" id="planRoutePanel">
         <div class="ht-accordion-header ht-accordion-header-center">
-          <span class="ht-route-title">PLAN + ROUTE</span>
+          <span class="ht-route-title">ACCESS ROUTE</span>
         </div>
         <div class="ht-form-grid">
           <div class="ht-form-row">
@@ -186,7 +232,7 @@
             </div>
           </div>
           <div class="ht-form-row">
-            <div class="ht-route-status" id="routePinStatus">Start -- â€¢ Loop back</div>
+            <div class="ht-route-status" id="routePinStatus">Start -- &bull; Loop back</div>
           </div>
           <div class="ht-form-row">
             <div class="ht-pill-stack ht-route-actions">
@@ -196,10 +242,11 @@
         </div>
       </div>
 
+      <!-- ── Live Hunt Panel ── -->
       <div class="ht-hunt-live-panel" id="huntLivePanel">
         <div class="ht-pill-row ht-pill-row-actions">
           <button class="ht-pill-btn" onclick="showMissionSummary()">Mission Summary</button>
-          <button class="ht-pill-btn" onclick="logPinOnMap()">Drop Pin</button>
+          <button class="ht-pill-btn" onclick="logWhitetailPinOnMap()">Drop Pin</button>
           <button class="ht-pill-btn" onclick="centerOnMyLocation()">Locate Me</button>
           <button class="ht-pill-btn" onclick="logSignVoice()">Log Sign</button>
           <button class="ht-pill-btn" onclick="startOver()">Start Over</button>
@@ -209,29 +256,61 @@
     </div>
   </div>
 
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" onerror="window.__htLoadScriptFallback && window.__htLoadScriptFallback('https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js')"></script>
-  <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js" onerror="window.__htLoadScriptFallback && window.__htLoadScriptFallback('https://cdn.jsdelivr.net/npm/leaflet-draw@1.0.4/dist/leaflet.draw.js')"></script>
-  <script src="https://unpkg.com/esri-leaflet@3.0.12/dist/esri-leaflet.js" onerror="window.__htLoadScriptFallback && window.__htLoadScriptFallback('https://cdn.jsdelivr.net/npm/esri-leaflet@3.0.12/dist/esri-leaflet.js')"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
+  <script src="https://unpkg.com/esri-leaflet@3.0.12/dist/esri-leaflet.js"></script>
 
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js?v=20260220b')
+        navigator.serviceWorker.register('/sw.js?v=20260220b')
           .then(() => console.log('HUNTECH: Service Worker registered'))
           .catch(err => console.log('Service Worker registration failed:', err));
       });
     }
   </script>
 
-  <!-- Core modules (load before main.js) -->
-  <script src="ht-errors.js?v=20260220b"></script>
-  <script src="ht-cloud.js?v=20260220b"></script>
+  <!-- Whitetail data engine (biology, regs, pin system) — load BEFORE main.js -->
+  <script src="whitetail-data.js?v=20260220b"></script>
   <script src="regulations.js?v=20260220b"></script>
-
-  <!-- Main app + extracted modules -->
   <script src="main.js?v=20260220b"></script>
-  <script src="ht-fly-fishing.js?v=20260220b"></script>
-  <script src="ht-tracking.js?v=20260220b"></script>
+
+  <script>
+    // ── Whitetail Module Init ──
+    (function() {
+      // Inject regulation banner
+      var bannerEl = document.getElementById('whitetailRegBanner');
+      if (bannerEl && typeof window.buildWhitetailRegBanner === 'function') {
+        bannerEl.innerHTML = window.buildWhitetailRegBanner();
+      }
+
+      // Set default weapon
+      window._whitetailWeapon = 'rifle';
+    })();
+
+    // Weapon selector logic
+    window.selectWhitetailWeapon = function(weapon) {
+      window._whitetailWeapon = weapon;
+      var btns = document.querySelectorAll('.ht-weapon-btn');
+      btns.forEach(function(btn) {
+        btn.classList.toggle('ht-weapon-btn--active', btn.getAttribute('data-weapon') === weapon);
+      });
+      var setup = window.getWhitetailWeaponSetup ? window.getWhitetailWeaponSetup(weapon) : null;
+      if (setup && typeof showNotice === 'function') {
+        showNotice(setup.name + ' — ' + setup.effectiveRange + 'yd range, ' + setup.concealmentNeed + ' concealment', 'info', 3500);
+      }
+    };
+
+    // Log Sign fallback for whitetail module
+    if (!window.logSignVoice) {
+      window.logSignVoice = function() {
+        if (typeof logWhitetailPinOnMap === 'function') {
+          logWhitetailPinOnMap();
+        } else if (typeof showNotice === 'function') {
+          showNotice('Drop a pin to log sign.', 'info', 2500);
+        }
+      };
+    }
+  </script>
 </body>
 </html>
-
