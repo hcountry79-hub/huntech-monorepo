@@ -836,38 +836,144 @@ body.module-fly .ht-strategy-panel {
   opacity: 0.85;
 }
 
-/* ═══ MICRO TROUT PINS ═══ */
+/* ═══ MICRO TROUT PINS — ANIMATED SWIMMING FISH ═══ */
 .ht-micro-trout-pin {
   pointer-events: auto !important;
   display: flex;
   align-items: center;
   gap: 0;
   cursor: pointer;
+  position: relative;
 }
-.ht-micro-trout-pin img {
+
+/* Swimming wrapper — subtle body undulation */
+.ht-trout-swim-wrap {
+  display: inline-block;
+  animation: troutSwim 2.5s ease-in-out infinite;
+  transform-origin: center center;
+}
+@keyframes troutSwim {
+  0%   { transform: translateX(0) rotate(0deg); }
+  15%  { transform: translateX(1.5px) rotate(1.2deg); }
+  30%  { transform: translateX(0) rotate(0deg); }
+  50%  { transform: translateX(-1px) rotate(-0.8deg); }
+  65%  { transform: translateX(0.5px) rotate(0.5deg); }
+  80%  { transform: translateX(-0.5px) rotate(-0.3deg); }
+  100% { transform: translateX(0) rotate(0deg); }
+}
+
+/* The trout image itself */
+.ht-trout-alive {
   display: block;
-  filter: drop-shadow(0 1px 3px rgba(0,0,0,0.7));
-  transition: transform 0.15s ease;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.6));
+  transition: transform 0.2s ease, filter 0.2s ease;
 }
-.ht-micro-trout-pin:hover img {
-  transform: scale(1.15);
+.ht-micro-trout-pin:hover .ht-trout-alive {
+  transform: scale(1.2);
+  filter: drop-shadow(0 3px 8px rgba(0,0,0,0.8)) brightness(1.1);
 }
+
+/* ── Environment-specific visual cues ── */
+/* Behind Boulder — slight shadow under fish */
+.ht-env-rock .ht-trout-swim-wrap::before {
+  content: '';
+  position: absolute;
+  bottom: -3px;
+  left: 4px;
+  width: 20px;
+  height: 8px;
+  border-radius: 50%;
+  background: radial-gradient(ellipse, rgba(60,50,40,0.5), transparent);
+  pointer-events: none;
+}
+.ht-env-rock .ht-trout-swim-wrap {
+  animation: troutRockHide 3s ease-in-out infinite;
+}
+@keyframes troutRockHide {
+  0%   { transform: translateX(0) rotate(0deg); }
+  20%  { transform: translateX(1px) rotate(0.5deg); }
+  40%  { transform: translateX(-0.5px) rotate(-0.3deg); }
+  60%  { transform: translateX(0.8px) rotate(0.8deg); }
+  80%  { transform: translateX(-0.3px) rotate(-0.2deg); }
+  100% { transform: translateX(0) rotate(0deg); }
+}
+
+/* Undercut Bank — fish partially hidden, darker atmosphere */
+.ht-env-undercut .ht-trout-alive {
+  filter: drop-shadow(0 2px 6px rgba(0,0,0,0.8)) brightness(0.85);
+}
+.ht-env-undercut .ht-trout-swim-wrap {
+  animation: troutUndercut 4s ease-in-out infinite;
+}
+@keyframes troutUndercut {
+  0%   { transform: translateX(0) rotate(-1deg); opacity: 0.85; }
+  30%  { transform: translateX(-1px) rotate(-0.5deg); opacity: 0.9; }
+  50%  { transform: translateX(0.5px) rotate(0deg); opacity: 0.95; }
+  70%  { transform: translateX(-0.5px) rotate(-0.8deg); opacity: 0.85; }
+  100% { transform: translateX(0) rotate(-1deg); opacity: 0.85; }
+}
+.ht-env-undercut .ht-trout-swim-wrap::after {
+  content: '';
+  position: absolute;
+  top: -4px;
+  left: -2px;
+  right: -2px;
+  height: 6px;
+  background: linear-gradient(to bottom, rgba(30,20,10,0.6), transparent);
+  border-radius: 3px 3px 0 0;
+  pointer-events: none;
+}
+
+/* Seam Edge — fish holds steady, subtle alignment */
+.ht-env-seam .ht-trout-swim-wrap {
+  animation: troutSeam 3.5s ease-in-out infinite;
+}
+@keyframes troutSeam {
+  0%   { transform: translateX(0) rotate(2deg); }
+  25%  { transform: translateX(0.8px) rotate(1.5deg); }
+  50%  { transform: translateX(0) rotate(2.5deg); }
+  75%  { transform: translateX(-0.5px) rotate(1.8deg); }
+  100% { transform: translateX(0) rotate(2deg); }
+}
+
+/* Feeding Lane — fish actively darting */
+.ht-env-lane .ht-trout-swim-wrap {
+  animation: troutLane 1.8s ease-in-out infinite;
+}
+@keyframes troutLane {
+  0%   { transform: translateX(0) rotate(0deg); }
+  10%  { transform: translateX(2px) rotate(1.5deg); }
+  20%  { transform: translateX(0) rotate(0deg); }
+  40%  { transform: translateX(-1px) rotate(-1deg); }
+  50%  { transform: translateX(0) rotate(0deg); }
+  70%  { transform: translateX(2.5px) rotate(2deg); }
+  80%  { transform: translateX(0.5px) rotate(0.5deg); }
+  100% { transform: translateX(0) rotate(0deg); }
+}
+
+/* Current — standard gentle sway */
+.ht-env-current .ht-trout-swim-wrap {
+  animation: troutSwim 2.5s ease-in-out infinite;
+}
+
+/* ── Labels ── */
 .ht-micro-trout-label {
   display: none;
   position: absolute;
-  left: 32px;
+  left: 46px;
   top: 50%;
   transform: translateY(-50%);
-  padding: 2px 6px;
-  border-radius: 4px;
+  padding: 3px 8px;
+  border-radius: 6px;
   background: rgba(6, 14, 20, 0.94);
   border: 1px solid rgba(255, 224, 130, 0.5);
   color: #ffe082;
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 700;
   white-space: nowrap;
   line-height: 1.3;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.5);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.6);
+  z-index: 10;
 }
 .ht-micro-trout-pin:hover .ht-micro-trout-label {
   display: block;

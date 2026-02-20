@@ -548,6 +548,9 @@ window.fishLetsGo = function() {
   // 1) Collapse the action bar
   closeFlyWaterActionBar();
 
+  // 1b) Hide the main area pill marker so it doesn't clutter the map
+  _hideMainAreaPill();
+
   // 2) Deploy zone polygon (flash then fade)
   if (typeof window.deployZonePolygonWithFade === 'function') {
     window.deployZonePolygonWithFade(water, zone);
@@ -567,6 +570,23 @@ window.fishLetsGo = function() {
     }, 800);
   }, 600);
 };
+
+/* Hide the main "BENNETT SPRING STATE PARK" area pill when checked in */
+function _hideMainAreaPill() {
+  try {
+    flyWaterMarkers.forEach(function(m) {
+      if (m && m._icon) m._icon.style.display = 'none';
+    });
+  } catch(e) {}
+}
+function _showMainAreaPill() {
+  try {
+    flyWaterMarkers.forEach(function(m) {
+      if (m && m._icon) m._icon.style.display = '';
+    });
+  } catch(e) {}
+}
+window._showMainAreaPill = _showMainAreaPill;
 
 function getFlyPinIcon(labelText) {
   const label = String(labelText || '').trim();
@@ -622,7 +642,7 @@ function getAccessPinIcon(accessPt) {
       className: 'ht-fly-area-pin',
       html: `<div class="ht-fly-zone-pill">${escapeHtml(zoneName)}</div>`,
       iconSize: [120, 20],
-      iconAnchor: [60, -8]
+      iconAnchor: [-10, -12]
     });
   }
 
@@ -2472,7 +2492,7 @@ window.deployZonePolygonWithFade = function(water, zone) {
     className: 'ht-zone-polygon-flash'
   }).addTo(map);
 
-  // Flash bright then fade to subtle
+  // Flash bright then fade out completely
   setTimeout(function() {
     if (_activeZonePolygon) {
       _activeZonePolygon.setStyle({ fillOpacity: 0.15 });
@@ -2485,9 +2505,15 @@ window.deployZonePolygonWithFade = function(water, zone) {
   }, 3000);
   setTimeout(function() {
     if (_activeZonePolygon) {
-      _activeZonePolygon.setStyle({ fillOpacity: 0.04, weight: 1, opacity: 0.4 });
+      _activeZonePolygon.setStyle({ fillOpacity: 0.02, weight: 0.5, opacity: 0.2 });
     }
   }, 5000);
+  setTimeout(function() {
+    if (_activeZonePolygon) {
+      try { map.removeLayer(_activeZonePolygon); } catch {}
+      _activeZonePolygon = null;
+    }
+  }, 7000);
 };
 
 /* ── AI Fishing Pin Calculator — ranks spots by user inputs ── */
@@ -2574,6 +2600,157 @@ window.deployAiFishingPins = function(water, zone, fishFlow) {
 
   var deployed = spots.length;
 };
+
+/* ═══════════════════════════════════════════════════════════════════
+   METHOD-SPECIFIC RECOMMENDATION ENGINE
+   Researched bait/lure/fly data with real-time condition awareness.
+   Each method gets tailored recommendations — no fly refs in bait mode.
+   ═══════════════════════════════════════════════════════════════════ */
+
+function _getRealTimeConditions() {
+  var h = new Date().getHours();
+  var month = new Date().getMonth(); // 0-indexed
+  var season = month >= 2 && month <= 4 ? 'spring' : month >= 5 && month <= 7 ? 'summer' : month >= 8 && month <= 10 ? 'fall' : 'winter';
+
+  // Determine light/sun conditions from time
+  var light = 'overcast'; // default
+  if (h >= 5 && h < 7) light = 'low-light';
+  else if (h >= 7 && h < 10) light = 'morning-sun';
+  else if (h >= 10 && h < 14) light = 'bright-sun';
+  else if (h >= 14 && h < 17) light = 'afternoon';
+  else if (h >= 17 && h < 20) light = 'evening';
+  else light = 'dark';
+
+  // Water temp estimate by season+time (Missouri trout waters stay 55-68F)
+  var waterTemp = season === 'winter' ? 48 : season === 'spring' ? 54 : season === 'summer' ? 62 : 56;
+  if (h >= 14 && h <= 18) waterTemp += 3;
+  if (h >= 5 && h <= 8) waterTemp -= 2;
+
+  // Pressure front proxy — afternoon = falling, morning = rising
+  var pressure = h < 12 ? 'rising' : h < 16 ? 'stable' : 'falling';
+
+  return { hour: h, season: season, light: light, waterTemp: waterTemp, pressure: pressure, month: month };
+}
+
+/* Get method-specific tackle recommendation based on real-time conditions */
+function getMethodSpecificRec(water, habitat, method) {
+  var c = _getRealTimeConditions();
+  var rec = { primary: '', backup: '', color: '', presentation: '', conditionNote: '', tackle: '' };
+
+  if (method === 'bait') {
+    // ─── BAIT FISHING ENGINE ────────────────────────────────────────
+    // PowerBait colors by condition (researched: Chartreuse & Rainbow in clear/bright,
+    // Salmon Egg & Garlic in stained, Yellow in cold, Hatchery Pellet near ramps)
+    var pbColors = {
+      'bright-sun': { primary: 'Chartreuse PowerBait', backup: 'Rainbow Glitter PowerBait', why: 'Bright sun — high-vis chartreuse triggers reaction strikes. UV reflection on glitter draws eyes in clear water.' },
+      'morning-sun': { primary: 'Rainbow PowerBait', backup: 'Yellow PowerBait', why: 'Morning light — rainbow mimics natural food colors in warming water. Switch to yellow if fish are sluggish.' },
+      'low-light': { primary: 'Orange PowerBait', backup: 'Salmon Egg Pink', why: 'Low light — orange and pink stand out against dark bottom. Match the natural salmon egg drift.' },
+      'evening': { primary: 'Salmon Egg PowerBait', backup: 'Garlic Chartreuse PowerBait', why: 'Evening feed — salmon egg color matches natural drift. Garlic scent draws fish in reduced visibility.' },
+      'afternoon': { primary: 'Green Pumpkin PowerBait', backup: 'Hatchery Pellet PowerBait', why: 'Afternoon — natural tones work when fish get pressured. Pellet color works near stocking sites.' },
+      'overcast': { primary: 'White/Garlic PowerBait', backup: 'Corn Yellow PowerBait', why: 'Overcast — white/garlic shows up on any bottom. Corn yellow is a proven all-conditions producer.' },
+      'dark': { primary: 'Garlic Glow PowerBait', backup: 'Salmon Egg Glow', why: 'Dark — glow varieties are essential. Apply extra scent. Trout hunt by smell after dark.' }
+    };
+    var pbRec = pbColors[c.light] || pbColors['overcast'];
+    rec.primary = pbRec.primary;
+    rec.backup = pbRec.backup;
+    rec.conditionNote = pbRec.why;
+
+    // Other bait options by habitat
+    var baitByHabitat = {
+      riffle: { bait: 'Berkley Trout Worm (pink or white)', rig: 'Split-shot rig 18" above #8 bait hook. Let it tumble with the current.' },
+      pool: { bait: 'Berkley Dough Bait or Whole Kernel Corn on treble', rig: 'Sliding sinker rig on bottom. 24" leader to #12 treble. Mold dough ball size of a marble.' },
+      run: { bait: 'Live nightcrawler or Gulp Alive worm', rig: 'Carolina rig — 1/4oz egg sinker, 24" fluorocarbon leader, #6 bait hook. Drift through the run naturally.' },
+      tailout: { bait: 'Berkley Mice Tail (pink/white)', rig: 'Small split shot 12" above hook. Cast upstream, let it dead drift through the thin water. Minimal weight.' },
+      boulder: { bait: 'PowerBait Floating Mice Tail (chartreuse/white)', rig: 'Bottom rig in the pocket behind the boulder. Floating bait lifts off the bottom — right in the strike zone.' }
+    };
+    var hb = baitByHabitat[habitat] || baitByHabitat.pool;
+    rec.tackle = hb.bait;
+    rec.presentation = hb.rig;
+
+    // Water temp adjustments
+    if (c.waterTemp < 50) {
+      rec.conditionNote += ' COLD WATER: Use smaller bait, fish slow. PowerBait floats off bottom — advantage in cold.';
+      rec.color = 'Go with bright orange or salmon egg — cold trout key on warm colors.';
+    } else if (c.waterTemp > 60) {
+      rec.conditionNote += ' WARM WATER: Natural baits (worms, corn) outperform dough in warm water. Fish feed actively.';
+      rec.color = 'Natural tones (green, brown) or high-contrast (white/garlic).';
+    } else {
+      rec.color = 'Current conditions favor standard PowerBait colors. Match the light.';
+    }
+
+    // Pressure adjustments
+    if (c.pressure === 'falling') {
+      rec.conditionNote += ' Falling pressure — fish feed aggressively before fronts. Use bigger baits.';
+    } else if (c.pressure === 'rising') {
+      rec.conditionNote += ' Rising pressure after a front — fish may be tight to bottom. Patience and scent are key.';
+    }
+
+  } else if (method === 'spin') {
+    // ─── LURE/SPIN ENGINE ───────────────────────────────────────────
+    // Spinner/spoon colors by condition (researched: gold in stained/overcast,
+    // silver in clear/bright, copper in cold, black in bright sun for silhouette)
+    var lureColors = {
+      'bright-sun': { primary: 'Mepps Aglia #2 (silver blade, white hackle)', backup: 'Panther Martin #4 (black body, gold blade)', why: 'Bright sun — silver flash mimics baitfish in clear water. Black body creates silhouette contrast.' },
+      'morning-sun': { primary: 'Rooster Tail 1/8oz (rainbow)', backup: 'Blue Fox Vibrax #2 (gold)', why: 'Morning — rainbow patterns in warming light. Gold blade flash triggers reaction strikes.' },
+      'low-light': { primary: 'Mepps Black Fury #2 (yellow dots)', backup: 'Kastmaster 1/8oz (gold)', why: 'Low light — dark body with bright accents. Gold kastmaster wobble visible at depth.' },
+      'evening': { primary: 'Blue Fox Vibrax #1 (gold/orange)', backup: 'Panther Martin #2 (gold body)', why: 'Evening — gold in fading light outperforms silver. Smaller sizes as trout get selective.' },
+      'afternoon': { primary: 'Rapala Countdown CD-3 (rainbow trout)', backup: 'Acme Phoebe 1/8oz (gold)', why: 'Afternoon — minnow imitation swimbait for pressured fish. Phoebe wobble triggers reflex strikes.' },
+      'overcast': { primary: 'Panther Martin #4 (gold/black)', backup: 'Mepps Aglia #1 (copper)', why: 'Overcast — gold blade maximum visibility. Copper is a secret weapon in flat light.' },
+      'dark': { primary: 'Mepps Black Fury #3 (silver/chartreuse)', backup: 'Jig 1/32oz (white marabou)', why: 'Dark — vibration matters more than color. Large blade for maximum thump. White jig for visibility.' }
+    };
+    var lRec = lureColors[c.light] || lureColors['overcast'];
+    rec.primary = lRec.primary;
+    rec.backup = lRec.backup;
+    rec.conditionNote = lRec.why;
+
+    // Lure presentation by habitat
+    var lureByHabitat = {
+      riffle: { lure: 'Small inline spinner (Panther Martin #2 or Rooster Tail 1/16oz)', pres: 'Cast upstream, reel just fast enough to feel the blade spin. Let it drift with the current through the riffle.' },
+      pool: { lure: 'Spoon (Kastmaster 1/8oz or Acme Phoebe)', pres: 'Cast to the head, let it flutter down. Slow retrieve with occasional twitches. Count down 3-5 seconds before retrieve.' },
+      run: { lure: 'Inline spinner with willow blade (Mepps #1-2)', pres: 'Cast quartering upstream. Steady retrieve just above bottom. The blade flash mimics a fleeing baitfish.' },
+      tailout: { lure: 'Micro crankbait (Rapala Ultra Light Minnow)', pres: 'Cast upstream, slow twitching retrieve. In thin tailout water, downsizing is critical — 1/16oz max.' },
+      boulder: { lure: 'Jig (1/32-1/16oz, marabou or twister tail)', pres: 'Pitch directly behind boulders. Let it sink into the pocket. Tiny hops off the bottom, 2-3 second pauses.' }
+    };
+    var hl = lureByHabitat[habitat] || lureByHabitat.run;
+    rec.tackle = hl.lure;
+    rec.presentation = hl.pres;
+
+    // Speed adjustments for water temp
+    if (c.waterTemp < 50) {
+      rec.color = 'Cold water = slow retrieve. Go smaller and slower. Gold/copper blades in cold.';
+      rec.conditionNote += ' COLD WATER: Slow your retrieve by 50%. Smaller lures, longer pauses.';
+    } else if (c.waterTemp > 60) {
+      rec.color = 'Warm water = faster retrieve. Silver/bright blades, aggressive presentation.';
+      rec.conditionNote += ' WARM WATER: Trout are active — faster retrieve, more aggressive action.';
+    } else {
+      rec.color = 'Match blade color to light conditions. Gold in low light, silver in bright.';
+    }
+
+  } else {
+    // ─── FLY FISHING ENGINE ─────────────────────────────────────────
+    var flyRec = getTimeAwareFlyRec(water, habitat);
+    rec.primary = flyRec.flyRec || 'Pheasant Tail Nymph #16';
+    rec.backup = flyRec.altFly || 'Elk Hair Caddis #14';
+    rec.conditionNote = flyRec.timeAdvice;
+
+    var flyByHabitat = {
+      riffle: { pres: 'Dead drift nymphs upstream. High-stick technique — keep line off the water. Short, accurate casts.', rig: 'Euro nymphing rig or dry-dropper. 9ft 5X leader, 4ft 6X tippet.' },
+      pool: { pres: 'Start at the head with nymphs, work streamers along the edges. Fish the tailout last with dries.', rig: 'Indicator nymph rig. 9ft 4X leader, 18" dropper to point fly.' },
+      run: { pres: 'Dry-dropper through the seam. Mend to extend your drift. Cover the transition between fast and slow.', rig: 'Dry-dropper: buoyant dry + bead head nymph 18" below. 5X tippet.' },
+      tailout: { pres: 'Long leaders, small dries. Approach from downstream — these fish are spooky. Delicate presentation.', rig: '12ft leader, 6X tippet. Size 18-20 dries. Drag-free drift critical.' },
+      boulder: { pres: 'Short casts into pockets. Each pocket is a separate cast. Dead drift nymphs tight behind rocks.', rig: 'Short line nymphing. 7.5ft 4X leader, heavy point fly + dropper.' }
+    };
+    var hf = flyByHabitat[habitat] || flyByHabitat.run;
+    rec.tackle = hf.rig;
+    rec.presentation = hf.pres;
+    rec.color = flyRec.hatches && flyRec.hatches.length ? 'Active hatches: ' + flyRec.hatches.join(', ') : 'No visible hatch — subsurface flies first.';
+  }
+
+  rec.method = method;
+  rec.conditions = c;
+  return rec;
+}
+window._getMethodSpecificRec = getMethodSpecificRec;
 
 /* Score a spot based on user inputs */
 function _scoreSpot(habitat, method, wade, skill, spotIdx, totalSpots) {
@@ -2707,17 +2884,18 @@ window.showMissionSummary = function(water, zone, fishFlow) {
   var spots = _aiFishingSpots;
   var topSpot = spots[0];
   var method = fishFlow.method || 'fly';
-  var rec = getTimeAwareFlyRec(water, topSpot ? topSpot.habitat : 'riffle');
+  var mRec = getMethodSpecificRec(water, topSpot ? topSpot.habitat : 'riffle', method);
   var totalSpots = spots.length;
+  var methodName = method === 'fly' ? 'fly fishing' : method === 'spin' ? 'lure fishing' : 'bait fishing';
 
   var summaryText = 'Welcome to ' + water.name + ', ' + zone.name + '. ' +
-    'I\'ve deployed ' + totalSpots + ' fishing spots ranked by your ' +
-    (method === 'fly' ? 'fly fishing' : method === 'spin' ? 'lure fishing' : 'bait fishing') + ' setup. ' +
-    'Your #1 spot is a ' + (topSpot ? topSpot.habitat : 'run') + ' — ' +
-    (rec.timeAdvice || 'Prime conditions for catching trout.') + ' ' +
-    'Start with ' + (rec.flyRec || 'your confidence pattern') + '. ' +
-    'Walk to each pin in order. When you reach a pin, I\'ll deploy micro-spots and give you precise casting instructions. ' +
-    'Report back to me with voice — tell me what you see, what\'s hatching, and what the trout are doing. I\'ll update your strategy in real time. Tight lines!';
+    'I\'ve deployed ' + totalSpots + ' fishing spots ranked for your ' + methodName + ' setup. ' +
+    'Your #1 spot is a ' + (topSpot ? topSpot.habitat : 'run') + '. ' +
+    mRec.conditionNote + ' ' +
+    'Start with ' + mRec.primary + '. ' +
+    (mRec.backup ? 'Backup: ' + mRec.backup + '. ' : '') +
+    'Tap any pin to check in — I\'ll deploy trout micro-spots with precise ' + methodName + ' instructions. ' +
+    'Report back with voice — tell me what you see and I\'ll update your strategy in real time. Tight lines!';
 
   var spotsListHtml = '';
   spots.forEach(function(s) {
@@ -2915,7 +3093,12 @@ function _autoCheckInToPin(pinIdx) {
         }).addTo(map);
         _activeMicroPolygons.push(microPoly);
         setTimeout(function() { microPoly.setStyle({ fillOpacity: 0.10 }); }, 2000);
-        setTimeout(function() { microPoly.setStyle({ fillOpacity: 0.04, opacity: 0.3 }); }, 4000);
+        setTimeout(function() { microPoly.setStyle({ fillOpacity: 0.03, opacity: 0.15 }); }, 4000);
+        setTimeout(function() {
+          try { map.removeLayer(microPoly); } catch {}
+          var pIdx = _activeMicroPolygons.indexOf(microPoly);
+          if (pIdx !== -1) _activeMicroPolygons.splice(pIdx, 1);
+        }, 6000);
       }
     }
   }
@@ -2980,18 +3163,39 @@ function _autoCheckInToPin(pinIdx) {
   candidates.sort(function(a, b) { return b.score - a.score; });
   var accepted = candidates.slice(0, maxMicros);
 
-  // Deploy accepted micro-spots as small trout pin icons
+  // Deploy accepted micro-spots as animated trout in environment
   var microCoords = [];
+  // Map micro-type to visual environment class
+  var envClasses = {
+    'primary-lie': 'ht-env-current',
+    'seam-edge': 'ht-env-seam',
+    'pocket-water': 'ht-env-rock',
+    'undercut-bank': 'ht-env-undercut',
+    'feeding-lane': 'ht-env-lane'
+  };
+  var envLabels = {
+    'primary-lie': 'Holding in Current',
+    'seam-edge': 'Working the Seam',
+    'pocket-water': 'Behind Boulder',
+    'undercut-bank': 'Under the Bank',
+    'feeding-lane': 'In the Lane'
+  };
+
   accepted.forEach(function(mc, i) {
     var mType = microTypes[i] || 'primary-lie';
-    var mLabel = _capitalize(mType.replace(/-/g, ' '));
+    var mLabel = envLabels[mType] || _capitalize(mType.replace(/-/g, ' '));
+    var envClass = envClasses[mType] || 'ht-env-current';
+    // Random swimming direction variation
+    var swimDelay = (i * 0.4).toFixed(1);
 
     var mIcon = L.divIcon({
-      className: 'ht-micro-trout-pin',
-      html: '<img src="assets/trout-pin.svg" width="28" height="14" alt="">' +
+      className: 'ht-micro-trout-pin ' + envClass,
+      html: '<div class="ht-trout-swim-wrap" style="animation-delay:' + swimDelay + 's">' +
+        '<img src="assets/trout-pin.svg" width="42" height="21" alt="" class="ht-trout-alive">' +
+        '</div>' +
         '<span class="ht-micro-trout-label">' + mLabel + '</span>',
-      iconSize: [28, 14],
-      iconAnchor: [14, 7]
+      iconSize: [42, 21],
+      iconAnchor: [21, 10]
     });
 
     var mMarker = L.marker([mc.lat, mc.lng], { icon: mIcon, zIndexOffset: 500 }).addTo(map);
@@ -3017,11 +3221,28 @@ function _autoCheckInToPin(pinIdx) {
 }
 window._autoCheckInToPin = _autoCheckInToPin;
 
-/* Manual pin click → same as auto checkin */
+/* Manual pin click → show CHECK IN confirmation popup, then deploy on confirm */
 function _onAiPinClick(water, zone, spot, fishFlow) {
   var idx = _aiFishingSpots.indexOf(spot);
-  _autoCheckInToPin(idx >= 0 ? idx : 0);
+  var pinIdx = idx >= 0 ? idx : 0;
+  var marker = _aiFishingPins[pinIdx];
+  if (!marker) { _autoCheckInToPin(pinIdx); return; }
+
+  var popupHtml = '<div style="min-width:200px;text-align:center;">' +
+    '<div style="font-weight:800;color:#7cffc7;font-size:14px;margin-bottom:4px;">#' + spot.rank + ' ' + escapeHtml(_capitalize(spot.habitat)) + '</div>' +
+    '<div style="font-size:11px;color:#c8e6d5;margin-bottom:8px;">Score: ' + spot.score + ' pts</div>' +
+    '<button style="padding:8px 20px;border-radius:10px;border:1.5px solid #7cffc7;background:rgba(124,255,199,0.18);color:#7cffc7;font-size:13px;font-weight:800;cursor:pointer;width:100%;" ' +
+      'onclick="window._confirmPinCheckIn(' + pinIdx + ')">CHECK IN HERE</button>' +
+    '</div>';
+  marker.unbindPopup();
+  marker.bindPopup(popupHtml, { maxWidth: 280, className: 'ht-zone-popup', closeButton: true }).openPopup();
 }
+
+/* Confirmed check-in from popup → deploy micro-spots */
+window._confirmPinCheckIn = function(pinIdx) {
+  if (map) map.closePopup();
+  _autoCheckInToPin(pinIdx);
+};
 
 /* ── Auto Check-In to a micro spot ── */
 function _autoCheckInToMicroSpot(microIdx) {
@@ -3048,16 +3269,39 @@ function _showSpotInfoTray(water, zone, spot, microType, microIdx) {
   if (_spotInfoTrayEl) { try { _spotInfoTrayEl.remove(); } catch {} }
 
   var strat = spot.strategy;
-  var rec = getTimeAwareFlyRec(water, spot.habitat);
+  var fishFlow = window._fishFlow || {};
+  var method = fishFlow.method || 'fly';
+  var mRec = getMethodSpecificRec(water, spot.habitat, method);
   var microLabel = _capitalize(microType.replace(/-/g, ' '));
 
-  var microAdvice = {
-    'primary-lie': 'This is the main holding position. Trout actively feed here. Your first cast should target this spot. Deliver your fly 3-4 feet upstream and let it drift naturally into the strike zone.',
-    'seam-edge': 'The seam between fast and slow water. Trout hold just inside the slow side, picking off food from the fast current. Cast to the fast side and let your offering drift into the seam.',
-    'pocket-water': 'Protected pocket behind structure. Trout rest here between feeding runs. Short, accurate casts directly into the pocket. Let your fly sink 2-3 seconds before any retrieval.',
-    'undercut-bank': 'Undercut bank where trout shelter from current and predators. Cast parallel to the bank, tight to the edge. Let your fly drift underneath the overhang. Big trout hide here.',
-    'feeding-lane': 'A natural conveyor belt of food funneling through a narrow channel. Position yourself downstream and cast upstream into the lane. Dead-drift is critical — any drag spooks fish.'
+  // Method-aware micro-spot advice
+  var microAdviceFly = {
+    'primary-lie': 'This is the main holding position. Trout actively feed here. Deliver your fly 3-4 feet upstream and let it drift naturally into the strike zone.',
+    'seam-edge': 'The seam between fast and slow water. Cast to the fast side and let your fly drift into the seam. Mend upstream for a drag-free drift.',
+    'pocket-water': 'Protected pocket behind structure. Short, accurate casts directly into the pocket. Let your fly sink 2-3 seconds before any retrieval.',
+    'undercut-bank': 'Undercut bank where trout shelter. Cast parallel to the bank, tight to the edge. Let your fly drift underneath the overhang.',
+    'feeding-lane': 'A natural food conveyor belt. Position yourself downstream and cast upstream into the lane. Dead-drift is critical.'
   };
+  var microAdviceBait = {
+    'primary-lie': 'The main holding position — trout park here to feed. Set your bait rig upstream and let it drift naturally into this lie. Be patient — let the bait sit 3-5 minutes.',
+    'seam-edge': 'The seam between fast and slow water is a bait magnet. Drift your bait along the slow side — trout pick off food here without fighting current.',
+    'pocket-water': 'Protected pocket behind the boulder. Drop your bait directly into the calm water. Use minimal weight — let the current do the work.',
+    'undercut-bank': 'Undercut bank — BIG trout territory. Cast your bait tight to the bank edge and let it drift under. This is where trophy fish hide from current and predators.',
+    'feeding-lane': 'Natural food funnel. Position your bait at the top of the lane and let it drift through. Natural presentation is everything — no bobber, just split shot and drift.'
+  };
+  var microAdviceSpin = {
+    'primary-lie': 'Main feeding position. Cast your lure upstream and retrieve through this holding zone. Slow, steady retrieve — match the current speed.',
+    'seam-edge': 'The seam is spinner territory. Cast across the fast water and let your lure swing into the slow side. The blade flash triggers strikes at the transition.',
+    'pocket-water': 'Pocket behind structure — pitch your lure directly into the calm water. Let it sink 2 seconds, then short twitches. Each pocket is one shot.',
+    'undercut-bank': 'Undercut bank — pitch a jig or small spoon tight to the bank. Let it flutter down along the edge. Big trout ambush from these lies.',
+    'feeding-lane': 'Cast upstream into the lane. Retrieve just fast enough to keep your blade turning. The narrow channel concentrates fish — every cast counts.'
+  };
+
+  var adviceMap = method === 'bait' ? microAdviceBait : method === 'spin' ? microAdviceSpin : microAdviceFly;
+  var advice = adviceMap[microType] || adviceMap['primary-lie'];
+
+  // Method-aware labels
+  var tackleLabel = method === 'fly' ? 'RECOMMENDED FLY' : method === 'bait' ? 'RECOMMENDED BAIT' : 'RECOMMENDED LURE';
 
   var el = document.createElement('div');
   el.className = 'ht-spot-info-tray';
@@ -3070,28 +3314,30 @@ function _showSpotInfoTray(water, zone, spot, microType, microIdx) {
     <div class="ht-spot-info-body">
       <div class="ht-spot-info-section">
         <div class="ht-spot-info-label">MICRO-SPOT STRATEGY</div>
-        <div class="ht-spot-info-text">${escapeHtml(microAdvice[microType] || microAdvice['primary-lie'])}</div>
+        <div class="ht-spot-info-text">${escapeHtml(advice)}</div>
       </div>
       <div class="ht-spot-info-section">
         <div class="ht-spot-info-label">APPROACH</div>
         <div class="ht-spot-info-text">${escapeHtml(strat.approach)}</div>
       </div>
       <div class="ht-spot-info-section">
-        <div class="ht-spot-info-label">CASTING</div>
-        <div class="ht-spot-info-text">${escapeHtml(strat.castDirection)}</div>
+        <div class="ht-spot-info-label">PRESENTATION</div>
+        <div class="ht-spot-info-text">${escapeHtml(mRec.presentation)}</div>
       </div>
       <div class="ht-spot-info-section">
-        <div class="ht-spot-info-label">RECOMMENDED FLY</div>
-        <div class="ht-spot-info-text">${escapeHtml(rec.flyRec || 'Match the hatch — observe the water first.')}</div>
-        ${rec.altFly ? '<div class="ht-spot-info-alt">Backup: ' + escapeHtml(rec.altFly) + '</div>' : ''}
+        <div class="ht-spot-info-label">${tackleLabel}</div>
+        <div class="ht-spot-info-text">${escapeHtml(mRec.primary)}</div>
+        <div class="ht-spot-info-alt">Backup: ${escapeHtml(mRec.backup)}</div>
+        ${mRec.tackle ? '<div class="ht-spot-info-alt">Rig: ' + escapeHtml(mRec.tackle) + '</div>' : ''}
+      </div>
+      <div class="ht-spot-info-section">
+        <div class="ht-spot-info-label">COLOR / PATTERN RATIONALE</div>
+        <div class="ht-spot-info-text">${escapeHtml(mRec.conditionNote)}</div>
+        ${mRec.color ? '<div class="ht-spot-info-alt">' + escapeHtml(mRec.color) + '</div>' : ''}
       </div>
       <div class="ht-spot-info-section">
         <div class="ht-spot-info-label">WADING</div>
         <div class="ht-spot-info-text">${escapeHtml(strat.wadingAdvice)}</div>
-      </div>
-      <div class="ht-spot-info-section">
-        <div class="ht-spot-info-label">CONDITIONS</div>
-        <div class="ht-spot-info-text">${escapeHtml(rec.timeAdvice)}</div>
       </div>
     </div>
     <div class="ht-spot-info-actions">

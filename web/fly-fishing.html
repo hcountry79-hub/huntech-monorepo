@@ -20,11 +20,11 @@
   <link rel="dns-prefetch" href="https://server.arcgisonline.com">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css" />
-  <link rel="stylesheet" href="app.css?v=20260220p">
+  <link rel="stylesheet" href="app.css?v=20260220q">
 
   <!-- AWS Backend Configuration -->
-  <script src="config.js?v=20260220p"></script>
-  <script src="api.js?v=20260220p"></script>
+  <script src="config.js?v=20260220q"></script>
+  <script src="api.js?v=20260220q"></script>
 </head>
 <body class="module-fly">
   <header class="ht-topbar">
@@ -33,7 +33,7 @@
         <div class="ht-brand-icon" aria-label="Huntech Fly Fishing logo">
           <img src="assets/fly-module-logo.svg" alt="Huntech Fly Fishing logo" width="38" height="38" loading="eager">
         </div>
-        <span class="ht-brand-text">HUNT<span class="ht-brand-mark">Ξ</span>CH</span>
+        <span class="ht-brand-text">HUNT<span class="ht-brand-mark">?</span>CH</span>
       </div>
 
       <div class="ht-module-switch" aria-label="Select module">
@@ -74,7 +74,7 @@
         <svg width="20" height="20" viewBox="0 0 24 24" fill="#2bd4ff">
           <path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
         </svg>
-        <input type="text" placeholder="Search anything: address, business, park, water, or GPS coords…" class="ht-search-input" id="searchInput" autocomplete="off" spellcheck="false">
+        <input type="text" placeholder="Search anything: address, business, park, water, or GPS coords�" class="ht-search-input" id="searchInput" autocomplete="off" spellcheck="false">
         <button class="ht-search-btn" type="button">Search</button>
         <div class="ht-search-results" id="searchResults"></div>
       </div>
@@ -105,7 +105,7 @@
   <main class="ht-map-container">
     <div id="map"></div>
 
-    <!-- ═══ HERO SPLASH — cinematic rotating background ═══ -->
+    <!-- --- HERO SPLASH � cinematic rotating background --- -->
     <div class="ht-map-hero" id="mapHero">
       <div class="ht-hero-slide ht-hero-slide--active ht-fly-slide-1" style="background-image:url('assets/fly-hero-1.webp')"></div>
       <div class="ht-hero-slide ht-fly-slide-2" style="background-image:url('assets/fly-hero-2.webp')"></div>
@@ -130,7 +130,7 @@
     </svg>
   </button>
 
-  <!-- ═══════════════ STREAM COMMAND TRAY ═══════════════ -->
+  <!-- --------------- STREAM COMMAND TRAY --------------- -->
   <div class="ht-toolbar" id="toolbar">
     <div class="ht-toolbar-tab">
       <!-- Collapsed 3-column header row -->
@@ -149,7 +149,7 @@
 
     <div class="ht-toolbar-content" id="toolbarContent">
 
-      <!-- ────── PILL NAVIGATION ────── -->
+      <!-- ------ PILL NAVIGATION ------ -->
       <div class="ht-stream-pills" id="streamPills">
         <button class="ht-stream-pill ht-stream-pill--active ht-stream-pill--primary" data-panel="fishNowPanel" onclick="showStreamPanel('fishNowPanel')">FISH NOW</button>
         <button class="ht-stream-pill" onclick="showMap()">MAP</button>
@@ -157,7 +157,7 @@
         <button class="ht-stream-pill" data-panel="flyBoxPanel" onclick="showStreamPanel('flyBoxPanel')">FLY BOX</button>
       </div>
 
-      <!-- ────── FAVORITES QUICK ACCESS ────── -->
+      <!-- ------ FAVORITES QUICK ACCESS ------ -->
       <div class="ht-stream-favorites" id="streamFavorites">
         <div class="ht-favorites-label">My Saved Spots</div>
         <div class="ht-favorites-grid" id="favoritesGrid">
@@ -168,14 +168,14 @@
         </div>
       </div>
 
-      <!-- ═══════ FISH NOW PANEL — Multi-Step Workflow ═══════ -->
+      <!-- ------- FISH NOW PANEL � Multi-Step Workflow ------- -->
       <div class="ht-stream-panel" id="fishNowPanel">
 
-        <!-- ──── Step 0: GPS Locating ──── -->
+        <!-- ---- Step 0: GPS Locating ---- -->
         <div class="ht-fish-step" id="fishStep0_loading">
           <div class="ht-fish-locate-card">
-            <div class="ht-fish-locate-pulse">📡</div>
-            <div class="ht-fish-locate-label">Finding your water…</div>
+            <div class="ht-fish-locate-pulse">??</div>
+            <div class="ht-fish-locate-label">Finding your water�</div>
             <div class="ht-fish-locate-sub">Scanning for nearby trout waters</div>
           </div>
         </div>
@@ -185,75 +185,75 @@
           <div class="ht-fish-welcome-card">
             <div class="ht-fish-welcome-ribbon" id="fishAreaRibbon">?? Trout Water</div>
             <div class="ht-fish-welcome-name" id="fishAreaTitle">Welcome to the Water</div>
-            <div class="ht-fish-welcome-detail" id="fishAreaDesc">Locating nearest trout water�</div>
+            <div class="ht-fish-welcome-detail" id="fishAreaDesc">Locating nearest trout water?</div>
             <div style="margin-top:12px;text-align:center;">
               <button class="ht-gold-btn ht-go-btn" type="button" onclick="fishStepCheckIn()" style="font-size:14px;padding:10px 22px;">? CHECK IN TO AREA</button>
             </div>
           </div>
         </div>
 
-        <!-- ──── Step 2: Mission Setup ──── -->
+        <!-- ---- Step 2: Mission Setup ---- -->
         <div class="ht-fish-step" id="fishStep2_strategy" style="display:none">
           <div class="ht-accordion-header ht-accordion-header-center">
-            <span class="ht-define-title">🪐 MISSION SETUP</span>
+            <span class="ht-define-title">?? MISSION SETUP</span>
           </div>
           <div class="ht-form-grid">
             <!-- Fishing Method -->
             <div class="ht-form-row">
               <div class="ht-form-label">Fishing Method</div>
               <div class="ht-method-row">
-                <button class="ht-method-btn ht-method-btn--active" data-fish-method="fly" onclick="pickFishMethod(this,'fly')">🪰 Fly</button>
-                <button class="ht-method-btn" data-fish-method="spin" onclick="pickFishMethod(this,'spin')">🎣 Lure</button>
-                <button class="ht-method-btn" data-fish-method="bait" onclick="pickFishMethod(this,'bait')">🪱 Bait</button>
+                <button class="ht-method-btn ht-method-btn--active" data-fish-method="fly" onclick="pickFishMethod(this,'fly')">?? Fly</button>
+                <button class="ht-method-btn" data-fish-method="spin" onclick="pickFishMethod(this,'spin')">?? Lure</button>
+                <button class="ht-method-btn" data-fish-method="bait" onclick="pickFishMethod(this,'bait')">?? Bait</button>
               </div>
             </div>
             <!-- Water Access -->
             <div class="ht-form-row">
               <div class="ht-form-label">Water Access</div>
               <div class="ht-method-row">
-                <button class="ht-method-btn ht-method-btn--active" data-fish-wade="waders" onclick="pickFishWade(this,'waders')">🥾 Wading</button>
-                <button class="ht-method-btn" data-fish-wade="streamside" onclick="pickFishWade(this,'streamside')">🏖️ Bank Fishing</button>
+                <button class="ht-method-btn ht-method-btn--active" data-fish-wade="waders" onclick="pickFishWade(this,'waders')">?? Wading</button>
+                <button class="ht-method-btn" data-fish-wade="streamside" onclick="pickFishWade(this,'streamside')">??? Bank Fishing</button>
               </div>
             </div>
             <!-- Skill Level -->
             <div class="ht-form-row">
               <div class="ht-form-label">Skill Level</div>
               <div class="ht-method-row">
-                <button class="ht-method-btn" data-fish-exp="new" onclick="pickFishExp(this,'new')">🌱 New</button>
-                <button class="ht-method-btn ht-method-btn--active" data-fish-exp="learning" onclick="pickFishExp(this,'learning')">📈 Learning</button>
-                <button class="ht-method-btn" data-fish-exp="confident" onclick="pickFishExp(this,'confident')">💪 Confident</button>
-                <button class="ht-method-btn" data-fish-exp="advanced" onclick="pickFishExp(this,'advanced')">🏆 Advanced</button>
+                <button class="ht-method-btn" data-fish-exp="new" onclick="pickFishExp(this,'new')">?? New</button>
+                <button class="ht-method-btn ht-method-btn--active" data-fish-exp="learning" onclick="pickFishExp(this,'learning')">?? Learning</button>
+                <button class="ht-method-btn" data-fish-exp="confident" onclick="pickFishExp(this,'confident')">?? Confident</button>
+                <button class="ht-method-btn" data-fish-exp="advanced" onclick="pickFishExp(this,'advanced')">?? Advanced</button>
               </div>
             </div>
             <!-- Expedition Type -->
             <div class="ht-form-row">
               <div class="ht-form-label">Expedition Type</div>
               <div class="ht-method-row">
-                <button class="ht-method-btn ht-method-btn--active" data-fish-mode="standard" onclick="pickFishMode(this,'standard')">🚗 Road Ready</button>
-                <button class="ht-method-btn" data-fish-mode="backcountry" onclick="pickFishMode(this,'backcountry')">🌲 Off the Grid</button>
+                <button class="ht-method-btn ht-method-btn--active" data-fish-mode="standard" onclick="pickFishMode(this,'standard')">?? Road Ready</button>
+                <button class="ht-method-btn" data-fish-mode="backcountry" onclick="pickFishMode(this,'backcountry')">?? Off the Grid</button>
               </div>
             </div>
             <!-- Deploy -->
             <div class="ht-form-row">
               <button class="ht-gold-btn ht-go-btn ht-lets-go-pulse" type="button" onclick="fishStepDeploy()">
-                🎣 DEPLOY FISHING PINS
+                ?? DEPLOY FISHING PINS
               </button>
             </div>
           </div>
         </div>
 
-        <!-- ──── Step 3: Define Fishing Route ──── -->
+        <!-- ---- Step 3: Define Fishing Route ---- -->
         <div class="ht-fish-step" id="fishStep2b_summary" style="display:none">
           <div class="ht-accordion-header ht-accordion-header-center">
-            <span class="ht-define-title">🗺️ DEFINE FISHING ROUTE</span>
+            <span class="ht-define-title">??? DEFINE FISHING ROUTE</span>
           </div>
           <div class="ht-form-grid">
             <div class="ht-form-row">
               <div class="ht-method-row ht-method-row--stack">
-                <button class="ht-gold-btn ht-go-btn" type="button" onclick="fishRouteFromMyLocation()">📍 Start From My Location</button>
-                <button class="ht-gold-btn ht-go-btn" type="button" onclick="fishRoutePickOnMap()">🗺️ Pick Starting Point on Map</button>
-                <button class="ht-gold-btn ht-go-btn" type="button" onclick="fishRouteNone()">🚫 No Route</button>
-                <button class="ht-gold-btn ht-go-btn ht-go-btn--ghost" type="button" onclick="fishRouteGoBack()">← Go Back</button>
+                <button class="ht-gold-btn ht-go-btn" type="button" onclick="fishRouteFromMyLocation()">?? Start From My Location</button>
+                <button class="ht-gold-btn ht-go-btn" type="button" onclick="fishRoutePickOnMap()">??? Pick Starting Point on Map</button>
+                <button class="ht-gold-btn ht-go-btn" type="button" onclick="fishRouteNone()">?? No Route</button>
+                <button class="ht-gold-btn ht-go-btn ht-go-btn--ghost" type="button" onclick="fishRouteGoBack()">? Go Back</button>
               </div>
             </div>
           </div>
@@ -262,40 +262,40 @@
         <!-- (fishStep3_route kept as hidden placeholder for step index alignment) -->
         <div class="ht-fish-step" id="fishStep3_route" style="display:none"></div>
 
-        <!-- ──── Step 4: AI Briefing / Trout Summary ──── -->
+        <!-- ---- Step 4: AI Briefing / Trout Summary ---- -->
         <div class="ht-fish-step" id="fishStep4_briefing" style="display:none">
           <div class="ht-accordion-header ht-accordion-header-center">
-            <span class="ht-define-title">🧠 Stream Intelligence</span>
+            <span class="ht-define-title">?? Stream Intelligence</span>
           </div>
           <div class="ht-form-grid">
             <div class="ht-form-row">
               <div class="ht-briefing-card" id="fishBriefingCard">
                 <div class="ht-briefing-coach">
-                  <div class="ht-coach-avatar">🎣</div>
-                  <div class="ht-coach-intro" id="fishCoachIntro">Loading your AI stream guide…</div>
+                  <div class="ht-coach-avatar">??</div>
+                  <div class="ht-coach-intro" id="fishCoachIntro">Loading your AI stream guide�</div>
                 </div>
                 <div class="ht-briefing-body" id="fishBriefingBody"></div>
               </div>
             </div>
             <div class="ht-form-row">
               <button class="ht-gold-btn ht-go-btn" type="button" onclick="fishStartSession()">
-                🐟 START FISHING
+                ?? START FISHING
               </button>
             </div>
           </div>
         </div>
 
-        <!-- ──── Step 5: Streamside Command (live session) ──── -->
+        <!-- ---- Step 5: Streamside Command (live session) ---- -->
         <div class="ht-fish-step" id="fishStep5_live" style="display:none">
           <div class="ht-accordion-header ht-accordion-header-center">
-            <span class="ht-define-title">🎣 Streamside Command</span>
+            <span class="ht-define-title">?? Streamside Command</span>
           </div>
           <div class="ht-form-grid">
             <!-- Live status bar -->
             <div class="ht-form-row">
               <div class="ht-live-session-bar">
                 <span class="ht-live-dot"></span>
-                <span class="ht-live-water-name" id="liveWaterName2">—</span>
+                <span class="ht-live-water-name" id="liveWaterName2">�</span>
                 <span class="ht-live-timer" id="liveTimer2">0:00</span>
               </div>
             </div>
@@ -304,34 +304,34 @@
             <div class="ht-form-row">
               <div class="ht-toolbar-btns ht-toolbar-btns-stack">
                 <div class="ht-pill-stack">
-                  <button class="ht-gold-btn" type="button" onclick="fishLogCatch()">📸 Log Catch</button>
+                  <button class="ht-gold-btn" type="button" onclick="fishLogCatch()">?? Log Catch</button>
                 </div>
                 <div class="ht-pill-stack">
-                  <button class="ht-gold-btn" type="button" onclick="fishLogFlyData()">🦟 Log Fly Data</button>
+                  <button class="ht-gold-btn" type="button" onclick="fishLogFlyData()">?? Log Fly Data</button>
                 </div>
               </div>
             </div>
             <div class="ht-form-row">
               <div class="ht-toolbar-btns ht-toolbar-btns-stack">
                 <div class="ht-pill-stack">
-                  <button class="ht-gold-btn" type="button" onclick="fishMyFlyBox()">🪺 My Fly Box</button>
+                  <button class="ht-gold-btn" type="button" onclick="fishMyFlyBox()">?? My Fly Box</button>
                 </div>
                 <div class="ht-pill-stack">
-                  <button class="ht-gold-btn" type="button" onclick="fishAiRecommend()">🧠 AI Fly Coach</button>
+                  <button class="ht-gold-btn" type="button" onclick="fishAiRecommend()">?? AI Fly Coach</button>
                 </div>
               </div>
             </div>
 
             <!-- End session -->
             <div class="ht-form-row" style="margin-top:8px">
-              <button class="ht-gold-btn ht-go-btn ht-go-btn--ghost" type="button" onclick="fishEndSession()">⏹ End Session</button>
+              <button class="ht-gold-btn ht-go-btn ht-go-btn--ghost" type="button" onclick="fishEndSession()">? End Session</button>
             </div>
           </div>
         </div>
 
       </div>
 
-      <!-- ═══════ MY SPOTS PANEL ═══════ -->
+      <!-- ------- MY SPOTS PANEL ------- -->
       <div class="ht-stream-panel" id="mySpotsPanel" style="display:none">
         <div class="ht-accordion-header ht-accordion-header-center">
           <span class="ht-define-title">My Spots</span>
@@ -343,23 +343,23 @@
           <div class="ht-form-row">
             <div id="savedSpotsList" class="ht-saved-spots-list">
               <!-- Populated dynamically from localStorage -->
-              <div class="ht-fly-note" style="opacity:.5">No saved spots yet — drop pins during a session</div>
+              <div class="ht-fly-note" style="opacity:.5">No saved spots yet � drop pins during a session</div>
             </div>
           </div>
           <div class="ht-form-row">
             <div class="ht-toolbar-btns ht-toolbar-btns-stack">
               <div class="ht-pill-stack">
-                <button class="ht-gold-btn" type="button" onclick="dropFishingPin()">📌 Drop Pin Here</button>
+                <button class="ht-gold-btn" type="button" onclick="dropFishingPin()">?? Drop Pin Here</button>
               </div>
               <div class="ht-pill-stack">
-                <button class="ht-gold-btn" type="button" onclick="importSpotsFromFile()">📥 Import Spots</button>
+                <button class="ht-gold-btn" type="button" onclick="importSpotsFromFile()">?? Import Spots</button>
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- ═══════ TRIP PLANNER PANEL ═══════ -->
+      <!-- ------- TRIP PLANNER PANEL ------- -->
       <div class="ht-stream-panel" id="tripPlannerPanel" style="display:none">
         <div class="ht-accordion-header ht-accordion-header-center">
           <span class="ht-define-title">Trip Planner</span>
@@ -406,17 +406,17 @@
           <div class="ht-form-row">
             <div class="ht-toolbar-btns ht-toolbar-btns-stack">
               <div class="ht-pill-stack">
-                <button class="ht-gold-btn" type="button" onclick="showRegulationGuide()">📋 Regulation Guide</button>
+                <button class="ht-gold-btn" type="button" onclick="showRegulationGuide()">?? Regulation Guide</button>
               </div>
               <div class="ht-pill-stack">
-                <button class="ht-gold-btn" type="button" onclick="window.open(window.TROUT_PERMITS.troutStamp.purchaseUrl,'_blank')">🪪 Buy Trout Permit</button>
+                <button class="ht-gold-btn" type="button" onclick="window.open(window.TROUT_PERMITS.troutStamp.purchaseUrl,'_blank')">?? Buy Trout Permit</button>
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- ═══════ MY FLY BOX PANEL ═══════ -->
+      <!-- ------- MY FLY BOX PANEL ------- -->
       <div class="ht-stream-panel" id="flyBoxPanel" style="display:none">
         <div class="ht-accordion-header ht-accordion-header-center">
           <span class="ht-define-title">My Fly Box</span>
@@ -442,22 +442,22 @@
           <div class="ht-form-row">
             <div class="ht-form-label">My Toolbox</div>
             <div class="ht-fly-chip-row">
-              <button class="ht-fly-chip" onclick="openGearCategory('rods')">🎣 Rods</button>
-              <button class="ht-fly-chip" onclick="openGearCategory('lines')">🧵 Lines</button>
-              <button class="ht-fly-chip" onclick="openGearCategory('leaders')">🪢 Leaders</button>
-              <button class="ht-fly-chip" onclick="openGearCategory('flies')">🪰 Flies</button>
-              <button class="ht-fly-chip" onclick="openGearCategory('lures')">✨ Lures</button>
-              <button class="ht-fly-chip" onclick="openGearCategory('bait')">🪱 Bait</button>
+              <button class="ht-fly-chip" onclick="openGearCategory('rods')">?? Rods</button>
+              <button class="ht-fly-chip" onclick="openGearCategory('lines')">?? Lines</button>
+              <button class="ht-fly-chip" onclick="openGearCategory('leaders')">?? Leaders</button>
+              <button class="ht-fly-chip" onclick="openGearCategory('flies')">?? Flies</button>
+              <button class="ht-fly-chip" onclick="openGearCategory('lures')">? Lures</button>
+              <button class="ht-fly-chip" onclick="openGearCategory('bait')">?? Bait</button>
             </div>
             <div class="ht-fly-note">Coach recommends from what you own</div>
           </div>
           <div class="ht-form-row">
             <div class="ht-toolbar-btns ht-toolbar-btns-stack">
               <div class="ht-pill-stack">
-                <button class="ht-gold-btn" type="button" onclick="addGearItem()">➕ Add Gear</button>
+                <button class="ht-gold-btn" type="button" onclick="addGearItem()">? Add Gear</button>
               </div>
               <div class="ht-pill-stack">
-                <button class="ht-gold-btn" type="button" onclick="scanFlyBox()">📸 Scan Fly Box</button>
+                <button class="ht-gold-btn" type="button" onclick="scanFlyBox()">?? Scan Fly Box</button>
               </div>
             </div>
           </div>
@@ -467,39 +467,39 @@
     </div>
   </div>
 
-  <!-- ═══════ WATER DETAIL BAR (fly-in panel for selected water) ═══════ -->
+  <!-- ------- WATER DETAIL BAR (fly-in panel for selected water) ------- -->
   <div class="ht-fly-water-bar" id="waterDetailBar">
     <div class="ht-fly-water-bar-header">
-      <span class="ht-fly-water-bar-title" id="waterDetailTitle">—</span>
+      <span class="ht-fly-water-bar-title" id="waterDetailTitle">�</span>
       <button class="ht-fly-water-bar-close" type="button" onclick="closeWaterDetail()">&times;</button>
     </div>
     <div class="ht-fly-water-bar-body" id="waterDetailBody">
       <!-- Populated dynamically: description, regulations, access points, coach tips -->
     </div>
     <div class="ht-fly-water-bar-actions" id="waterDetailActions">
-      <button class="ht-fly-pill ht-fly-pill--primary" type="button" onclick="fishThisWater()">🐟 Fish Here</button>
-      <button class="ht-fly-pill ht-fly-pill--ghost" type="button" onclick="navigateToWater()">🧭 Navigate</button>
-      <button class="ht-fly-pill ht-fly-pill--ghost" type="button" onclick="saveSpot()">📌 Save Spot</button>
-      <button class="ht-fly-pill ht-fly-pill--stamp" type="button" id="waterStampBtn" style="display:none" onclick="window.open(window.TROUT_PERMITS.troutStamp.purchaseUrl,'_blank')">🪪 Trout Permit Required</button>
+      <button class="ht-fly-pill ht-fly-pill--primary" type="button" onclick="fishThisWater()">?? Fish Here</button>
+      <button class="ht-fly-pill ht-fly-pill--ghost" type="button" onclick="navigateToWater()">?? Navigate</button>
+      <button class="ht-fly-pill ht-fly-pill--ghost" type="button" onclick="saveSpot()">?? Save Spot</button>
+      <button class="ht-fly-pill ht-fly-pill--stamp" type="button" id="waterStampBtn" style="display:none" onclick="window.open(window.TROUT_PERMITS.troutStamp.purchaseUrl,'_blank')">?? Trout Permit Required</button>
     </div>
   </div>
 
-  <!-- ═══════ EDUCATION TILE (shown on hotspot tap) ═══════ -->
+  <!-- ------- EDUCATION TILE (shown on hotspot tap) ------- -->
   <div class="ht-fly-education-tile" id="educationTile" style="display:none">
     <div class="ht-edu-header">
-      <span class="ht-edu-title" id="eduTitle">—</span>
+      <span class="ht-edu-title" id="eduTitle">�</span>
       <button class="ht-edu-close" type="button" onclick="closeEducationTile()">&times;</button>
     </div>
     <div class="ht-edu-body" id="eduBody">
       <!-- Populated: habitat description, tips, approach, fly recommendation -->
     </div>
     <div class="ht-edu-actions">
-      <button class="ht-gold-btn" type="button" onclick="checkInHotspot()">✅ Check In Here</button>
-      <button class="ht-gold-btn" type="button" onclick="readItToMe()">🔊 Read It To Me</button>
+      <button class="ht-gold-btn" type="button" onclick="checkInHotspot()">? Check In Here</button>
+      <button class="ht-gold-btn" type="button" onclick="readItToMe()">?? Read It To Me</button>
     </div>
   </div>
 
-  <!-- CMD bubble removed � user requested removal -->
+  <!-- CMD bubble removed ? user requested removal -->
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
@@ -518,7 +518,7 @@
   </script>
 
   <script>
-    // Global error handler � catch initialization errors visibly
+    // Global error handler ? catch initialization errors visibly
     window.onerror = function(msg, src, line) {
       console.error('HUNTECH JS ERROR:', msg, src, line);
       var el = document.createElement('div');
@@ -529,10 +529,10 @@
     };
   </script>
 
-  <script src="regulations.js?v=20260220p"></script>
-  <script src="fly-fishing-data.js?v=20260220p"></script>
-  <script src="ht-fly-fishing.js?v=20260220p"></script>
-  <script src="main.js?v=20260220p"></script>
+  <script src="regulations.js?v=20260220q"></script>
+  <script src="fly-fishing-data.js?v=20260220q"></script>
+  <script src="ht-fly-fishing.js?v=20260220q"></script>
+  <script src="main.js?v=20260220q"></script>
 
   <script>
     // --- FAILSAFE fishStepCheckIn ---
@@ -544,7 +544,7 @@
         console.log('HUNTECH: fishStepCheckIn defined by main.js OK');
         return; // main.js already defined it during parse (unlikely, it's in DOMContentLoaded)
       }
-      console.warn('HUNTECH: fishStepCheckIn NOT yet defined � installing failsafe');
+      console.warn('HUNTECH: fishStepCheckIn NOT yet defined ? installing failsafe');
       window.fishStepCheckIn = function(waterId) {
         try {
           console.log('HUNTECH FAILSAFE: fishStepCheckIn called', waterId);
