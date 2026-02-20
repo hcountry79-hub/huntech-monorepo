@@ -15840,7 +15840,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Ignore storage failures
   }
 
-  // Fly module: start with tray OPEN and auto-launch Fish Now
+  // Fly module: start with tray OPEN — Montauk auto-load (at 600ms) handles showStreamPanel
   if (isFly) {
     try {
       const toolbar = document.getElementById('toolbar');
@@ -15853,13 +15853,6 @@ document.addEventListener('DOMContentLoaded', () => {
         localStorage.removeItem('htToolbarCollapsed');
       }
     } catch {}
-    setTimeout(function() {
-      try {
-        if (typeof window.showStreamPanel === 'function') {
-          window.showStreamPanel('fishNowPanel');
-        }
-      } catch(e) { console.warn('HUNTECH: auto Fish Now error', e); }
-    }, 450);
   }
 
   updateTrayMiniLabels();
