@@ -547,7 +547,6 @@ window.fishLetsGo = function() {
 
   // 1) Collapse the action bar
   closeFlyWaterActionBar();
-  showNotice('⚡ Deploying AI fishing strategy…', 'success', 2000);
 
   // 2) Deploy zone polygon (flash then fade)
   if (typeof window.deployZonePolygonWithFade === 'function') {
@@ -2574,7 +2573,6 @@ window.deployAiFishingPins = function(water, zone, fishFlow) {
   });
 
   var deployed = spots.length;
-  showNotice(deployed + ' fishing spot' + (deployed > 1 ? 's' : '') + ' deployed — ranked best to worst', 'success', 3000);
 };
 
 /* Score a spot based on user inputs */
@@ -2764,7 +2762,7 @@ window._listenMission = function() {
   if (!textEl) return;
   if (typeof window.speakText === 'function') {
     window.speakText(textEl.textContent);
-    showNotice('Reading mission briefing...', 'info', 2000);
+    // status suppressed
   } else if (typeof speakTextBrowser === 'function') {
     speakTextBrowser(textEl.textContent);
   } else {
@@ -2889,7 +2887,7 @@ function _autoCheckInToPin(pinIdx) {
   var zone = fishFlow ? fishFlow.selectedZone : null;
   if (!water || !zone) return;
 
-  showNotice('Arrived at Spot #' + spot.rank + ' — ' + _capitalize(spot.habitat), 'success', 3500);
+  // status suppressed
 
   // Clear previous micro pins & polygons
   _activeMicroPins.forEach(function(m) { try { map.removeLayer(m); } catch {} });
@@ -3014,7 +3012,7 @@ function _autoCheckInToPin(pinIdx) {
   map.fitBounds(zbounds.pad(0.3), { animate: true, duration: 0.8, maxZoom: 19 });
 
   if (accepted.length === 0) {
-    showNotice('This spot is best fished right here — no micro-spots needed', 'info', 3000);
+    // status suppressed
   }
 }
 window._autoCheckInToPin = _autoCheckInToPin;
@@ -3040,7 +3038,7 @@ function _autoCheckInToMicroSpot(microIdx) {
   var spot = _aiFishingSpots[_checkedInPinIdx];
   if (!water || !zone || !spot) return;
 
-  showNotice('At micro-spot: ' + _capitalize(mType.replace(/-/g, ' ')), 'success', 2500);
+  // status suppressed
   _showSpotInfoTray(water, zone, spot, mType, microIdx);
 }
 
@@ -3127,7 +3125,7 @@ window._listenSpotBriefing = function() {
   } else if (typeof speakTextBrowser === 'function') {
     speakTextBrowser(text);
   }
-  showNotice('Reading spot briefing...', 'info', 2000);
+  // status suppressed
 };
 
 window._nextSpot = function() {
@@ -3135,7 +3133,7 @@ window._nextSpot = function() {
   if (_checkedInPinIdx >= 0 && _checkedInPinIdx < _aiFishingSpots.length - 1) {
     _autoCheckInToPin(_checkedInPinIdx + 1);
   } else {
-    showNotice('🏆 You\'ve covered all spots! Great session.', 'success', 3000);
+    // status suppressed
   }
 };
 
@@ -3154,12 +3152,12 @@ window._startVoiceReport = function() {
   recognition.interimResults = false;
   recognition.lang = 'en-US';
 
-  showNotice('Listening… tell me what you see', 'info', 5000);
+  // status suppressed
 
   recognition.onresult = function(event) {
     var transcript = event.results[0][0].transcript;
     console.log('HUNTECH VOICE:', transcript);
-    showNotice('Heard: "' + transcript + '"', 'success', 3000);
+    // status suppressed
     _processCoachReport(transcript);
   };
 
