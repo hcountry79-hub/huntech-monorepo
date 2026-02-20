@@ -225,6 +225,13 @@ window.TROUT_WATERS = [
       { name: 'Store / Tag Office', lat: 37.7257, lng: -92.8558, type: 'parking', notes: 'Park store on MO 64A near hatchery. Daily tags, concession, tackle, snacks, fly lessons.' },
       { name: 'Restrooms', lat: 37.7248, lng: -92.8565, type: 'parking', notes: 'CCC-built restroom facility near parking and store.' }
     ],
+    streamPath: [
+      [37.7166,-92.8569],[37.7176,-92.8578],[37.7189,-92.8585],[37.7200,-92.8580],
+      [37.7215,-92.8568],[37.7230,-92.8558],[37.7242,-92.8558],[37.7252,-92.8552],
+      [37.7260,-92.8550],[37.7270,-92.8552],[37.7278,-92.8555],[37.7290,-92.8562],
+      [37.7300,-92.8568],[37.7310,-92.8574],[37.7320,-92.8585],[37.7330,-92.8598],
+      [37.7341,-92.8614]
+    ],
     solitude: 'low', difficulty: 'easy', wadingRequired: false, familyFriendly: true,
     bestSeasons: ['spring', 'fall'],
     hatches: { spring: ['BWO #16-20', 'Midges #18-24', 'Scuds #14-16'], summer: ['Caddis #14-16', 'Sulphurs #16-18', 'Terrestrials'], fall: ['BWO #16-20', 'Midges #18-22', 'October Caddis #10-12'], winter: ['Midges #20-24', 'BWO #18-22'] },
@@ -255,6 +262,11 @@ window.TROUT_WATERS = [
       { name: 'Lodge Parking', lat: 37.4525, lng: -91.6815, type: 'parking', notes: 'Montauk Lodge main lot. Walk to spring and stream. Tag office inside.' },
       { name: 'Store / Tag Office', lat: 37.4523, lng: -91.6813, type: 'parking', notes: 'Park store inside Dorman L. Steelman Lodge. Daily tags, tackle, supplies.' },
       { name: 'Hatchery / Mill', lat: 37.4549, lng: -91.6855, type: 'parking', notes: 'Historic 1896 gristmill and trout hatchery near spring. Educational stop.' }
+    ],
+    streamPath: [
+      [37.4608,-91.6834],[37.4600,-91.6828],[37.4590,-91.6816],[37.4580,-91.6815],
+      [37.4570,-91.6817],[37.4557,-91.6821],[37.4548,-91.6830],[37.4540,-91.6840],
+      [37.4536,-91.6848],[37.4528,-91.6852],[37.4520,-91.6855]
     ],
     solitude: 'low', difficulty: 'easy', wadingRequired: false, familyFriendly: true,
     bestSeasons: ['spring', 'fall'],
@@ -287,6 +299,12 @@ window.TROUT_WATERS = [
       { name: 'Park Store', lat: 36.5843, lng: -93.8371, type: 'parking', notes: 'Store at Rte F / Hwy 112 intersection. Tags, tackle, groceries.' },
       { name: 'Restrooms', lat: 36.5843, lng: -93.8359, type: 'parking', notes: 'Main restroom facility near store and parking area.' }
     ],
+    streamPath: [
+      [36.5926,-93.8335],[36.5916,-93.8338],[36.5906,-93.8347],[36.5901,-93.8351],
+      [36.5888,-93.8357],[36.5878,-93.8356],[36.5868,-93.8362],[36.5865,-93.8363],
+      [36.5858,-93.8361],[36.5853,-93.8356],[36.5847,-93.8351],[36.5834,-93.8346],
+      [36.5827,-93.8345],[36.5821,-93.8344],[36.5814,-93.8340],[36.5807,-93.8337]
+    ],
     solitude: 'low', difficulty: 'easy', wadingRequired: false, familyFriendly: true,
     bestSeasons: ['spring', 'fall'],
     hatches: { spring: ['BWO #16-20', 'Midges #18-24', 'Scuds #14-16'], summer: ['Caddis #14-16', 'Terrestrials', 'Cream variants #16'], fall: ['BWO #18-22', 'Midges #18-22'], winter: ['Midges #20-26', 'BWO #20-24'] },
@@ -318,6 +336,11 @@ window.TROUT_WATERS = [
       { name: 'Main Parking / Gate', lat: 37.9551, lng: -91.5318, type: 'parking', notes: 'Entrance gate — pay $5/vehicle. Parking near spring, museum, and stream.' },
       { name: 'Store / Museum', lat: 37.9539, lng: -91.5345, type: 'parking', notes: 'James Foundation Iron Works Museum near spring pool. Tags and supplies.' },
       { name: 'Restrooms', lat: 37.9542, lng: -91.5320, type: 'parking', notes: 'Main restrooms near parking area.' }
+    ],
+    streamPath: [
+      [37.9534,-91.5328],[37.9544,-91.5326],[37.9553,-91.5329],[37.9560,-91.5340],
+      [37.9568,-91.5350],[37.9575,-91.5360],[37.9579,-91.5368],[37.9585,-91.5367],
+      [37.9595,-91.5366],[37.9603,-91.5365],[37.9615,-91.5363]
     ],
     solitude: 'low', difficulty: 'easy', wadingRequired: false, familyFriendly: true,
     bestSeasons: ['spring', 'fall'],

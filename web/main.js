@@ -15987,11 +15987,23 @@ document.addEventListener('DOMContentLoaded', () => {
       iconAnchor: [0, 16]
     });
     fishFlow.areaMarker = L.marker([water.lat, water.lng], { icon: pillIcon, zIndexOffset: 900 }).addTo(map);
-    // Click the pin → scroll to action bar
+    // Click the pin → info popup with action pills
     fishFlow.areaMarker.on('click', function() {
-      fishShowStep(1);
-      const el = document.getElementById('fishStep1_areaAction');
-      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      var w = fishFlow.area;
+      if (!w) return;
+      var desc = String(w.description || '').substring(0, 160);
+      var html = '<div style="min-width:230px;">' +
+        '<div style="font-weight:700;color:#2bd4ff;font-size:14px;">' + escapeHtml(w.name) + '</div>' +
+        '<div style="font-size:12px;color:#ddd;margin-top:3px;">' + escapeHtml(w.waterType || 'Trout Water') + ' \u2022 ' + escapeHtml(w.ribbon || w.category || '') + '</div>' +
+        '<div style="font-size:11px;color:#b8d8c8;margin-top:6px;line-height:1.4;">' + escapeHtml(desc) + '</div>' +
+        '<div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap;">' +
+        '<button style="padding:5px 12px;border-radius:6px;border:1px solid #7cffc7;background:rgba(124,255,199,0.15);color:#7cffc7;font-size:11px;font-weight:700;cursor:pointer;" onclick="fishStepCheckIn();if(map)map.closePopup();">\u2705 Check In</button>' +
+        '<button style="padding:5px 12px;border-radius:6px;border:1px solid #2bd4ff;background:rgba(43,212,255,0.1);color:#2bd4ff;font-size:11px;font-weight:700;cursor:pointer;" onclick="fishStepSaveSpot();if(map)map.closePopup();">\uD83D\uDCCC Save Spot</button>' +
+        '<button style="padding:5px 12px;border-radius:6px;border:1px solid #666;background:rgba(255,255,255,0.05);color:#aaa;font-size:11px;font-weight:700;cursor:pointer;" onclick="if(map)map.closePopup();">\u2190 Back</button>' +
+        '<button style="padding:5px 12px;border-radius:6px;border:1px solid #666;background:rgba(255,255,255,0.05);color:#aaa;font-size:11px;font-weight:700;cursor:pointer;" onclick="if(map)map.closePopup();">\u2715 Close</button>' +
+        '</div></div>';
+      fishFlow.areaMarker.unbindPopup();
+      fishFlow.areaMarker.bindPopup(html, { maxWidth: 300, className: 'ht-area-popup' }).openPopup();
     });
   }
 

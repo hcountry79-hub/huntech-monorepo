@@ -1286,17 +1286,60 @@ function getFlyCheckInLatLng() {
   return null;
 }
 
-function showFlyCheckInZone(latlng) {
+/* Build a polygon corridor around a stream path (array of [lat,lng] pairs) */
+function buildStreamCorridor(path, bufferM) {
+  if (!path || path.length < 2) return null;
+  var R = Math.PI / 180;
+  var mPerLat = 111000;
+  var mPerLng = 111000 * Math.cos(path[0][0] * R);
+  var left = [], right = [];
+  for (var i = 0; i < path.length; i++) {
+    var lat = path[i][0], lng = path[i][1];
+    var dy, dx;
+    if (i === 0) { dy = path[1][0] - lat; dx = path[1][1] - lng; }
+    else if (i === path.length - 1) { dy = lat - path[i-1][0]; dx = lng - path[i-1][1]; }
+    else { dy = path[i+1][0] - path[i-1][0]; dx = path[i+1][1] - path[i-1][1]; }
+    var dyM = dy * mPerLat, dxM = dx * mPerLng;
+    var len = Math.sqrt(dyM * dyM + dxM * dxM);
+    if (len < 0.01) { left.push([lat, lng]); right.push([lat, lng]); continue; }
+    var pLat = (-dxM / len) * bufferM / mPerLat;
+    var pLng = (dyM / len) * bufferM / mPerLng;
+    left.push([lat + pLat, lng + pLng]);
+    right.push([lat - pLat, lng - pLng]);
+  }
+  return left.concat(right.reverse());
+}
+
+function showFlyCheckInZone(latlng, waterId) {
   if (!latlng || !map) return;
   if (flyCheckInAreaLayer) {
     try { map.removeLayer(flyCheckInAreaLayer); } catch {}
   }
+  // Look up water to get stream path
+  var water = null;
+  if (waterId && window.TROUT_WATERS) {
+    water = window.TROUT_WATERS.find(function(w) { return w.id === waterId; });
+  }
+  if (water && water.streamPath && water.streamPath.length >= 2) {
+    var corridor = buildStreamCorridor(water.streamPath, 45);
+    if (corridor) {
+      flyCheckInAreaLayer = L.polygon(corridor, {
+        color: '#2bd4ff',
+        weight: 2,
+        fillColor: '#2bd4ff',
+        fillOpacity: 0.12,
+        dashArray: '6 4'
+      }).addTo(map);
+      return;
+    }
+  }
+  // Fallback: small circle for waters without stream path
   flyCheckInAreaLayer = L.circle(latlng, {
-    radius: 140,
+    radius: 100,
     color: '#2bd4ff',
     weight: 2,
     fillColor: '#2bd4ff',
-    fillOpacity: 0.14
+    fillOpacity: 0.12
   }).addTo(map);
 }
 
@@ -1782,7 +1825,7 @@ window.flyCheckIn = function() {
 window.flyCheckInAtAccess = function(waterId, lat, lng, accessName) {
   if (!isFlyModule()) return;
   const latlng = L.latLng(lat, lng);
-  showFlyCheckInZone(latlng);
+  showFlyCheckInZone(latlng, waterId);
   if (map) map.setView(latlng, Math.max(map.getZoom(), 14));
   // Close any open popups so the map stays clean
   if (map) map.closePopup();
