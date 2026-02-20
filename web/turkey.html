@@ -20,7 +20,7 @@
   <script src="config.js?v=20260218a"></script>
   <script src="api.js?v=20260218a"></script>
 </head>
-<body class="module-turkey">
+<body class="module-turkey ht-toolbar-collapsed">
   <header class="ht-topbar">
     <div class="ht-header-left">
       <div class="ht-brand">
@@ -37,6 +37,7 @@
           <option value="fly-fishing.html">Fly Fishing</option>
           <option value="mushroom.html">Mushroom</option>
           <option value="turkey.html" selected>Turkey</option>
+          <option value="whitetail.html">Whitetail</option>
         </select>
       </div>
 
@@ -67,7 +68,7 @@
         <svg width="20" height="20" viewBox="0 0 24 24" fill="#c8a96e">
           <path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
         </svg>
-        <input type="text" placeholder="Search town, conservation area, or coords…" class="ht-search-input" id="searchInput" autocomplete="off" spellcheck="false">
+        <input type="text" placeholder="Search any address, business, park, or coords…" class="ht-search-input" id="searchInput" autocomplete="off" spellcheck="false">
         <button class="ht-search-btn" type="button">Search</button>
         <div class="ht-search-results" id="searchResults"></div>
       </div>
@@ -128,8 +129,8 @@
   <main class="ht-map-container">
     <div id="map"></div>
 
-    <!-- ═══ HERO SPLASH — cinematic rotating turkey gallery ═══ -->
-    <div class="ht-map-hero" id="mapHero">
+    <!-- ═══ HERO SPLASH — hidden by default, map loads immediately ═══ -->
+    <div class="ht-map-hero" id="mapHero" style="display:none">
       <div class="ht-hero-slide ht-hero-slide--active ht-slide-turkey-1"  style="background-image:url('assets/turkey-hero-1.jpg')"></div>
       <div class="ht-hero-vignette"></div>
     </div>
@@ -144,7 +145,7 @@
     </svg>
   </button>
 
-  <div class="ht-toolbar" id="toolbar">
+  <div class="ht-toolbar collapsed" id="toolbar">
     <div class="ht-toolbar-tab">
       <div class="ht-toolbar-tab-row">
         <button class="ht-toolbar-mini-btn ht-toolbar-mini-btn-startover" type="button" onclick="window.startOver()" data-full-label="START OVER" data-short-label="START OVER">START OVER</button>
@@ -163,8 +164,7 @@
 
       <!-- ── Step 1: Scout & Define Area ── -->
       <div class="ht-accordion ht-accordion-static" id="defineAreaPanel">
-        <div class="ht-accordion-header ht-accordion-header-split">
-          <span class="ht-header-spacer" aria-hidden="true"></span>
+        <div class="ht-accordion-header ht-accordion-header-minimal">
           <span class="ht-define-title">Scout &amp; Define Area</span>
         </div>
         <div class="ht-form-grid">

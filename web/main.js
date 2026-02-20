@@ -1865,7 +1865,7 @@ function activateShedMap() {
     document.body.classList.add('ht-map-active');
     initializeMap();
     restoreLastKnownLocation();
-    setDefaultAreaFromLocation();
+    // setDefaultAreaFromLocation(); // Removed — no auto radius/pins on load
     updateFilterChips();
     updateWorkflowUI();
     updateLocateMeOffset();
@@ -1948,7 +1948,7 @@ function activateTurkeyMap() {
     document.body.classList.add('ht-map-active');
     initializeMap();
     restoreLastKnownLocation();
-    setDefaultAreaFromLocation();
+    // setDefaultAreaFromLocation(); // Removed — no auto radius/pins on load
     updateFilterChips();
     updateWorkflowUI();
     updateLocateMeOffset();
@@ -1976,7 +1976,7 @@ function activateWhitetailMap() {
     document.body.classList.add('ht-map-active');
     initializeMap();
     restoreLastKnownLocation();
-    setDefaultAreaFromLocation();
+    // setDefaultAreaFromLocation(); // Removed — no auto radius/pins on load
     updateFilterChips();
     updateWorkflowUI();
     updateLocateMeOffset();
@@ -16389,7 +16389,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.body.classList.add('ht-hero-dismissed');
     initializeMap();
     restoreLastKnownLocation();
-    setDefaultAreaFromLocation();
+    // setDefaultAreaFromLocation(); // Removed — no auto radius/pins on load
     updateFilterChips();
     updateWorkflowUI();
     updateLocateMeOffset();
@@ -16456,7 +16456,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (!isFly && !isMush) {
     restoreLastKnownLocation();
     tryAutoCenterWithoutPrompt();
-    setDefaultAreaFromLocation();
+    // setDefaultAreaFromLocation(); // Removed — no auto radius/pins on load
   }
 
   const savedPropertySelect = document.getElementById('savedPropertySelect');
