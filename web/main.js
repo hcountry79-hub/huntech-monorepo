@@ -15986,23 +15986,14 @@ document.addEventListener('DOMContentLoaded', () => {
       iconAnchor: [0, 16]
     });
     fishFlow.areaMarker = L.marker([water.lat, water.lng], { icon: pillIcon, zIndexOffset: 900 }).addTo(map);
-    // Click the pin → info popup with action pills
+    // Click the pin → open unified action tray (no white popup)
     fishFlow.areaMarker.on('click', function() {
       var w = fishFlow.area;
       if (!w) return;
-      var desc = String(w.description || '').substring(0, 160);
-      var html = '<div style="min-width:230px;">' +
-        '<div style="font-weight:700;color:#2bd4ff;font-size:14px;">' + escapeHtml(w.name) + '</div>' +
-        '<div style="font-size:12px;color:#ddd;margin-top:3px;">' + escapeHtml(w.waterType || 'Trout Water') + ' \u2022 ' + escapeHtml(w.ribbon || w.category || '') + '</div>' +
-        '<div style="font-size:11px;color:#b8d8c8;margin-top:6px;line-height:1.4;">' + escapeHtml(desc) + '</div>' +
-        '<div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap;">' +
-        '<button style="padding:5px 12px;border-radius:6px;border:1px solid #7cffc7;background:rgba(124,255,199,0.15);color:#7cffc7;font-size:11px;font-weight:700;cursor:pointer;" onclick="fishStepCheckIn();if(map)map.closePopup();">\u2705 Check In</button>' +
-        '<button style="padding:5px 12px;border-radius:6px;border:1px solid #2bd4ff;background:rgba(43,212,255,0.1);color:#2bd4ff;font-size:11px;font-weight:700;cursor:pointer;" onclick="fishStepSaveSpot();if(map)map.closePopup();">\uD83D\uDCCC Save Spot</button>' +
-        '<button style="padding:5px 12px;border-radius:6px;border:1px solid #666;background:rgba(255,255,255,0.05);color:#aaa;font-size:11px;font-weight:700;cursor:pointer;" onclick="if(map)map.closePopup();">\u2190 Back</button>' +
-        '<button style="padding:5px 12px;border-radius:6px;border:1px solid #666;background:rgba(255,255,255,0.05);color:#aaa;font-size:11px;font-weight:700;cursor:pointer;" onclick="if(map)map.closePopup();">\u2715 Close</button>' +
-        '</div></div>';
-      fishFlow.areaMarker.unbindPopup();
-      fishFlow.areaMarker.bindPopup(html, { maxWidth: 300, className: 'ht-area-popup' }).openPopup();
+      if (typeof map !== 'undefined' && map) map.closePopup();
+      if (typeof showFlyWaterActionBar === 'function') {
+        showFlyWaterActionBar(w);
+      }
     });
   }
 
@@ -16010,69 +16001,32 @@ document.addEventListener('DOMContentLoaded', () => {
   function fishNowInit() {
     console.log('HUNTECH: fishNowInit running');
     fishShowStep(0); // show GPS scanning state
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(function(pos) {
-        console.log('HUNTECH: GPS got position', pos.coords.latitude, pos.coords.longitude);
-        const lat = pos.coords.latitude, lng = pos.coords.longitude;
-        // Center map at zoom 12 so user can see surrounding water pins
-        if (typeof map !== 'undefined' && map) {
-          map.setView([lat, lng], 12, { animate: true, duration: 1.0 });
-        }
-        // Only check-in if user is physically within 2 miles of a public trout water
-        const water = findNearestWater(lat, lng, 2.0);
-        if (water) {
-          fishFlow.area = water;
-          placeAreaPin(water);
-          const ribbonEl = document.getElementById('fishAreaRibbon');
-          const titleEl = document.getElementById('fishAreaTitle');
-          const descEl = document.getElementById('fishAreaDesc');
-          if (ribbonEl) ribbonEl.textContent = '🎣 ' + (water.ribbon || water.category || 'Trout Water');
-          if (titleEl) titleEl.textContent = 'Welcome to ' + water.name;
-          if (descEl) {
-            const parts = [(water.streamMiles ? water.streamMiles + ' mi' : ''), (water.species || []).join(', '), (water.waterType || '')].filter(Boolean);
-            descEl.textContent = parts.join(' · ');
-          }
-          setTimeout(() => fishShowStep(1), 700);
-        } else {
-          // User is NOT near a public trout water — show browse state
-          const loadingEl = document.getElementById('fishStep0_loading');
-          if (loadingEl) {
-            // Build closest 5 waters list so user can select one
-            let listHtml = '';
-            if (window.TROUT_WATERS && window.TROUT_WATERS.length) {
-              const R = 3958.8, lat1 = lat * Math.PI / 180;
-              const sorted = window.TROUT_WATERS
-                .filter(w => w.lat && w.lng)
-                .map(w => {
-                  const dlat = (w.lat - lat) * Math.PI / 180, dlng = (w.lng - lng) * Math.PI / 180;
-                  const a = Math.sin(dlat/2)*Math.sin(dlat/2) + Math.cos(lat1)*Math.cos(w.lat*Math.PI/180)*Math.sin(dlng/2)*Math.sin(dlng/2);
-                  return { water: w, dist: R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)) };
-                })
-                .sort((a, b) => a.dist - b.dist)
-                .slice(0, 5);
-              listHtml = sorted.map(item =>
-                '<button class="ht-fish-browse-row" type="button" onclick="fishSelectWater(\'' + escapeHtml(item.water.id) + '\')">' +
-                '<span class="ht-fish-browse-name">' + escapeHtml(item.water.name) + '</span>' +
-                '<span class="ht-fish-browse-dist">' + item.dist.toFixed(0) + ' mi</span>' +
-                '</button>'
-              ).join('');
-            }
-            loadingEl.innerHTML =
-              '<div class="ht-fish-locate-card">' +
-              '<div class="ht-fish-locate-label" style="margin-bottom:4px;">You\'re not at a trout water</div>' +
-              '<div class="ht-fish-locate-sub" style="margin-bottom:12px;">Tap a pin on the map to check in, or pick a nearby water below.</div>' +
-              (listHtml ? '<div class="ht-fish-browse-list">' + listHtml + '</div>' : '') +
-              '<button class="ht-fish-secondary-link" type="button" onclick="fishStepStartOver()" style="margin-top:10px;">↩ Scan again</button>' +
-              '</div>';
-          }
-        }
-      }, function() {
-        centerOnMyLocationInternal();
-        showNotice('Enable location access to find your nearest trout water.', 'error', 3500);
-      }, { enableHighAccuracy: true, maximumAge: 10000, timeout: 15000 });
-    } else {
-      showNotice('GPS not available on this device.', 'error', 3500);
+    // DEV: Lock to Bennett Spring for testing (skip real GPS)
+    var water = window.TROUT_WATERS && window.TROUT_WATERS.find(function(w) { return w.id === 'bennett-spring'; });
+    if (!water) {
+      showNotice('Bennett Spring data not loaded.', 'error', 3500);
+      return;
     }
+    fishFlow.area = water;
+    placeAreaPin(water);
+    if (typeof map !== 'undefined' && map) {
+      map.setView([water.lat, water.lng], 14, { animate: true, duration: 1.0 });
+    }
+    // Show the unified action tray (bottom bar)
+    if (typeof showFlyWaterActionBar === 'function') {
+      setTimeout(function() { showFlyWaterActionBar(water); }, 400);
+    }
+    // Populate step 1 welcome elements
+    var ribbonEl = document.getElementById('fishAreaRibbon');
+    var titleEl = document.getElementById('fishAreaTitle');
+    var descEl = document.getElementById('fishAreaDesc');
+    if (ribbonEl) ribbonEl.textContent = '\uD83C\uDFA3 ' + (water.ribbon || water.category || 'Trout Water');
+    if (titleEl) titleEl.textContent = 'Welcome to ' + water.name;
+    if (descEl) {
+      var parts = [(water.streamMiles ? water.streamMiles + ' mi' : ''), (water.species || []).join(', '), (water.waterType || '')].filter(Boolean);
+      descEl.textContent = parts.join(' \u00B7 ');
+    }
+    setTimeout(function() { fishShowStep(1); }, 500);
   }
 
   // Called when user taps a water in the browse list or a pin on the map
@@ -16157,8 +16111,13 @@ document.addEventListener('DOMContentLoaded', () => {
   /* ═══ Step 1 actions ═══ */
   window.fishStepCheckIn = function() {
     if (!fishFlow.area) return;
-    showNotice('✅ Checked in at ' + fishFlow.area.name, 'success', 2500);
-    fishShowStep(2);
+    showNotice('\u2705 Checked in at ' + fishFlow.area.name, 'success', 2500);
+    // Expand the unified tray to show preferences + LET'S GO
+    if (typeof showFlyCheckInForm === 'function') {
+      showFlyCheckInForm(fishFlow.area);
+    } else {
+      fishShowStep(2);
+    }
   };
 
   /* ═══ Step 2 → Deploy Pins & Advance to Route Tray ═══ */

@@ -439,15 +439,61 @@ function showFlyWaterActionBar(water) {
       <button class="ht-fly-water-bar-close" type="button" onclick="closeFlyWaterActionBar()">X</button>
     </div>
     <div class="ht-fly-water-bar-actions">
-      <button class="ht-fly-pill ht-fly-pill--primary" type="button" onclick="addFlyWaterToSaved('${escapeHtml(water.id)}')">Add to My Trout Waters</button>
+      <button class="ht-fly-pill ht-fly-pill--primary" type="button" onclick="fishStepCheckIn()">Check In to Area</button>
+      <button class="ht-fly-pill" type="button" onclick="fishStepSaveSpot()">Add to My Spots</button>
       <button class="ht-fly-pill ht-fly-pill--ghost" type="button" onclick="openFlyWaterRegulations('${escapeHtml(water.id)}')">Area Rules + Regs</button>
       <button class="${stampClass}" type="button" aria-label="${stampLabel}" disabled>${stampPill}</button>
-      <button class="ht-fly-pill" type="button" onclick="flyFishNow('${escapeHtml(water.id)}')">Fish Now</button>
-      <button class="ht-fly-pill" type="button" onclick="flyAddToTripPlanner('${escapeHtml(water.id)}')">Add to Trip Planner</button>
     </div>
   `;
   bar.classList.add('is-visible');
 }
+
+/* ── Check-In form: expands tray to show preferences + LET'S GO ── */
+function showFlyCheckInForm(water) {
+  if (!water) return;
+  const bar = ensureFlyWaterActionBar();
+  const stampRequired = isTroutStampRequired(water);
+  const stampNote = stampRequired ? '⚠️ Trout Stamp Required' : '✅ No Stamp Required';
+  const ribbonLabel = water.ribbon ? ` • ${escapeHtml(water.ribbon)}` : '';
+  bar.innerHTML = `
+    <div class="ht-fly-water-bar-header">
+      <div>
+        <div class="ht-fly-water-bar-title">✅ ${escapeHtml(water.name || 'Trout Water')}</div>
+        <div class="ht-fly-water-bar-sub">Checked In${ribbonLabel} • ${stampNote}</div>
+      </div>
+      <button class="ht-fly-water-bar-close" type="button" onclick="closeFlyWaterActionBar()">X</button>
+    </div>
+    <div class="ht-fly-tray-form">
+      <div class="ht-fly-tray-row">
+        <div class="ht-fly-tray-label">Fishing Method</div>
+        <div class="ht-method-row">
+          <button class="ht-method-btn ht-method-btn--active" data-fish-method="fly" onclick="pickFishMethod(this,'fly')">🪰 Fly</button>
+          <button class="ht-method-btn" data-fish-method="spin" onclick="pickFishMethod(this,'spin')">🎣 Lure</button>
+          <button class="ht-method-btn" data-fish-method="bait" onclick="pickFishMethod(this,'bait')">🪱 Bait</button>
+        </div>
+      </div>
+      <div class="ht-fly-tray-row">
+        <div class="ht-fly-tray-label">Water Access</div>
+        <div class="ht-method-row">
+          <button class="ht-method-btn ht-method-btn--active" data-fish-wade="waders" onclick="pickFishWade(this,'waders')">🥾 Wading</button>
+          <button class="ht-method-btn" data-fish-wade="streamside" onclick="pickFishWade(this,'streamside')">🏖️ Bank</button>
+        </div>
+      </div>
+      <div class="ht-fly-tray-row">
+        <div class="ht-fly-tray-label">Skill Level</div>
+        <div class="ht-method-row">
+          <button class="ht-method-btn" data-fish-exp="new" onclick="pickFishExp(this,'new')">🌱 New</button>
+          <button class="ht-method-btn ht-method-btn--active" data-fish-exp="learning" onclick="pickFishExp(this,'learning')">📈 Learning</button>
+          <button class="ht-method-btn" data-fish-exp="confident" onclick="pickFishExp(this,'confident')">💪 Confident</button>
+          <button class="ht-method-btn" data-fish-exp="advanced" onclick="pickFishExp(this,'advanced')">🏆 Advanced</button>
+        </div>
+      </div>
+      <button class="ht-fly-pill ht-fly-pill--letsgo" type="button" onclick="fishStepDeploy();closeFlyWaterActionBar();">🎣 LET'S GO</button>
+    </div>
+  `;
+  bar.classList.add('is-visible');
+}
+window.showFlyCheckInForm = showFlyCheckInForm;
 
 function getFlyPinIcon(labelText) {
   const label = String(labelText || '').trim();
@@ -471,19 +517,8 @@ function getFlyCustomWaters() {
 
 function openFlyWaterPopup(marker, water) {
   if (!marker || !water) return;
-  const confidence = water.confidence ? water.confidence.toUpperCase() : 'UNKNOWN';
-  const popup = `
-    <div style="min-width:200px;">
-      <div style="font-weight:700;color:#2bd4ff;">${escapeHtml(water.name)}</div>
-      <div style="font-size:12px;color:#ddd;margin-top:4px;">${escapeHtml(water.waterType || 'Public Water')} • ${escapeHtml(water.ribbon || 'General')}</div>
-      <div style="font-size:11px;color:#9fb9c5;margin-top:6px;">Access: ${escapeHtml(water.access || 'Check official access points.')}</div>
-      <div style="font-size:11px;color:#9fb9c5;margin-top:4px;">Solitude: ${escapeHtml(water.solitude || 'medium')} • Confidence: ${escapeHtml(confidence)}</div>
-      <div style="font-size:11px;color:#7cffc7;margin-top:6px;">Use the action bar below to save, plan, or fish now.</div>
-    </div>
-  `;
-  marker.bindPopup(popup);
+  // No white popup — show unified action tray instead
   showFlyWaterActionBar(water);
-  try { marker.closePopup(); } catch {}
 }
 
 function addFlyWaterMarker(water, labelOverride) {
