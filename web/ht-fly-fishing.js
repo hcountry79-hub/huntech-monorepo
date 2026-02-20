@@ -2548,14 +2548,15 @@ window.deployAiFishingPins = function(water, zone, fishFlow) {
   var bounds = [];
   spots.forEach(function(spot) {
     var pinColor = spot.rank === 1 ? '#7cffc7' : spot.rank === 2 ? '#2bd4ff' : spot.rank <= 4 ? '#ffe082' : '#9fc3ce';
+    var pillHtml = '<div class="ht-ai-fish-pill" style="border-color:' + pinColor + ';color:' + pinColor + ';">' +
+        '<span class="ht-ai-fish-rank">#' + spot.rank + '</span>' +
+        '<span class="ht-ai-fish-habitat">' + escapeHtml(_capitalize(spot.habitat)) + '</span>' +
+      '</div>';
     var icon = L.divIcon({
       className: 'ht-ai-fish-pin',
-      html: '<div class="ht-ai-fish-pill" style="border-color:' + pinColor + ';color:' + pinColor + ';">' +
-        '<span class="ht-ai-fish-rank">#' + spot.rank + '</span>' +
-        '<span class="ht-ai-fish-habitat">' + _habitatEmoji(spot.habitat) + ' ' + escapeHtml(_capitalize(spot.habitat)) + '</span>' +
-      '</div>',
-      iconSize: [0, 0],
-      iconAnchor: [0, 16]
+      html: pillHtml,
+      iconSize: [80, 22],
+      iconAnchor: [40, 11]
     });
 
     var marker = L.marker([spot.lat, spot.lng], {
@@ -2573,7 +2574,7 @@ window.deployAiFishingPins = function(water, zone, fishFlow) {
   });
 
   var deployed = spots.length;
-  showNotice('🎯 ' + deployed + ' fishing spot' + (deployed > 1 ? 's' : '') + ' deployed — ranked best to worst', 'success', 3000);
+  showNotice(deployed + ' fishing spot' + (deployed > 1 ? 's' : '') + ' deployed — ranked best to worst', 'success', 3000);
 };
 
 /* Score a spot based on user inputs */
@@ -2725,7 +2726,7 @@ window.showMissionSummary = function(water, zone, fishFlow) {
     var col = s.rank === 1 ? '#7cffc7' : s.rank === 2 ? '#2bd4ff' : '#ffe082';
     spotsListHtml += '<div class="ht-mission-spot" style="border-left:3px solid ' + col + ';">' +
       '<span class="ht-mission-spot-rank" style="color:' + col + ';">#' + s.rank + '</span>' +
-      '<span class="ht-mission-spot-name">' + _habitatEmoji(s.habitat) + ' ' + escapeHtml(_capitalize(s.habitat)) + '</span>' +
+      '<span class="ht-mission-spot-name">' + escapeHtml(_capitalize(s.habitat)) + '</span>' +
       '<span class="ht-mission-spot-score">' + s.score + ' pts</span>' +
     '</div>';
   });
@@ -2735,7 +2736,6 @@ window.showMissionSummary = function(water, zone, fishFlow) {
   el.innerHTML = `
     <div class="ht-mission-summary-card">
       <div class="ht-mission-summary-header">
-        <div class="ht-mission-summary-icon">🎯</div>
         <div class="ht-mission-summary-title">MISSION BRIEFING</div>
         <div class="ht-mission-summary-sub">${escapeHtml(water.name)} — ${escapeHtml(zone.name)}</div>
       </div>
@@ -2744,9 +2744,9 @@ window.showMissionSummary = function(water, zone, fishFlow) {
         <div class="ht-mission-summary-spots">${spotsListHtml}</div>
       </div>
       <div class="ht-mission-summary-actions">
-        <button class="ht-mission-btn ht-mission-btn--listen" type="button" onclick="window._listenMission()">🔊 Listen</button>
-        <button class="ht-mission-btn ht-mission-btn--save" type="button" onclick="window._saveMissionToJournal()">📓 Save to Journal</button>
-        <button class="ht-mission-btn ht-mission-btn--close" type="button" onclick="window._closeMissionSummary()">✕ Close & Fish</button>
+        <button class="ht-mission-btn ht-mission-btn--listen" type="button" onclick="window._listenMission()">Listen</button>
+        <button class="ht-mission-btn ht-mission-btn--save" type="button" onclick="window._saveMissionToJournal()">Save to Journal</button>
+        <button class="ht-mission-btn ht-mission-btn--close" type="button" onclick="window._closeMissionSummary()">Close & Fish</button>
       </div>
     </div>
   `;
@@ -2764,7 +2764,7 @@ window._listenMission = function() {
   if (!textEl) return;
   if (typeof window.speakText === 'function') {
     window.speakText(textEl.textContent);
-    showNotice('🔊 Reading mission briefing...', 'info', 2000);
+    showNotice('Reading mission briefing...', 'info', 2000);
   } else if (typeof speakTextBrowser === 'function') {
     speakTextBrowser(textEl.textContent);
   } else {
@@ -2889,7 +2889,7 @@ function _autoCheckInToPin(pinIdx) {
   var zone = fishFlow ? fishFlow.selectedZone : null;
   if (!water || !zone) return;
 
-  showNotice('📍 Arrived at Spot #' + spot.rank + ' — ' + _capitalize(spot.habitat) + '. Deploying micro-spots...', 'success', 3500);
+  showNotice('Arrived at Spot #' + spot.rank + ' — ' + _capitalize(spot.habitat) + '. Deploying micro-spots...', 'success', 3500);
 
   // Clear previous micro pins & polygons
   _activeMicroPins.forEach(function(m) { try { map.removeLayer(m); } catch {} });
@@ -2925,19 +2925,41 @@ function _autoCheckInToPin(pinIdx) {
     }
   }
 
-  // Deploy 3 micro cast-to spots within this area
+  // Deploy 3 micro cast-to spots on the stream segment near this spot
   var microTypes = ['primary-lie', 'seam-edge', 'pocket-water'];
-  var microLabels = ['🎯 Primary Lie', '🌊 Seam Edge', '💧 Pocket Water'];
-  var offsets = [[-0.00008, -0.00005], [0.00005, 0.00008], [-0.00004, 0.00010]];
+  var microLabels = ['Primary Lie', 'Seam Edge', 'Pocket Water'];
 
+  // Calculate micro positions along the actual stream segment
+  var cIdx = spot.segmentIdx;
+  var seg = getZoneStreamSegment(water, zone) || [];
+  var microCoords = [];
+  // Place micro spots at segment points near the main pin: -1, 0, +1 indices
+  var microOffsets = [-1, 0, 1];
   for (var i = 0; i < 3; i++) {
-    var mLat = spot.lat + offsets[i][0];
-    var mLng = spot.lng + offsets[i][1];
+    var sIdx = Math.max(0, Math.min(seg.length - 1, cIdx + microOffsets[i]));
+    // Tiny perpendicular nudge (3m) to spread them visually but keep on/near water
+    var nudgeLat = 0, nudgeLng = 0;
+    if (seg.length >= 2) {
+      var R = Math.PI / 180;
+      var mPerLat = 111000, mPerLng = 111000 * Math.cos(seg[0][0] * R);
+      var prevI = Math.max(0, sIdx - 1), nextI = Math.min(seg.length - 1, sIdx + 1);
+      var dy = seg[nextI][0] - seg[prevI][0], dx = seg[nextI][1] - seg[prevI][1];
+      var dyM = dy * mPerLat, dxM = dx * mPerLng;
+      var len = Math.sqrt(dyM * dyM + dxM * dxM);
+      if (len > 0.01) {
+        var perpDist = (i - 1) * 3; // -3m, 0m, +3m
+        nudgeLat = (-dxM / len) * perpDist / mPerLat;
+        nudgeLng = (dyM / len) * perpDist / mPerLng;
+      }
+    }
+    var mLat = seg[sIdx][0] + nudgeLat;
+    var mLng = seg[sIdx][1] + nudgeLng;
+    microCoords.push([mLat, mLng]);
     var mIcon = L.divIcon({
       className: 'ht-micro-cast-pin',
       html: '<div class="ht-micro-cast-pill">' + microLabels[i] + '</div>',
-      iconSize: [0, 0],
-      iconAnchor: [0, 12]
+      iconSize: [72, 18],
+      iconAnchor: [36, 9]
     });
     var mMarker = L.marker([mLat, mLng], { icon: mIcon, zIndexOffset: 500 }).addTo(map);
     mMarker.__microType = microTypes[i];
@@ -2950,8 +2972,10 @@ function _autoCheckInToPin(pinIdx) {
     _activeMicroPins.push(mMarker);
   }
 
-  // Zoom to the pin area
-  map.setView([spot.lat, spot.lng], 18, { animate: true, duration: 0.8 });
+  // Zoom to fit the main pin + all micro spots
+  var allPts = [[spot.lat, spot.lng]].concat(microCoords);
+  var zbounds = L.latLngBounds(allPts);
+  map.fitBounds(zbounds.pad(0.3), { animate: true, duration: 0.8, maxZoom: 19 });
 }
 window._autoCheckInToPin = _autoCheckInToPin;
 
@@ -2976,7 +3000,7 @@ function _autoCheckInToMicroSpot(microIdx) {
   var spot = _aiFishingSpots[_checkedInPinIdx];
   if (!water || !zone || !spot) return;
 
-  showNotice('🎯 At micro-spot: ' + _capitalize(mType.replace(/-/g, ' ')), 'success', 2500);
+  showNotice('At micro-spot: ' + _capitalize(mType.replace(/-/g, ' ')), 'success', 2500);
   _showSpotInfoTray(water, zone, spot, mType, microIdx);
 }
 
@@ -2999,41 +3023,41 @@ function _showSpotInfoTray(water, zone, spot, microType, microIdx) {
   el.className = 'ht-spot-info-tray';
   el.innerHTML = `
     <div class="ht-spot-info-header">
-      <div class="ht-spot-info-title">🎯 ${escapeHtml(microLabel)}</div>
-      <div class="ht-spot-info-sub">${_habitatEmoji(spot.habitat)} ${escapeHtml(_capitalize(spot.habitat))} — Spot #${spot.rank}</div>
+      <div class="ht-spot-info-title">${escapeHtml(microLabel)}</div>
+      <div class="ht-spot-info-sub">${escapeHtml(_capitalize(spot.habitat))} — Spot #${spot.rank}</div>
       <button class="ht-spot-info-close" type="button" onclick="window._closeSpotInfoTray()">✕</button>
     </div>
     <div class="ht-spot-info-body">
       <div class="ht-spot-info-section">
-        <div class="ht-spot-info-label">🎯 MICRO-SPOT STRATEGY</div>
+        <div class="ht-spot-info-label">MICRO-SPOT STRATEGY</div>
         <div class="ht-spot-info-text">${escapeHtml(microAdvice[microType] || microAdvice['primary-lie'])}</div>
       </div>
       <div class="ht-spot-info-section">
-        <div class="ht-spot-info-label">🧭 APPROACH</div>
+        <div class="ht-spot-info-label">APPROACH</div>
         <div class="ht-spot-info-text">${escapeHtml(strat.approach)}</div>
       </div>
       <div class="ht-spot-info-section">
-        <div class="ht-spot-info-label">🎣 CASTING</div>
+        <div class="ht-spot-info-label">CASTING</div>
         <div class="ht-spot-info-text">${escapeHtml(strat.castDirection)}</div>
       </div>
       <div class="ht-spot-info-section">
-        <div class="ht-spot-info-label">🪰 RECOMMENDED FLY</div>
+        <div class="ht-spot-info-label">RECOMMENDED FLY</div>
         <div class="ht-spot-info-text">${escapeHtml(rec.flyRec || 'Match the hatch — observe the water first.')}</div>
         ${rec.altFly ? '<div class="ht-spot-info-alt">Backup: ' + escapeHtml(rec.altFly) + '</div>' : ''}
       </div>
       <div class="ht-spot-info-section">
-        <div class="ht-spot-info-label">🥾 WADING</div>
+        <div class="ht-spot-info-label">WADING</div>
         <div class="ht-spot-info-text">${escapeHtml(strat.wadingAdvice)}</div>
       </div>
       <div class="ht-spot-info-section">
-        <div class="ht-spot-info-label">⏰ CONDITIONS</div>
+        <div class="ht-spot-info-label">CONDITIONS</div>
         <div class="ht-spot-info-text">${escapeHtml(rec.timeAdvice)}</div>
       </div>
     </div>
     <div class="ht-spot-info-actions">
-      <button class="ht-spot-info-btn ht-spot-info-btn--voice" type="button" onclick="window._startVoiceReport()">🎙️ Report to Coach</button>
-      <button class="ht-spot-info-btn ht-spot-info-btn--listen" type="button" onclick="window._listenSpotBriefing()">🔊 Listen</button>
-      <button class="ht-spot-info-btn ht-spot-info-btn--next" type="button" onclick="window._nextSpot()">→ Next Spot</button>
+      <button class="ht-spot-info-btn ht-spot-info-btn--voice" type="button" onclick="window._startVoiceReport()">Report to Coach</button>
+      <button class="ht-spot-info-btn ht-spot-info-btn--listen" type="button" onclick="window._listenSpotBriefing()">Listen</button>
+      <button class="ht-spot-info-btn ht-spot-info-btn--next" type="button" onclick="window._nextSpot()">Next Spot</button>
     </div>
   `;
   document.body.appendChild(el);
@@ -3063,7 +3087,7 @@ window._listenSpotBriefing = function() {
   } else if (typeof speakTextBrowser === 'function') {
     speakTextBrowser(text);
   }
-  showNotice('🔊 Reading spot briefing...', 'info', 2000);
+  showNotice('Reading spot briefing...', 'info', 2000);
 };
 
 window._nextSpot = function() {
@@ -3078,7 +3102,7 @@ window._nextSpot = function() {
 /* ── Voice AI Coach — Speech Recognition Input ── */
 window._startVoiceReport = function() {
   if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-    showNotice('🎙️ Voice input not supported on this browser. Try Chrome.', 'warning', 3500);
+    showNotice('Voice input not supported on this browser. Try Chrome.', 'warning', 3500);
     // Fallback: show text input
     _showTextReportInput();
     return;
@@ -3090,12 +3114,12 @@ window._startVoiceReport = function() {
   recognition.interimResults = false;
   recognition.lang = 'en-US';
 
-  showNotice('🎙️ Listening… tell me what you see', 'info', 5000);
+  showNotice('Listening… tell me what you see', 'info', 5000);
 
   recognition.onresult = function(event) {
     var transcript = event.results[0][0].transcript;
     console.log('HUNTECH VOICE:', transcript);
-    showNotice('🎙️ Heard: "' + transcript + '"', 'success', 3000);
+    showNotice('Heard: "' + transcript + '"', 'success', 3000);
     _processCoachReport(transcript);
   };
 
