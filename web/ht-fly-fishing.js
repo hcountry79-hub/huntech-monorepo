@@ -1343,6 +1343,372 @@ function showFlyCheckInZone(latlng, waterId) {
   }).addTo(map);
 }
 
+/* ═══════════════════════════════════════════════════════════════════════
+   ZONE-FILTERED DEPLOYMENT + MICRO PINS + STRATEGY BRIEFINGS
+   ═══════════════════════════════════════════════════════════════════════ */
+
+var zonePinMarkers = [];
+var microPinMarkers = [];
+var zonePolygonLayer = null;
+var anglerPinMarker = null;
+
+/* Parse allowed fishing methods for a zone */
+function getZoneAllowedMethods(zone) {
+  if (zone && Array.isArray(zone.methods) && zone.methods.length) return zone.methods;
+  // Fallback: parse from zone name/notes
+  var name = String(zone.name || '').toLowerCase();
+  var notes = String(zone.notes || '').toLowerCase();
+  var combined = name + ' ' + notes;
+  if (combined.indexOf('bait only') !== -1) return ['bait'];
+  if (combined.indexOf('fly only') !== -1 || combined.indexOf('c&r fly') !== -1 || combined.indexOf('fly area') !== -1) return ['fly'];
+  if (combined.indexOf('flies & lures') !== -1 || combined.indexOf('lures & flies') !== -1 || combined.indexOf('flies and artificial lures') !== -1) return ['fly', 'spin'];
+  if (combined.indexOf('all methods') !== -1 || combined.indexOf('all legal') !== -1) return ['fly', 'spin', 'bait'];
+  return ['fly', 'spin', 'bait']; // default: all methods
+}
+
+/* Method label for display */
+function getMethodLabel(m) {
+  if (m === 'fly') return 'Fly';
+  if (m === 'spin') return 'Lure';
+  if (m === 'bait') return 'Bait';
+  return m;
+}
+
+/* Clear deployed zone pins */
+function clearZonePins() {
+  zonePinMarkers.forEach(function(m) { try { map.removeLayer(m); } catch {} });
+  zonePinMarkers = [];
+}
+
+/* Clear micro pins, angler pin, and zone polygon */
+function clearMicroPins() {
+  microPinMarkers.forEach(function(m) { try { map.removeLayer(m); } catch {} });
+  microPinMarkers = [];
+  if (zonePolygonLayer) { try { map.removeLayer(zonePolygonLayer); } catch {} zonePolygonLayer = null; }
+  if (anglerPinMarker) { try { map.removeLayer(anglerPinMarker); } catch {} anglerPinMarker = null; }
+}
+
+/* Zone pin icon */
+function getZonePinIcon(zone, idx) {
+  var colors = ['#2bd4ff', '#7cffc7', '#ffe082'];
+  var color = colors[idx % colors.length];
+  return L.divIcon({
+    className: 'ht-zone-deploy-pin',
+    html: '<div class="ht-zone-deploy-pill" style="border-color:' + color + ';color:' + color + ';">' +
+      '<span class="ht-zone-deploy-dot" style="background:' + color + ';"></span>' +
+      escapeHtml(zone.name) + '</div>',
+    iconSize: [0, 0],
+    iconAnchor: [0, 16]
+  });
+}
+
+/* Trout micro-pin icon (fish emoji with habitat indicator) */
+function getTroutMicroPinIcon(habitat) {
+  var emojis = { riffle: '🐟', pool: '🐠', run: '🐟', boulder: '🐡', tailout: '🐟' };
+  var emoji = emojis[habitat] || '🐟';
+  return L.divIcon({
+    className: 'ht-trout-micro-pin',
+    html: '<div class="ht-trout-micro-pill">' + emoji + '</div>',
+    iconSize: [28, 28],
+    iconAnchor: [14, 14]
+  });
+}
+
+/* Angler position pin icon */
+function getAnglerPinIcon() {
+  return L.divIcon({
+    className: 'ht-angler-pin',
+    html: '<div class="ht-angler-pill">🧍</div>',
+    iconSize: [28, 28],
+    iconAnchor: [14, 28]
+  });
+}
+
+/* Get the portion of streamPath that belongs to a zone */
+function getZoneStreamSegment(water, zone) {
+  if (!water || !water.streamPath || water.streamPath.length < 2) return null;
+  var path = water.streamPath;
+  var zones = (water.access || []).filter(function(a) { return a.type === 'zone'; });
+  if (zones.length < 2) return path;
+
+  // Find each zone's nearest point index on the stream path
+  var zoneIndexes = zones.map(function(z) {
+    var best = 0, bestDist = Infinity;
+    for (var i = 0; i < path.length; i++) {
+      var d = Math.pow(path[i][0] - z.lat, 2) + Math.pow(path[i][1] - z.lng, 2);
+      if (d < bestDist) { bestDist = d; best = i; }
+    }
+    return { zone: z, idx: best };
+  });
+  zoneIndexes.sort(function(a, b) { return a.idx - b.idx; });
+
+  // Find this zone's position
+  var myPos = -1;
+  for (var i = 0; i < zoneIndexes.length; i++) {
+    if (zoneIndexes[i].zone === zone) { myPos = i; break; }
+  }
+  if (myPos === -1) return path;
+
+  // Slice path: from midpoint between prev zone to midpoint with next zone
+  var startIdx = 0, endIdx = path.length - 1;
+  if (myPos > 0) startIdx = Math.round((zoneIndexes[myPos - 1].idx + zoneIndexes[myPos].idx) / 2);
+  if (myPos < zoneIndexes.length - 1) endIdx = Math.round((zoneIndexes[myPos].idx + zoneIndexes[myPos + 1].idx) / 2);
+  return path.slice(startIdx, endIdx + 1);
+}
+
+/* Get perpendicular offset point for angler position */
+function getAnglerOffset(segment, pointIdx, meters) {
+  if (!segment || segment.length < 2) return [segment[0][0], segment[0][1]];
+  var R = Math.PI / 180;
+  var mPerLat = 111000, mPerLng = 111000 * Math.cos(segment[0][0] * R);
+  var lat = segment[pointIdx][0], lng = segment[pointIdx][1];
+  var dy, dx;
+  if (pointIdx === 0) { dy = segment[1][0] - lat; dx = segment[1][1] - lng; }
+  else if (pointIdx >= segment.length - 1) { dy = lat - segment[segment.length - 2][0]; dx = lng - segment[segment.length - 2][1]; }
+  else { dy = segment[pointIdx + 1][0] - segment[pointIdx - 1][0]; dx = segment[pointIdx + 1][1] - segment[pointIdx - 1][1]; }
+  var dyM = dy * mPerLat, dxM = dx * mPerLng;
+  var len = Math.sqrt(dyM * dyM + dxM * dxM);
+  if (len < 0.01) return [lat, lng];
+  // Offset perpendicular (left side of stream)
+  var pLat = (-dxM / len) * meters / mPerLat;
+  var pLng = (dyM / len) * meters / mPerLng;
+  return [lat + pLat, lng + pLng];
+}
+
+/* Get current time period for fly recommendations */
+function getTimePeriod() {
+  var h = new Date().getHours();
+  if (h >= 5 && h < 9) return 'early-morning';
+  if (h >= 9 && h < 12) return 'morning';
+  if (h >= 12 && h < 15) return 'midday';
+  if (h >= 15 && h < 18) return 'afternoon';
+  if (h >= 18 && h < 21) return 'evening';
+  return 'night';
+}
+
+/* Get current season */
+function getCurrentSeason() {
+  var m = new Date().getMonth();
+  if (m >= 2 && m <= 4) return 'spring';
+  if (m >= 5 && m <= 7) return 'summer';
+  if (m >= 8 && m <= 10) return 'fall';
+  return 'winter';
+}
+
+/* Get time-aware fly recommendation */
+function getTimeAwareFlyRec(water, habitat) {
+  var period = getTimePeriod();
+  var season = getCurrentSeason();
+  var flavor = window.TROUT_HOTSPOT_FLAVOR && window.TROUT_HOTSPOT_FLAVOR[habitat];
+  var edu = window.TROUT_EDUCATION && window.TROUT_EDUCATION[habitat];
+  var hatches = (water && water.hatches && water.hatches[season]) || [];
+  var flyRec = '';
+  var altFly = '';
+  if (flavor && flavor.flies && flavor.flies.length) {
+    var fIdx = Math.floor(Math.random() * flavor.flies.length);
+    flyRec = flavor.flies[fIdx];
+    altFly = flavor.flies[(fIdx + 1) % flavor.flies.length];
+  }
+  var timeAdvice = '';
+  if (period === 'early-morning') timeAdvice = 'Low light — use dark patterns. Trout feed aggressively in dawn. Streamers and dark nymphs are ideal.';
+  else if (period === 'morning') timeAdvice = 'Prime feeding window. Nymphs and emergers produce consistently. Watch for hatch activity.';
+  else if (period === 'midday') timeAdvice = 'Midday sun pushes trout deep. Go subsurface with weighted nymphs. Fish slow pools and shaded banks.';
+  else if (period === 'afternoon') timeAdvice = 'Caddis activity often picks up. Dry-dropper rigs cover both surface and subsurface. Stay observant.';
+  else if (period === 'evening') timeAdvice = 'Prime time. BWO and caddis spinners. Trout move to tailouts and riffles to sip in soft light.';
+  else timeAdvice = 'Night fishing — large streamers stripped slow near structure. Big trout are most aggressive now.';
+  return { flyRec: flyRec, altFly: altFly, timeAdvice: timeAdvice, hatches: hatches, season: season, period: period };
+}
+
+/* Build strategy briefing popup HTML for a micro pin */
+function buildMicroPinBriefing(water, zone, habitat) {
+  var flavor = window.TROUT_HOTSPOT_FLAVOR && window.TROUT_HOTSPOT_FLAVOR[habitat];
+  var edu = window.TROUT_EDUCATION && window.TROUT_EDUCATION[habitat];
+  var rec = getTimeAwareFlyRec(water, habitat);
+  var rIdx = Math.floor(Math.random() * ((flavor && flavor.titles) ? flavor.titles.length : 1));
+
+  var title = (flavor && flavor.titles) ? flavor.titles[rIdx] : (habitat.charAt(0).toUpperCase() + habitat.slice(1));
+  var reason = (flavor && flavor.reasons) ? flavor.reasons[rIdx % flavor.reasons.length] : '';
+  var approach = (flavor && flavor.approach) ? flavor.approach[rIdx % flavor.approach.length] : '';
+  var tips = (edu && edu.tips) ? edu.tips : [];
+  var guideTip = tips.length ? tips[Math.floor(Math.random() * tips.length)] : '';
+  var guideTip2 = tips.length > 1 ? tips[(Math.floor(Math.random() * tips.length) + 1) % tips.length] : '';
+
+  var html = '<div class="ht-micro-briefing" style="min-width:260px;max-width:320px;">';
+  html += '<div style="font-weight:800;color:#2bd4ff;font-size:14px;margin-bottom:4px;">🐟 ' + escapeHtml(title) + '</div>';
+  html += '<div style="font-size:10px;color:#7cffc7;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">' + escapeHtml(habitat) + ' • ' + escapeHtml(zone.name) + '</div>';
+
+  // Why fish here
+  html += '<div style="font-size:11px;color:#c8e6d5;margin-bottom:6px;line-height:1.4;"><b style="color:#ffe082;">Why here:</b> ' + escapeHtml(reason) + '</div>';
+
+  // Approach
+  html += '<div style="font-size:11px;color:#c8e6d5;margin-bottom:6px;line-height:1.4;"><b style="color:#ffe082;">Approach:</b> ' + escapeHtml(approach) + '</div>';
+
+  // Time-aware fly recommendation
+  html += '<div style="font-size:11px;color:#c8e6d5;margin-bottom:4px;line-height:1.4;"><b style="color:#ffe082;">Best Fly (' + escapeHtml(rec.period) + '):</b> ' + escapeHtml(rec.flyRec) + '</div>';
+  if (rec.altFly) {
+    html += '<div style="font-size:10px;color:#89b5a2;margin-bottom:4px;line-height:1.3;"><b>Backup:</b> ' + escapeHtml(rec.altFly) + '</div>';
+  }
+
+  // Time-of-day conditions
+  html += '<div style="font-size:10px;color:#89b5a2;margin-bottom:6px;line-height:1.3;"><b>Conditions:</b> ' + escapeHtml(rec.timeAdvice) + '</div>';
+
+  // Hatch data
+  if (rec.hatches.length) {
+    html += '<div style="font-size:10px;color:#89b5a2;margin-bottom:4px;"><b style="color:#2bd4ff;">' + escapeHtml(rec.season) + ' Hatches:</b> ' + escapeHtml(rec.hatches.join(', ')) + '</div>';
+  }
+
+  // Pro guide tips
+  html += '<div style="border-top:1px solid rgba(43,212,255,0.2);padding-top:6px;margin-top:6px;">';
+  html += '<div style="font-size:10px;color:#ffe082;font-weight:800;margin-bottom:3px;">🎓 PRO GUIDE TIP</div>';
+  html += '<div style="font-size:10px;color:#c8e6d5;line-height:1.4;">' + escapeHtml(guideTip) + '</div>';
+  if (guideTip2 && guideTip2 !== guideTip) {
+    html += '<div style="font-size:10px;color:#89b5a2;line-height:1.3;margin-top:3px;">💡 ' + escapeHtml(guideTip2) + '</div>';
+  }
+  html += '</div>';
+
+  // No-luck backup advice
+  html += '<div style="border-top:1px solid rgba(43,212,255,0.15);padding-top:5px;margin-top:5px;">';
+  html += '<div style="font-size:10px;color:#d4a57f;line-height:1.3;">⚠️ <b>No luck?</b> Change depth first. Add or remove split shot. Move 10 feet upstream and re-drift. Switch to a smaller pattern — go down 2 sizes.</div>';
+  html += '</div>';
+
+  html += '</div>';
+  return html;
+}
+
+/* Deploy zone pins filtered by user's selected method */
+window.deployMethodFilteredZones = function(water, userMethod) {
+  if (!water || !Array.isArray(water.access)) return;
+  clearZonePins();
+  clearMicroPins();
+  var zones = water.access.filter(function(a) { return a.type === 'zone'; });
+  var deployed = 0;
+  var methodMap = { fly: 'fly', spin: 'spin', bait: 'bait' };
+  var method = methodMap[userMethod] || userMethod;
+
+  zones.forEach(function(zone, idx) {
+    var allowed = getZoneAllowedMethods(zone);
+    if (allowed.indexOf(method) === -1) return;
+
+    var marker = L.marker([zone.lat, zone.lng], {
+      icon: getZonePinIcon(zone, idx),
+      zIndexOffset: 200
+    }).addTo(map);
+
+    marker.__zone = zone;
+    marker.__zoneIdx = idx;
+
+    // Build popup with auto/manual check-in
+    marker.on('click', function() {
+      var popupHtml = '<div style="min-width:240px;">' +
+        '<div style="font-weight:700;color:#2bd4ff;font-size:14px;">' + escapeHtml(zone.name) + '</div>' +
+        '<div style="font-size:11px;color:#ddd;margin-top:3px;">📍 ' + escapeHtml(water.name) + '</div>' +
+        '<div style="font-size:11px;color:#b8d8c8;margin-top:6px;line-height:1.3;">' + escapeHtml(zone.notes || '') + '</div>' +
+        '<div style="font-size:10px;color:#ffe082;margin-top:4px;">Allowed: ' + escapeHtml(allowed.map(getMethodLabel).join(', ')) + '</div>' +
+        '<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;">' +
+        '<button style="padding:6px 14px;border-radius:8px;border:1px solid #7cffc7;background:rgba(124,255,199,0.15);color:#7cffc7;font-size:12px;font-weight:800;cursor:pointer;" ' +
+          'onclick="zoneCheckIn(\'' + escapeHtml(water.id) + '\',' + idx + ')">✅ CHECK IN</button>' +
+        '<button style="padding:6px 14px;border-radius:8px;border:1px solid #666;background:rgba(255,255,255,0.05);color:#aaa;font-size:11px;font-weight:700;cursor:pointer;" ' +
+          'onclick="if(map)map.closePopup();">Close</button>' +
+        '</div></div>';
+      marker.unbindPopup();
+      marker.bindPopup(popupHtml, { maxWidth: 320, className: 'ht-zone-popup' }).openPopup();
+    });
+
+    zonePinMarkers.push(marker);
+    deployed++;
+  });
+
+  var label = getMethodLabel(method);
+  if (deployed === 0) {
+    showNotice('⚠️ No zones available for ' + label + ' fishing at ' + water.name + '. Try a different method.', 'warning', 4000);
+  } else {
+    showNotice('📍 ' + deployed + ' zone' + (deployed > 1 ? 's' : '') + ' deployed for ' + label + ' fishing', 'success', 2500);
+  }
+};
+
+/* Zone check-in: build polygon + deploy micro pins */
+window.zoneCheckIn = function(waterId, zoneIdx) {
+  if (!map) return;
+  map.closePopup();
+  var water = null;
+  if (window.TROUT_WATERS) {
+    water = window.TROUT_WATERS.find(function(w) { return w.id === waterId; });
+  }
+  if (!water || !Array.isArray(water.access)) return;
+  var zones = water.access.filter(function(a) { return a.type === 'zone'; });
+  var zone = zones[zoneIdx];
+  if (!zone) return;
+
+  clearMicroPins();
+
+  // Build zone polygon from stream segment
+  var segment = getZoneStreamSegment(water, zone);
+  if (segment && segment.length >= 2) {
+    var corridor = buildStreamCorridor(segment, 40);
+    if (corridor) {
+      zonePolygonLayer = L.polygon(corridor, {
+        color: '#7cffc7',
+        weight: 2,
+        fillColor: '#7cffc7',
+        fillOpacity: 0.10,
+        dashArray: '5 3'
+      }).addTo(map);
+    }
+  }
+
+  // Deploy micro pins along the zone segment
+  var habitats = ['riffle', 'pool', 'run', 'boulder', 'tailout'];
+  var numSpots = segment ? Math.min(5, Math.max(3, segment.length - 1)) : 3;
+  var spotSegment = segment || [[zone.lat, zone.lng]];
+
+  for (var i = 0; i < numSpots; i++) {
+    var pIdx = segment ? Math.round(i * (segment.length - 1) / Math.max(1, numSpots - 1)) : 0;
+    var lat = spotSegment[Math.min(pIdx, spotSegment.length - 1)][0];
+    var lng = spotSegment[Math.min(pIdx, spotSegment.length - 1)][1];
+    var habitat = habitats[i % habitats.length];
+
+    // Slight offset so pins don't overlap stream center
+    var jitterLat = (Math.random() - 0.5) * 0.0001;
+    var jitterLng = (Math.random() - 0.5) * 0.0001;
+
+    var troutMarker = L.marker([lat + jitterLat, lng + jitterLng], {
+      icon: getTroutMicroPinIcon(habitat),
+      zIndexOffset: 300
+    }).addTo(map);
+
+    // Closure for click
+    (function(mk, h) {
+      mk.on('click', function() {
+        var briefHtml = buildMicroPinBriefing(water, zone, h);
+        mk.unbindPopup();
+        mk.bindPopup(briefHtml, { maxWidth: 340, className: 'ht-micro-popup' }).openPopup();
+      });
+    })(troutMarker, habitat);
+
+    microPinMarkers.push(troutMarker);
+
+    // Place angler position pin (first spot gets it)
+    if (i === 0 && segment && segment.length >= 2) {
+      var anglerPos = getAnglerOffset(segment, pIdx, 25);
+      anglerPinMarker = L.marker(anglerPos, {
+        icon: getAnglerPinIcon(),
+        zIndexOffset: 250
+      }).addTo(map);
+      anglerPinMarker.bindPopup(
+        '<div style="min-width:180px;">' +
+        '<div style="font-weight:700;color:#ffe082;font-size:13px;">🧍 Your Setup Position</div>' +
+        '<div style="font-size:11px;color:#c8e6d5;margin-top:4px;line-height:1.3;">Set up here. Face the stream. Keep your shadow behind you. Start with short casts to the nearest lie, then work outward.</div>' +
+        '</div>',
+        { maxWidth: 260 }
+      );
+    }
+  }
+
+  // Zoom to zone
+  map.setView([zone.lat, zone.lng], 17, { animate: true, duration: 0.8 });
+  showNotice('✅ Checked in at ' + zone.name + ' — ' + numSpots + ' cast-to spots deployed', 'success', 3000);
+};
+
 function getFlyCheckInSpots() {
   return [
     'Tailout seam just below the run',

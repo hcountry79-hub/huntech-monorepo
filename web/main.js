@@ -15709,7 +15709,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }, 320);
     setTimeout(() => centerOnMyLocationInternal(), 500);
   } else if (isFly) {
-    /* Fly-fishing: skip hero, load map immediately, default to Montauk */
+    /* Fly-fishing: skip hero, load map immediately, center on user GPS */
     flyMapPending = false;
     document.body.classList.remove('ht-map-pending');
     document.body.classList.add('ht-map-active');
@@ -15722,12 +15722,10 @@ document.addEventListener('DOMContentLoaded', () => {
     requestAnimationFrame(() => {
       if (map && typeof map.invalidateSize === 'function') map.invalidateSize();
     });
-    // Default to Montauk State Park on launch — triggered after rAF
+    // Center on user's GPS location on launch (tray stays closed)
     requestAnimationFrame(() => {
       setTimeout(() => {
-        if (typeof window.loadFavoriteWater === 'function') {
-          window.loadFavoriteWater('montauk');
-        }
+        centerOnMyLocationInternal();
       }, 50);
     });
   } else if (isTurk) {
@@ -15843,17 +15841,18 @@ document.addEventListener('DOMContentLoaded', () => {
     // Ignore storage failures
   }
 
-  // Fly module: start with tray OPEN — Montauk auto-load (at 600ms) handles showStreamPanel
+  // Fly module: start with tray CLOSED — user taps Fish Now to open
+  // Fly module: start with tray CLOSED by default
   if (isFly) {
     try {
       const toolbar = document.getElementById('toolbar');
-      const icons = document.querySelectorAll('.ht-toggle-icon');
       if (toolbar) {
-        toolbarOpen = true;
-        toolbar.classList.remove('collapsed');
-        document.body.classList.remove('ht-toolbar-collapsed');
-        icons.forEach(function(icon) { icon.textContent = '<'; });
-        localStorage.removeItem('htToolbarCollapsed');
+        toolbarOpen = false;
+        toolbar.classList.add('collapsed');
+        document.body.classList.add('ht-toolbar-collapsed');
+        const icons = document.querySelectorAll('.ht-toggle-icon');
+        icons.forEach(function(icon) { icon.textContent = '>'; });
+        localStorage.setItem('htToolbarCollapsed', '1');
       }
     } catch {}
   }
@@ -16165,15 +16164,17 @@ document.addEventListener('DOMContentLoaded', () => {
   /* ═══ Step 2 → Deploy Pins & Advance to Route Tray ═══ */
   window.fishStepDeploy = function() {
     if (!fishFlow.area) return;
-    // Deploy fishing pins for this water on the map
-    if (typeof showFlyWaterMarkers === 'function') {
+    // Deploy method-filtered zone pins (only zones matching user's selection)
+    if (typeof window.deployMethodFilteredZones === 'function') {
+      window.deployMethodFilteredZones(fishFlow.area, fishFlow.method);
+    } else if (typeof showFlyWaterMarkers === 'function') {
       showFlyWaterMarkers();
     }
     // Zoom to the water
     if (typeof map !== 'undefined' && map && fishFlow.area.lat && fishFlow.area.lng) {
       map.setView([fishFlow.area.lat, fishFlow.area.lng], 15, { animate: true, duration: 0.8 });
     }
-    showNotice('📍 Fishing pins deployed at ' + fishFlow.area.name, 'success', 2500);
+    showNotice('📍 Fishing zones deployed at ' + fishFlow.area.name, 'success', 2500);
     // Advance to routing tray (step 3)
     fishShowStep(3);
   };
