@@ -2002,8 +2002,8 @@ function initializeMap() {
   }
   mapInitialized = true;
   map = L.map('map', {
-    center: [38.26, -90.55],
-    zoom: 13,
+    center: [37.9534, -91.5328],  // Maramec Spring Park — field test 2026-02-21
+    zoom: 15,
     maxZoom: 20,
     zoomControl: false,
     zoomSnap: 0.5,
