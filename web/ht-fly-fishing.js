@@ -1584,31 +1584,42 @@ function getAnglerPinIcon() {
 }
 
 /* Get the portion of streamPath that belongs to a zone */
+function _nearestPathIdx(path, lat, lng) {
+  var best = 0, bestDist = Infinity;
+  for (var i = 0; i < path.length; i++) {
+    var d = Math.pow(path[i][0] - lat, 2) + Math.pow(path[i][1] - lng, 2);
+    if (d < bestDist) { bestDist = d; best = i; }
+  }
+  return best;
+}
+
 function getZoneStreamSegment(water, zone) {
   if (!water || !water.streamPath || water.streamPath.length < 2) return null;
   var path = water.streamPath;
+
+  // ── Prefer explicit zoneBounds when available ──
+  if (zone.zoneBounds && zone.zoneBounds.length === 2) {
+    var startIdx = _nearestPathIdx(path, zone.zoneBounds[0][0], zone.zoneBounds[0][1]);
+    var endIdx   = _nearestPathIdx(path, zone.zoneBounds[1][0], zone.zoneBounds[1][1]);
+    if (startIdx > endIdx) { var tmp = startIdx; startIdx = endIdx; endIdx = tmp; }
+    return path.slice(startIdx, endIdx + 1);
+  }
+
+  // ── Fallback: midpoint algorithm for zones without explicit bounds ──
   var zones = (water.access || []).filter(function(a) { return a.type === 'zone'; });
   if (zones.length < 2) return path;
 
-  // Find each zone's nearest point index on the stream path
   var zoneIndexes = zones.map(function(z) {
-    var best = 0, bestDist = Infinity;
-    for (var i = 0; i < path.length; i++) {
-      var d = Math.pow(path[i][0] - z.lat, 2) + Math.pow(path[i][1] - z.lng, 2);
-      if (d < bestDist) { bestDist = d; best = i; }
-    }
-    return { zone: z, idx: best };
+    return { zone: z, idx: _nearestPathIdx(path, z.lat, z.lng) };
   });
   zoneIndexes.sort(function(a, b) { return a.idx - b.idx; });
 
-  // Find this zone's position
   var myPos = -1;
   for (var i = 0; i < zoneIndexes.length; i++) {
     if (zoneIndexes[i].zone === zone) { myPos = i; break; }
   }
   if (myPos === -1) return path;
 
-  // Slice path: from midpoint between prev zone to midpoint with next zone
   var startIdx = 0, endIdx = path.length - 1;
   if (myPos > 0) startIdx = Math.round((zoneIndexes[myPos - 1].idx + zoneIndexes[myPos].idx) / 2);
   if (myPos < zoneIndexes.length - 1) endIdx = Math.round((zoneIndexes[myPos].idx + zoneIndexes[myPos + 1].idx) / 2);

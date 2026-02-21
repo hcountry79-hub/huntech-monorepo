@@ -218,9 +218,12 @@ window.TROUT_WATERS = [
     seasonDates: { open: 'March 1', close: 'October 31', catchRelease: 'Nov 1 - Feb 28' },
     regulations: { method: 'Three regulated zones. Zone 1 fly only, Zone 2 flies & artificial lures, Zone 3 bait only.', dailyLimit: 4, minSize: null, gearRestrictions: 'Zone 1: fly only. Zone 2: flies & artificial lures. Zone 3: bait ONLY — no flies or lures.', specialRules: 'Daily tag required ($3). Hours 6:30am–30min after sunset. No fishing from bridge. Winter C&R: flies/artificial lures only, entire stream.' },
     access: [
-      { name: 'Zone 1 — Fly Only', lat: 37.7189, lng: -92.8585, type: 'zone', methods: ['fly'], notes: 'Spring pool to hatchery dam. Fly fishing ONLY. Crystal clear sight fishing — long leaders, small flies. Shortest zone, most technical.' },
-      { name: 'Zone 2 — Flies & Lures', lat: 37.7233, lng: -92.8561, type: 'zone', methods: ['fly', 'spin'], notes: 'Hatchery dam to Whistle Bridge. Flies and artificial lures allowed. Most popular section — arrive early on weekends.' },
-      { name: 'Zone 3 — Bait Only', lat: 37.7310, lng: -92.8574, type: 'zone', methods: ['bait'], notes: 'Whistle Bridge to Niangua River. BAIT ONLY — no flies or artificial lures permitted. Family friendly, least crowded.' }
+      // Zone pins placed at center of each zone; zoneBounds define exact boundaries
+      // Boundary 1 (hatchery dam): ~37.7195, -92.8587  (stream path index 4)
+      // Boundary 2 (Whistle Bridge): 37.7279, -92.8555  (user-verified 37°43'40.39"N 92°51'19.74"W)
+      { name: 'Zone 1 — Fly Only', lat: 37.7180, lng: -92.8578, type: 'zone', methods: ['fly'], zoneBounds: [[37.7164, -92.8568], [37.7195, -92.8587]], notes: 'Spring pool to hatchery dam. Fly fishing ONLY. Crystal clear sight fishing — long leaders, small flies. Shortest zone, most technical.' },
+      { name: 'Zone 2 — Flies & Lures', lat: 37.7240, lng: -92.8555, type: 'zone', methods: ['fly', 'spin'], zoneBounds: [[37.7195, -92.8587], [37.7279, -92.8555]], notes: 'Hatchery dam to Whistle Bridge. Flies and artificial lures allowed. Most popular section — arrive early on weekends.' },
+      { name: 'Zone 3 — Bait Only', lat: 37.7316, lng: -92.8585, type: 'zone', methods: ['bait'], zoneBounds: [[37.7279, -92.8555], [37.7353, -92.8623]], notes: 'Whistle Bridge to Niangua River. BAIT ONLY — no flies or artificial lures permitted. Family friendly, least crowded.' }
       // Amenity pins (parking, store, restrooms) removed — no OSM-verified coordinates available
     ],
     // OSM Way 198626029 — Bennett Spring Branch (waterway=river), verified 2026-02-20
