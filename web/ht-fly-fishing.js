@@ -556,6 +556,11 @@ window.fishLetsGo = function() {
     window.deployZonePolygonWithFade(water, zone);
   }
 
+  // 2b) Center map on the selected zone so user doesn't have to find it
+  if (typeof map !== 'undefined' && map && zone.lat && zone.lng) {
+    map.setView([zone.lat, zone.lng], 17, { animate: true, duration: 0.8 });
+  }
+
   // 3) Calculate and deploy ranked pins in the selected zone
   setTimeout(function() {
     if (typeof window.deployAiFishingPins === 'function') {
@@ -587,6 +592,7 @@ function _showMainAreaPill() {
   } catch(e) {}
 }
 window._showMainAreaPill = _showMainAreaPill;
+window._hideMainAreaPill = _hideMainAreaPill;
 
 function getFlyPinIcon(labelText) {
   const label = String(labelText || '').trim();
@@ -594,7 +600,7 @@ function getFlyPinIcon(labelText) {
     className: 'ht-fly-area-pin',
     html: `<div class="ht-fly-area-pill"><img class="ht-fly-area-pill-icon" src="assets/trout-logo.png" alt="">${escapeHtml(label)}</div>`,
     iconSize: [0, 0],
-    iconAnchor: [0, 16]
+    iconAnchor: [-15, 30]
   });
 }
 
@@ -1521,6 +1527,16 @@ function clearMicroPins() {
   microPinMarkers = [];
   if (zonePolygonLayer) { try { map.removeLayer(zonePolygonLayer); } catch {} zonePolygonLayer = null; }
   if (anglerPinMarker) { try { map.removeLayer(anglerPinMarker); } catch {} anglerPinMarker = null; }
+  // Clear stand-here angler pins
+  if (typeof _activeAnglerPins !== 'undefined' && _activeAnglerPins) {
+    _activeAnglerPins.forEach(function(m) { try { map.removeLayer(m); } catch {} });
+    _activeAnglerPins = [];
+  }
+  // Clear approach direction lines
+  if (typeof _activeApproachLines !== 'undefined' && _activeApproachLines) {
+    _activeApproachLines.forEach(function(l) { try { map.removeLayer(l); } catch {} });
+    _activeApproachLines = [];
+  }
   // Clear flow overlay
   if (typeof clearFlowOverlay === 'function') try { clearFlowOverlay(); } catch {}
 }
@@ -1759,7 +1775,7 @@ window.deployMethodFilteredZones = function(water, userMethod) {
   if (deployed === 0) {
     showNotice('⚠️ No zones available for ' + label + ' fishing at ' + water.name + '. Try a different method.', 'warning', 4000);
   } else {
-    showNotice('📍 ' + deployed + ' zone' + (deployed > 1 ? 's' : '') + ' deployed for ' + label + ' fishing', 'success', 2500);
+    console.log('HUNTECH: 📍 ' + deployed + ' zone' + (deployed > 1 ? 's' : '') + ' deployed for ' + label + ' fishing');
   }
 };
 
@@ -1843,7 +1859,7 @@ window.zoneCheckIn = function(waterId, zoneIdx) {
 
   // Zoom to zone
   map.setView([zone.lat, zone.lng], 17, { animate: true, duration: 0.8 });
-  showNotice('✅ Checked in at ' + zone.name + ' — ' + numSpots + ' cast-to spots deployed', 'success', 3000);
+  console.log('HUNTECH: ✅ Checked in at ' + zone.name + ' — ' + numSpots + ' cast-to spots deployed');
 };
 
 function getFlyCheckInSpots() {
@@ -2461,6 +2477,8 @@ var _activeZonePolygon = null;  // current zone polygon layer
 var _activeMicroPolygons = [];  // micro-area polygons
 var _activeMicroPins = [];      // micro-spot pins within a pin area
 var _activeFlowLayers = [];     // water flow simulation overlay layers
+var _activeAnglerPins = [];     // stand-here angler position pins
+var _activeApproachLines = [];  // approach direction polylines
 var _missionSummaryEl = null;   // mission summary overlay DOM
 var _spotInfoTrayEl = null;     // spot info tray DOM
 var _proximityWatchId = null;   // geolocation watch for auto-checkin
@@ -2542,12 +2560,50 @@ function deployFlowOverlay(water, zone) {
   var mainFlow = L.polyline(seg, {
     color: '#2bd4ff',
     weight: 3,
-    opacity: 0.45,
-    dashArray: '8 14',
+    opacity: 0.5,
+    dashArray: '8 12',
     className: 'ht-flow-line ht-flow-main',
     interactive: false
   }).addTo(map);
   _activeFlowLayers.push(mainFlow);
+
+  // Glow underlayer — soft wide glow beneath main current
+  var glowFlow = L.polyline(seg, {
+    color: '#2bd4ff',
+    weight: 10,
+    opacity: 0.12,
+    className: 'ht-flow-line ht-flow-glow',
+    interactive: false
+  }).addTo(map);
+  _activeFlowLayers.push(glowFlow);
+
+  // Inner fast-current line — thin bright line for speed feel
+  var innerFlow = L.polyline(seg, {
+    color: '#7cefff',
+    weight: 1.5,
+    opacity: 0.5,
+    dashArray: '4 8',
+    className: 'ht-flow-line ht-flow-inner',
+    interactive: false
+  }).addTo(map);
+  _activeFlowLayers.push(innerFlow);
+
+  // Shimmer particles along the flow
+  for (var sp = 0; sp < seg.length; sp++) {
+    var spDelay = (sp * 0.7) % 3;
+    var particleIcon = L.divIcon({
+      className: 'ht-flow-particle',
+      html: '<div class="ht-flow-dot" style="animation-delay:' + spDelay.toFixed(1) + 's"></div>',
+      iconSize: [3, 3],
+      iconAnchor: [1, 1]
+    });
+    var particleMarker = L.marker([seg[sp][0], seg[sp][1]], {
+      icon: particleIcon,
+      zIndexOffset: 280,
+      interactive: false
+    }).addTo(map);
+    _activeFlowLayers.push(particleMarker);
+  }
 
   // Secondary flow lines — offset ±3m from center for stream width feel
   var leftBank = [], rightBank = [];
@@ -2639,8 +2695,8 @@ function deployFlowOverlay(water, zone) {
     var obstacleIcon = L.divIcon({
       className: 'ht-flow-obstacle',
       html: '<div class="ht-flow-rock"></div>',
-      iconSize: [10, 10],
-      iconAnchor: [5, 5]
+      iconSize: [12, 10],
+      iconAnchor: [6, 5]
     });
     var obsMarker = L.marker([oLat, oLng], {
       icon: obstacleIcon,
@@ -2648,6 +2704,21 @@ function deployFlowOverlay(water, zone) {
       interactive: false
     }).addTo(map);
     _activeFlowLayers.push(obsMarker);
+
+    // Ripple ring effect at obstacle
+    var rippleDelay = (k * 0.6) % 2;
+    var rippleIcon = L.divIcon({
+      className: 'ht-flow-ripple',
+      html: '<div class="ht-flow-ripple-ring" style="animation-delay:' + rippleDelay.toFixed(1) + 's"></div>',
+      iconSize: [18, 18],
+      iconAnchor: [9, 9]
+    });
+    var rippleMarker = L.marker([oLat, oLng], {
+      icon: rippleIcon,
+      zIndexOffset: 295,
+      interactive: false
+    }).addTo(map);
+    _activeFlowLayers.push(rippleMarker);
   }
 
   // Flow arrow indicators — small chevrons showing direction
@@ -3370,6 +3441,8 @@ function _autoCheckInToPin(pinIdx) {
     'deep-slot': 'Deep Slot'
   };
 
+  var microDeployData = []; // capture fish positions for stand-here pins
+
   accepted.forEach(function(mc, i) {
     var mType = microTypes[i] || 'primary-lie';
     var mLabel = envLabels[mType] || _capitalize(mType.replace(/-/g, ' '));
@@ -3414,6 +3487,119 @@ function _autoCheckInToPin(pinIdx) {
     })(mMarker, mType, i);
     _activeMicroPins.push(mMarker);
     microCoords.push([placeLat, placeLng]);
+
+    // ── Store data for stand-here pins + approach lines ──
+    microDeployData.push({
+      fishLat: placeLat,
+      fishLng: placeLng,
+      segIdx: mc.segIdx,
+      type: mType,
+      side: side,
+      perpLat: perpLat,
+      perpLng: perpLng,
+      downLat: sdLat / sLen,
+      downLng: sdLng / sLen
+    });
+  });
+
+  // ── Deploy stand-here angler pins + approach direction lines ──
+  _activeAnglerPins.forEach(function(m) { try { map.removeLayer(m); } catch {} });
+  _activeAnglerPins = [];
+  _activeApproachLines.forEach(function(l) { try { map.removeLayer(l); } catch {} });
+  _activeApproachLines = [];
+
+  // Distance configs per micro-type (meters downstream + meters perpendicular)
+  var anglerDists = {
+    'primary-lie': { down: 14, perp: 10 },
+    'seam-edge': { down: 10, perp: 14 },
+    'pocket-water': { down: 8, perp: 7 },
+    'undercut-bank': { down: 12, perp: 18 },
+    'feeding-lane': { down: 12, perp: 9 },
+    'tail-glide': { down: 15, perp: 10 },
+    'riffle-drop': { down: 10, perp: 10 },
+    'eddy-pocket': { down: 8, perp: 7 },
+    'bank-shadow': { down: 12, perp: 16 },
+    'deep-slot': { down: 12, perp: 10 }
+  };
+  // Approach advice per micro-type
+  var approachAdvice = {
+    'primary-lie': 'Approach from downstream. Stay low, cast upstream.',
+    'seam-edge': 'Cross-stream approach. Cast across the seam.',
+    'pocket-water': 'Approach from below. Short, accurate casts into the pocket.',
+    'undercut-bank': 'Approach from opposite bank. Cast parallel to the bank edge.',
+    'feeding-lane': 'Approach from directly downstream. Dead-drift upstream.',
+    'tail-glide': 'Approach from downstream. Position at the tail, cast into the glide.',
+    'riffle-drop': 'Low approach from downstream. Work the drop-off edge.',
+    'eddy-pocket': 'Side approach from below the eddy. Pitch into calm water.',
+    'bank-shadow': 'Approach from opposite bank. Long casts tight to the shadow line.',
+    'deep-slot': 'Downstream approach. Let your presentation sink deep.'
+  };
+
+  microDeployData.forEach(function(md, idx) {
+    var dist = anglerDists[md.type] || { down: 12, perp: 10 };
+    var degPerM = 0.000009; // ~1 meter in degrees
+
+    // Angler position: downstream + further from stream center (same side as fish)
+    var anglerLat = md.fishLat + md.downLat * degPerM * dist.down + md.perpLat * degPerM * dist.perp * md.side;
+    var anglerLng = md.fishLng + md.downLng * degPerM * dist.down + md.perpLng * degPerM * dist.perp * md.side;
+
+    // Stand-here pin
+    var shIcon = L.divIcon({
+      className: 'ht-stand-here-pin',
+      html: '<div class="ht-stand-here-dot"><span class="ht-stand-here-icon">🧍</span></div>',
+      iconSize: [22, 22],
+      iconAnchor: [11, 11]
+    });
+    var shMarker = L.marker([anglerLat, anglerLng], {
+      icon: shIcon,
+      zIndexOffset: 480,
+      interactive: true
+    }).addTo(map);
+
+    var advice = approachAdvice[md.type] || 'Approach from downstream.';
+    shMarker.bindPopup(
+      '<div style="min-width:160px;">' +
+      '<div style="font-weight:700;color:#7cffc7;font-size:12px;margin-bottom:3px;">🧍 Stand Here</div>' +
+      '<div style="font-size:10px;color:#c8e6d5;line-height:1.4;">' + advice + '</div>' +
+      '</div>',
+      { maxWidth: 220, className: 'ht-zone-popup' }
+    );
+    _activeAnglerPins.push(shMarker);
+    microCoords.push([anglerLat, anglerLng]);
+
+    // Approach direction line — dashed line from angler to fish
+    var approachLine = L.polyline(
+      [[anglerLat, anglerLng], [md.fishLat, md.fishLng]],
+      {
+        color: '#7cffc7',
+        weight: 1.5,
+        opacity: 0.35,
+        dashArray: '4 6',
+        className: 'ht-approach-line',
+        interactive: false
+      }
+    ).addTo(map);
+    _activeApproachLines.push(approachLine);
+
+    // Approach direction arrow at midpoint
+    var midLat = (anglerLat + md.fishLat) / 2;
+    var midLng = (anglerLng + md.fishLng) / 2;
+    var aAngle = Math.atan2(
+      (md.fishLng - anglerLng) * 111000 * Math.cos(md.fishLat * Math.PI / 180),
+      (md.fishLat - anglerLat) * 111000
+    ) * 180 / Math.PI;
+    var arrowIcon = L.divIcon({
+      className: 'ht-approach-arrow-pin',
+      html: '<div class="ht-approach-arrow" style="transform:rotate(' + (aAngle - 90) + 'deg)">›</div>',
+      iconSize: [14, 14],
+      iconAnchor: [7, 7]
+    });
+    var arrowMk = L.marker([midLat, midLng], {
+      icon: arrowIcon,
+      zIndexOffset: 475,
+      interactive: false
+    }).addTo(map);
+    _activeApproachLines.push(arrowMk);
   });
 
   // Zoom to fit the main pin + micro spots

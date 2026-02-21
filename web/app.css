@@ -849,53 +849,108 @@ body.module-fly .ht-strategy-panel {
   pointer-events: none !important;
 }
 .ht-flow-main {
-  animation: flowDash 2s linear infinite;
+  animation: flowDash 1.6s linear infinite;
+  filter: drop-shadow(0 0 4px rgba(43, 212, 255, 0.35));
+}
+.ht-flow-glow {
+  animation: flowDash 1.6s linear infinite;
+  filter: blur(4px);
+}
+.ht-flow-inner {
+  animation: flowDashFast 1.0s linear infinite;
 }
 .ht-flow-side {
-  animation: flowDash 3s linear infinite;
+  animation: flowDash 2.2s linear infinite;
 }
 .ht-flow-eddy {
-  animation: flowDash 2.5s linear infinite reverse;
+  animation: flowEddy 3.5s ease-in-out infinite;
 }
 @keyframes flowDash {
   0%   { stroke-dashoffset: 0; }
-  100% { stroke-dashoffset: -44; }
+  100% { stroke-dashoffset: -56; }
+}
+@keyframes flowDashFast {
+  0%   { stroke-dashoffset: 0; }
+  100% { stroke-dashoffset: -36; }
+}
+@keyframes flowEddy {
+  0%   { stroke-dashoffset: 0; opacity: 0.2; }
+  30%  { stroke-dashoffset: 20; opacity: 0.45; }
+  60%  { stroke-dashoffset: 40; opacity: 0.35; }
+  100% { stroke-dashoffset: 56; opacity: 0.2; }
 }
 
-/* Obstacle rock markers */
+/* Shimmer particles along current */
+.ht-flow-particle {
+  pointer-events: none !important;
+}
+.ht-flow-dot {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(43, 212, 255, 0.95), rgba(43, 212, 255, 0.1));
+  animation: flowParticle 2.8s ease-in-out infinite;
+  box-shadow: 0 0 6px rgba(43, 212, 255, 0.5), 0 0 12px rgba(43, 212, 255, 0.2);
+}
+@keyframes flowParticle {
+  0%   { opacity: 0; transform: scale(0.4); }
+  15%  { opacity: 0.9; transform: scale(1.1); }
+  60%  { opacity: 0.7; transform: scale(1); }
+  85%  { opacity: 0.3; transform: scale(0.8); }
+  100% { opacity: 0; transform: scale(0.3); }
+}
+
+/* Obstacle rock markers — enhanced */
 .ht-flow-obstacle {
   pointer-events: none !important;
 }
 .ht-flow-rock {
-  width: 10px;
+  width: 12px;
   height: 10px;
   border-radius: 40% 60% 50% 45%;
-  background: radial-gradient(ellipse at 30% 30%, #8a7860, #4a3f30);
-  border: 1px solid rgba(0,0,0,0.4);
-  box-shadow: 0 1px 4px rgba(0,0,0,0.5);
-  opacity: 0.7;
+  background: radial-gradient(ellipse at 30% 30%, #9a8a70, #4a3f30);
+  border: 1px solid rgba(0,0,0,0.5);
+  box-shadow: 0 1px 6px rgba(0,0,0,0.6), 0 0 4px rgba(43, 212, 255, 0.12);
+  opacity: 0.85;
 }
 
-/* Flow direction arrows */
+/* Ripple effect around obstacles */
+.ht-flow-ripple {
+  pointer-events: none !important;
+}
+.ht-flow-ripple-ring {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(43, 212, 255, 0.3);
+  animation: flowRipple 3s ease-out infinite;
+}
+@keyframes flowRipple {
+  0%   { transform: scale(0.5); opacity: 0.5; border-width: 2px; }
+  50%  { transform: scale(1.8); opacity: 0.2; border-width: 1px; }
+  100% { transform: scale(3); opacity: 0; border-width: 0.5px; }
+}
+
+/* Flow direction arrows — enhanced with glow */
 .ht-flow-arrow-pin {
   pointer-events: none !important;
 }
 .ht-flow-arrow {
-  width: 12px;
-  height: 12px;
+  width: 14px;
+  height: 14px;
   display: flex;
   align-items: center;
   justify-content: center;
   color: #2bd4ff;
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 900;
-  opacity: 0.5;
-  text-shadow: 0 0 3px rgba(43,212,255,0.6);
-  animation: flowArrowPulse 2s ease-in-out infinite;
+  opacity: 0.6;
+  text-shadow: 0 0 8px rgba(43,212,255,0.8), 0 0 16px rgba(43,212,255,0.25);
+  animation: flowArrowPulse 2.2s ease-in-out infinite;
 }
 @keyframes flowArrowPulse {
-  0%, 100% { opacity: 0.35; }
-  50%      { opacity: 0.65; }
+  0%, 100% { opacity: 0.3; transform: scale(0.85); }
+  50%      { opacity: 0.85; transform: scale(1.15); }
 }
 
 /* ═══ MICRO TROUT PINS — ANIMATED SWIMMING FISH ═══ */
@@ -908,114 +963,149 @@ body.module-fly .ht-strategy-panel {
   position: relative;
 }
 
-/* Swimming wrapper — subtle body undulation */
+/* Swimming wrapper — organic body undulation with tail-flick dynamics */
 .ht-trout-swim-wrap {
   display: inline-block;
-  animation: troutSwim 2.5s ease-in-out infinite;
-  transform-origin: center center;
+  animation: troutSwim 3.5s ease-in-out infinite;
+  transform-origin: 70% center; /* pivot near tail like real fish */
+  will-change: transform;
 }
 @keyframes troutSwim {
-  0%   { transform: translateX(0) rotate(0deg); }
-  15%  { transform: translateX(1.5px) rotate(1.2deg); }
-  30%  { transform: translateX(0) rotate(0deg); }
-  50%  { transform: translateX(-1px) rotate(-0.8deg); }
-  65%  { transform: translateX(0.5px) rotate(0.5deg); }
-  80%  { transform: translateX(-0.5px) rotate(-0.3deg); }
-  100% { transform: translateX(0) rotate(0deg); }
+  0%   { transform: translateX(0) translateY(0) rotate(0deg) scaleX(1); }
+  8%   { transform: translateX(3px) translateY(-1px) rotate(2.5deg) scaleX(0.97); }
+  16%  { transform: translateX(5px) translateY(0.5px) rotate(-1deg) scaleX(1.03); }
+  24%  { transform: translateX(1px) translateY(-0.5px) rotate(1.5deg) scaleX(0.98); }
+  32%  { transform: translateX(-3px) translateY(0.8px) rotate(-3deg) scaleX(1.02); }
+  42%  { transform: translateX(-1px) translateY(-0.3px) rotate(0.5deg) scaleX(1); }
+  52%  { transform: translateX(2px) translateY(0.6px) rotate(-1.5deg) scaleX(0.97); }
+  /* Tail flick burst — sudden darting motion */
+  60%  { transform: translateX(7px) translateY(-1.5px) rotate(4.5deg) scaleX(0.93); }
+  66%  { transform: translateX(4px) translateY(0) rotate(-0.5deg) scaleX(1.05); }
+  74%  { transform: translateX(-2px) translateY(0.5px) rotate(-2deg) scaleX(1); }
+  85%  { transform: translateX(1px) translateY(-0.3px) rotate(1deg) scaleX(0.99); }
+  100% { transform: translateX(0) translateY(0) rotate(0deg) scaleX(1); }
 }
 
 /* The trout image itself */
 .ht-trout-alive {
   display: block;
-  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.6));
+  filter: drop-shadow(0 2px 6px rgba(0,0,0,0.7));
   transition: transform 0.2s ease, filter 0.2s ease;
 }
 .ht-micro-trout-pin:hover .ht-trout-alive {
-  transform: scale(1.2);
-  filter: drop-shadow(0 3px 8px rgba(0,0,0,0.8)) brightness(1.1);
+  transform: scale(1.25);
+  filter: drop-shadow(0 4px 12px rgba(0,0,0,0.9)) brightness(1.15);
 }
 
 /* ── Environment-specific visual cues ── */
-/* Behind Boulder — slight shadow under fish */
+/* Behind Boulder — fish darts out from cover to feed, retreats */
 .ht-env-rock .ht-trout-swim-wrap::before {
   content: '';
   position: absolute;
-  bottom: -3px;
-  left: 4px;
-  width: 20px;
-  height: 8px;
+  bottom: -4px;
+  left: 2px;
+  width: 24px;
+  height: 10px;
   border-radius: 50%;
-  background: radial-gradient(ellipse, rgba(60,50,40,0.5), transparent);
+  background: radial-gradient(ellipse, rgba(50,40,30,0.6), transparent);
   pointer-events: none;
 }
 .ht-env-rock .ht-trout-swim-wrap {
-  animation: troutRockHide 3s ease-in-out infinite;
+  animation: troutRockHide 4.5s ease-in-out infinite;
 }
 @keyframes troutRockHide {
-  0%   { transform: translateX(0) rotate(0deg); }
-  20%  { transform: translateX(1px) rotate(0.5deg); }
-  40%  { transform: translateX(-0.5px) rotate(-0.3deg); }
-  60%  { transform: translateX(0.8px) rotate(0.8deg); }
-  80%  { transform: translateX(-0.3px) rotate(-0.2deg); }
-  100% { transform: translateX(0) rotate(0deg); }
+  0%   { transform: translateX(0) translateY(0) rotate(0deg) scaleX(1); }
+  /* Peek out from behind boulder */
+  12%  { transform: translateX(4px) translateY(-1px) rotate(3deg) scaleX(0.96); }
+  /* Hold and watch */
+  22%  { transform: translateX(5px) translateY(-0.5px) rotate(2deg) scaleX(1); }
+  /* Quick dart out for food */
+  30%  { transform: translateX(9px) translateY(-2px) rotate(5deg) scaleX(0.92); }
+  35%  { transform: translateX(6px) translateY(0) rotate(1deg) scaleX(1.05); }
+  /* Retreat back to safety */
+  48%  { transform: translateX(1px) translateY(0.5px) rotate(-2deg) scaleX(1.02); }
+  60%  { transform: translateX(-1px) translateY(0) rotate(-0.5deg) scaleX(1); }
+  /* Subtle shifts behind rock */
+  75%  { transform: translateX(2px) translateY(-0.3px) rotate(1.5deg) scaleX(0.98); }
+  88%  { transform: translateX(0.5px) translateY(0.2px) rotate(-1deg) scaleX(1.01); }
+  100% { transform: translateX(0) translateY(0) rotate(0deg) scaleX(1); }
 }
 
-/* Undercut Bank — fish partially hidden, darker atmosphere */
+/* Undercut Bank — fish lurks in shadow, lazy drift out and back */
 .ht-env-undercut .ht-trout-alive {
-  filter: drop-shadow(0 2px 6px rgba(0,0,0,0.8)) brightness(0.85);
+  filter: drop-shadow(0 3px 8px rgba(0,0,0,0.9)) brightness(0.8);
 }
 .ht-env-undercut .ht-trout-swim-wrap {
-  animation: troutUndercut 4s ease-in-out infinite;
+  animation: troutUndercut 5.5s ease-in-out infinite;
 }
 @keyframes troutUndercut {
-  0%   { transform: translateX(0) rotate(-1deg); opacity: 0.85; }
-  30%  { transform: translateX(-1px) rotate(-0.5deg); opacity: 0.9; }
-  50%  { transform: translateX(0.5px) rotate(0deg); opacity: 0.95; }
-  70%  { transform: translateX(-0.5px) rotate(-0.8deg); opacity: 0.85; }
-  100% { transform: translateX(0) rotate(-1deg); opacity: 0.85; }
+  0%   { transform: translateX(0) translateY(0) rotate(-1.5deg) scaleX(1); opacity: 0.78; }
+  15%  { transform: translateX(-2px) translateY(0.5px) rotate(-0.5deg) scaleX(1.01); opacity: 0.83; }
+  30%  { transform: translateX(1px) translateY(-0.3px) rotate(-2deg) scaleX(0.99); opacity: 0.88; }
+  45%  { transform: translateX(-1px) translateY(0.8px) rotate(0deg) scaleX(1.02); opacity: 0.93; }
+  /* Lazy drift out from bank */
+  58%  { transform: translateX(4px) translateY(-0.5px) rotate(1.5deg) scaleX(0.97); opacity: 0.86; }
+  70%  { transform: translateX(2px) translateY(0) rotate(-0.5deg) scaleX(1); opacity: 0.80; }
+  85%  { transform: translateX(-1.5px) translateY(0.3px) rotate(-2deg) scaleX(1.01); opacity: 0.76; }
+  100% { transform: translateX(0) translateY(0) rotate(-1.5deg) scaleX(1); opacity: 0.78; }
 }
 .ht-env-undercut .ht-trout-swim-wrap::after {
   content: '';
   position: absolute;
-  top: -4px;
-  left: -2px;
-  right: -2px;
-  height: 6px;
-  background: linear-gradient(to bottom, rgba(30,20,10,0.6), transparent);
-  border-radius: 3px 3px 0 0;
+  top: -5px;
+  left: -3px;
+  right: -3px;
+  height: 8px;
+  background: linear-gradient(to bottom, rgba(20,14,6,0.7), transparent);
+  border-radius: 4px 4px 0 0;
   pointer-events: none;
 }
 
-/* Seam Edge — fish holds steady, subtle alignment */
+/* Seam Edge — fish holds at angle, quick lateral corrections */
 .ht-env-seam .ht-trout-swim-wrap {
-  animation: troutSeam 3.5s ease-in-out infinite;
+  animation: troutSeam 3s ease-in-out infinite;
 }
 @keyframes troutSeam {
-  0%   { transform: translateX(0) rotate(2deg); }
-  25%  { transform: translateX(0.8px) rotate(1.5deg); }
-  50%  { transform: translateX(0) rotate(2.5deg); }
-  75%  { transform: translateX(-0.5px) rotate(1.8deg); }
-  100% { transform: translateX(0) rotate(2deg); }
+  0%   { transform: translateX(0) translateY(0) rotate(3deg) scaleX(1); }
+  /* Quick lateral correction */
+  12%  { transform: translateX(-3px) translateY(0.5px) rotate(1deg) scaleX(1.03); }
+  22%  { transform: translateX(1px) translateY(-0.3px) rotate(4.5deg) scaleX(0.97); }
+  /* Hold steady at angle against current */
+  35%  { transform: translateX(0) translateY(0) rotate(3.5deg) scaleX(1); }
+  /* Another correction — fighting the seam */
+  48%  { transform: translateX(4px) translateY(-1px) rotate(1.5deg) scaleX(0.96); }
+  58%  { transform: translateX(2px) translateY(0.5px) rotate(5deg) scaleX(1.02); }
+  /* Short cross-current glide */
+  72%  { transform: translateX(-2px) translateY(-0.5px) rotate(2deg) scaleX(1.01); }
+  85%  { transform: translateX(1px) translateY(0.2px) rotate(3.5deg) scaleX(0.99); }
+  100% { transform: translateX(0) translateY(0) rotate(3deg) scaleX(1); }
 }
 
-/* Feeding Lane — fish actively darting */
+/* Feeding Lane — aggressive darting to intercept food */
 .ht-env-lane .ht-trout-swim-wrap {
-  animation: troutLane 1.8s ease-in-out infinite;
+  animation: troutLane 2.2s ease-in-out infinite;
 }
 @keyframes troutLane {
-  0%   { transform: translateX(0) rotate(0deg); }
-  10%  { transform: translateX(2px) rotate(1.5deg); }
-  20%  { transform: translateX(0) rotate(0deg); }
-  40%  { transform: translateX(-1px) rotate(-1deg); }
-  50%  { transform: translateX(0) rotate(0deg); }
-  70%  { transform: translateX(2.5px) rotate(2deg); }
-  80%  { transform: translateX(0.5px) rotate(0.5deg); }
-  100% { transform: translateX(0) rotate(0deg); }
+  0%   { transform: translateX(0) translateY(0) rotate(0deg) scaleX(1); }
+  /* Aggressive dart to intercept food */
+  8%   { transform: translateX(6px) translateY(-2px) rotate(4deg) scaleX(0.90); }
+  15%  { transform: translateX(9px) translateY(-1px) rotate(1deg) scaleX(1.07); }
+  /* Quick return to holding position */
+  25%  { transform: translateX(3px) translateY(0.5px) rotate(-2deg) scaleX(1.02); }
+  35%  { transform: translateX(0) translateY(0) rotate(0deg) scaleX(1); }
+  /* Another strike — opposite direction */
+  48%  { transform: translateX(-5px) translateY(-1.5px) rotate(-4deg) scaleX(0.92); }
+  55%  { transform: translateX(-3px) translateY(0) rotate(-1deg) scaleX(1.04); }
+  /* Settle back */
+  68%  { transform: translateX(1px) translateY(0.3px) rotate(1deg) scaleX(0.99); }
+  80%  { transform: translateX(-1px) translateY(-0.2px) rotate(-0.5deg) scaleX(1.01); }
+  90%  { transform: translateX(0.5px) translateY(0.1px) rotate(0.3deg) scaleX(1); }
+  100% { transform: translateX(0) translateY(0) rotate(0deg) scaleX(1); }
 }
 
-/* Current — standard gentle sway */
+/* Current — gentle sway with body flex */
 .ht-env-current .ht-trout-swim-wrap {
-  animation: troutSwim 2.5s ease-in-out infinite;
+  animation: troutSwim 3.5s ease-in-out infinite;
 }
 
 /* ── Labels ── */
@@ -3572,6 +3662,54 @@ body.module-fly #map {
   cursor: pointer;
 }
 
+/* ═══ Stand-Here Angler Position Pins ═══ */
+.ht-stand-here-pin {
+  pointer-events: auto !important;
+  background: transparent !important;
+  border: none !important;
+}
+.ht-stand-here-dot {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(124, 255, 199, 0.3), rgba(124, 255, 199, 0.05));
+  border: 2px solid rgba(124, 255, 199, 0.55);
+  box-shadow: 0 0 10px rgba(124, 255, 199, 0.25), inset 0 0 4px rgba(124, 255, 199, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: standHerePulse 3s ease-in-out infinite;
+  cursor: pointer;
+}
+.ht-stand-here-icon {
+  font-size: 11px;
+  line-height: 1;
+  filter: drop-shadow(0 0 2px rgba(124, 255, 199, 0.4));
+}
+@keyframes standHerePulse {
+  0%, 100% { box-shadow: 0 0 10px rgba(124, 255, 199, 0.25), inset 0 0 4px rgba(124, 255, 199, 0.15); transform: scale(1); }
+  50%      { box-shadow: 0 0 18px rgba(124, 255, 199, 0.45), inset 0 0 6px rgba(124, 255, 199, 0.25); transform: scale(1.1); }
+}
+
+/* ═══ Approach Direction Lines ═══ */
+.ht-approach-line {
+  pointer-events: none !important;
+}
+.ht-approach-arrow-pin {
+  pointer-events: none !important;
+}
+.ht-approach-arrow {
+  font-size: 14px;
+  color: #7cffc7;
+  text-shadow: 0 0 5px rgba(124, 255, 199, 0.6);
+  opacity: 0.7;
+  animation: approachPulse 2.5s ease-in-out infinite;
+}
+@keyframes approachPulse {
+  0%, 100% { opacity: 0.45; }
+  50%      { opacity: 0.9; }
+}
+
 /* ═══ Micro Pin Briefing Popup ═══ */
 .ht-micro-popup .leaflet-popup-content-wrapper,
 .ht-zone-popup .leaflet-popup-content-wrapper {
@@ -5005,31 +5143,32 @@ body.module-mushroom .ht-map-hero-meta {
 .ht-fly-area-pill {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
-  background: linear-gradient(135deg, rgba(6, 18, 26, 0.92), rgba(4, 12, 18, 0.88));
+  gap: 3px;
+  background: linear-gradient(135deg, rgba(6, 18, 26, 0.85), rgba(4, 12, 18, 0.80));
   color: #2bd4ff;
-  font-size: 11px;
+  font-size: 7px;
   font-weight: 700;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.4px;
   text-transform: uppercase;
-  padding: 5px 14px 5px 8px;
-  border-radius: 20px;
-  border: 1px solid rgba(43, 212, 255, 0.45);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5), 0 0 12px rgba(43, 212, 255, 0.15);
+  padding: 2px 6px 2px 4px;
+  border-radius: 12px;
+  border: 1px solid rgba(43, 212, 255, 0.30);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.4), 0 0 6px rgba(43, 212, 255, 0.08);
   white-space: nowrap;
   cursor: pointer;
   transition: transform 0.15s ease, box-shadow 0.15s ease;
-  backdrop-filter: blur(8px);
+  backdrop-filter: blur(6px);
+  opacity: 0.7;
 }
 .ht-fly-area-pill:hover {
   transform: scale(1.05);
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.6), 0 0 18px rgba(43, 212, 255, 0.25);
 }
 .ht-fly-area-pill-icon {
-  width: 16px;
-  height: 16px;
+  width: 9px;
+  height: 9px;
   object-fit: contain;
-  filter: drop-shadow(0 0 4px rgba(43, 212, 255, 0.5));
+  filter: drop-shadow(0 0 3px rgba(43, 212, 255, 0.4));
   flex-shrink: 0;
 }
 /* Zone sub-pill — regulation boundary markers */
@@ -5039,12 +5178,12 @@ body.module-mushroom .ht-map-hero-meta {
   gap: 0;
   background: linear-gradient(135deg, rgba(6, 14, 22, 0.90), rgba(4, 10, 16, 0.86));
   color: #8ae6ff;
-  font-size: 9.5px;
+  font-size: 8px;
   font-weight: 700;
   letter-spacing: 0.4px;
   text-transform: uppercase;
-  padding: 3px 10px;
-  border-radius: 14px;
+  padding: 2px 8px;
+  border-radius: 12px;
   border: 1px solid rgba(43, 212, 255, 0.30);
   box-shadow: 0 3px 10px rgba(0, 0, 0, 0.45), 0 0 8px rgba(43, 212, 255, 0.10);
   white-space: nowrap;

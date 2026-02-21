@@ -16800,7 +16800,12 @@ document.addEventListener('DOMContentLoaded', () => {
       fishFlow.selectedZoneIdx = 0;
       fishFlow.selectedZone = null;
 
-      showNotice('✅ Checked in at ' + water.name, 'success', 2500);
+      console.log('HUNTECH: ✅ Checked in at ' + water.name);
+
+      // Hide the main area pill marker so it doesn't clutter the map
+      if (typeof window._hideMainAreaPill === 'function') {
+        try { window._hideMainAreaPill(); } catch(ex) {}
+      }
 
       // Zoom to area level on check-in so user sees zone/amenity pins
       if (typeof map !== 'undefined' && map && water.lat && water.lng) {
