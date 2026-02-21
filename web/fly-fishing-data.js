@@ -325,22 +325,27 @@ window.TROUT_WATERS = [
   //  Stream: Spring Branch flows N to Meramec River (~1 mi)
   //  OSM spring: node 289828682  (37.9534, -91.5328)
   //  Privately owned (James Foundation). Separate entrance fee ($5/vehicle).
-  //  Zone 1: Near spring pool — fly area
-  //  Zone 2: Middle section
-  //  Zone 3: Lower section near Meramec River confluence — all methods
+  //  Zone 1: Spring pool → first bend — FLY AREA (flies only)
+  //  Zone 2: First bend → upper straightaway — Flies & Lures
+  //  Zone 3: Upper straightaway → Meramec River — All methods (incl bait)
+  //  Boundary 1 (Zone 1/2): ~37.9566, -91.5331  (stream path index 9, first bend)
+  //  Boundary 2 (Zone 2/3): ~37.9591, -91.5368  (stream path index 21, upper straight)
   {
     id: 'maramec-spring', name: 'Maramec Spring Park', category: 'trout-park', ribbon: 'Trout Park',
     region: 'eastern-ozarks', lat: 37.9534, lng: -91.5328, acres: null, streamMiles: 1.0,
     species: ['rainbow'], waterType: 'spring-creek', flowSource: 'Maramec Spring (96M gal/day, 5th largest in MO)',
     usgsSiteId: null, generationWarning: false, troutStampRequired: true,
-    seasonDates: { open: 'March 15', close: 'October 31', catchRelease: 'Nov 1 - Feb 28' },
-    regulations: { method: 'Zone 1 fly area near spring. General methods in lower zones.', dailyLimit: 4, minSize: null, gearRestrictions: 'Zone 1: fly area. Zone 2: flies & lures. Zone 3: all methods.', specialRules: 'Privately owned (James Foundation). Separate entrance fee ($5/vehicle). Not MDC-managed.' },
+    seasonDates: { open: 'March 1', close: 'October 31', catchRelease: 'Nov 1 - Feb 28' },
+    regulations: { method: 'Three fishing zones. Zone 1 fly area, Zone 2 flies & lures, Zone 3 all methods.', dailyLimit: 4, minSize: null, gearRestrictions: 'Zone 1: flies only. Zone 2: flies & artificial lures. Zone 3: all methods including bait.', specialRules: 'Privately owned (James Foundation). $5/vehicle entrance fee. Daily trout tag required ($3). Not MDC-managed — separate rules. Winter C&R (Nov-Feb): flies & artificial lures only, entire stream.' },
     access: [
-      { name: 'Zone 1 — Fly Area', lat: 37.9553, lng: -91.5329, type: 'zone', methods: ['fly'], notes: 'Near spring pool. Sight fishing for large trout in crystal-clear water. Fly area — most technical.' },
-      { name: 'Zone 2 — Flies & Lures', lat: 37.9579, lng: -91.5368, type: 'zone', methods: ['fly', 'spin'], notes: 'Middle Spring Branch. Good riffle water for nymphing. Flies and artificial lures.' },
-      { name: 'Zone 3 — All Methods', lat: 37.9603, lng: -91.5365, type: 'zone', methods: ['fly', 'spin', 'bait'], notes: 'Northern section near Meramec River confluence. All methods including bait. Family friendly.' },
+      // Zone pins placed at center of each zone; zoneBounds define exact boundary coordinates
+      // Boundary 1 (first bend): 37.9566, -91.5331  (stream path index 9)
+      // Boundary 2 (upper straightaway): 37.9591, -91.5368  (stream path index 21)
+      { name: 'Zone 1 — Fly Area', lat: 37.9556, lng: -91.5327, type: 'zone', methods: ['fly'], zoneBounds: [[37.9539, -91.5332], [37.9566, -91.5331]], notes: 'Spring pool to first bend. Flies ONLY. Crystal-clear water, sight fishing for large trout near the spring pool. Most technical zone — long leaders, small flies, delicate presentations.' },
+      { name: 'Zone 2 — Flies & Lures', lat: 37.9568, lng: -91.5350, type: 'zone', methods: ['fly', 'spin'], zoneBounds: [[37.9566, -91.5331], [37.9591, -91.5368]], notes: 'First bend to upper straightaway. Flies and artificial lures. Good riffle-run-pool sequence for nymphing and small spinner fishing. Most varied structure.' },
+      { name: 'Zone 3 — All Methods', lat: 37.9604, lng: -91.5364, type: 'zone', methods: ['fly', 'spin', 'bait'], zoneBounds: [[37.9591, -91.5368], [37.9619, -91.5343]], notes: 'Upper straightaway to Meramec River confluence. ALL methods including bait. Wider water, deeper runs. Family friendly, least crowded section.' },
       { name: 'Main Parking / Gate', lat: 37.9551, lng: -91.5318, type: 'parking', verified: true, notes: 'Entrance gate — pay $5/vehicle. Parking near spring, museum, and stream. (OSM node 37.9551/-91.5318 verified)' },
-      { name: 'Restrooms', lat: 37.9595, lng: -91.5315, type: 'parking', verified: true, notes: 'Restroom facility. (OSM node 37.9595/-91.5315 verified)' }
+      { name: 'Restrooms', lat: 37.9595, lng: -91.5315, type: 'parking', verified: true, notes: 'Restroom facility near Zone 3. (OSM node 37.9595/-91.5315 verified)' }
       // Store/Museum removed — no OSM-verified coordinates
     ],
     // OSM Way 204259234 — Maramec Spring Branch (waterway=stream), verified 2026-02-20
@@ -356,12 +361,12 @@ window.TROUT_WATERS = [
     ],
     solitude: 'low', difficulty: 'easy', wadingRequired: false, familyFriendly: true,
     bestSeasons: ['spring', 'fall'],
-    hatches: { spring: ['BWO #16-20', 'Midge #18-24', 'Caddis #14-16'], summer: ['Caddis #14-16', 'Sulphurs #16', 'Terrestrials'], fall: ['BWO #16-22', 'October Caddis #10-12'], winter: ['Midges #20-24'] },
-    topFlies: ['#16 Pheasant Tail', '#14 Hares Ear', '#18 Midge Larva', '#16 Elk Hair Caddis', '#12 Woolly Bugger'],
-    topLures: ['Small Rooster Tail', 'Panther Martin', 'Kastmaster', 'Trout Magnet', 'Rapala Countdown CD-3 (rainbow trout)', 'Rebel Wee Craw (crawdad)'],
-    topBait: ['PowerBait', 'Corn', 'Nightcrawlers'],
-    coachTips: ['Maramec is privately owned (James Foundation) — not MDC. Separate rules and fees.', 'The 5th largest spring in MO. Massive deep blue pool holds trophy-sized trout.', 'Less crowded than Bennett and Roaring River on weekdays.', 'Beautiful museum and nature center on-site.'],
-    description: 'Privately operated trout park fed by Missouris 5th largest spring. Beautiful grounds with nature museum. Less crowded than state-run parks on weekdays.'
+    hatches: { spring: ['BWO #16-20', 'Midge #18-24', 'Caddis #14-16', 'Scuds #14-16'], summer: ['Caddis #14-16', 'Sulphurs #16', 'Terrestrials', 'Cream Midges #20-22'], fall: ['BWO #16-22', 'October Caddis #10-12', 'Midges #18-22'], winter: ['Midges #20-26', 'BWO #18-22 (warm afternoons)', 'Scuds #14-16 (year-round)'] },
+    topFlies: ['#16 Pheasant Tail Nymph', '#14 Hares Ear', '#20 Zebra Midge', '#16 Scud (tan/orange)', '#16 Elk Hair Caddis', '#12 Woolly Bugger (olive)'],
+    topLures: ['1/8oz Rooster Tail (white)', '1/8oz Panther Martin (gold)', 'Small Kastmaster (gold)', 'Trout Magnet (white/chartreuse)', 'Rapala Countdown CD-3 (rainbow trout)', 'Rebel Wee Craw (crawdad)'],
+    topBait: ['PowerBait (chartreuse/rainbow)', 'Whole kernel corn', 'Nightcrawlers on small hook', 'Salmon eggs'],
+    coachTips: ['Maramec is privately owned (James Foundation) — NOT MDC. Different rules. $5/vehicle entrance + $3 daily trout tag + state trout stamp required.', 'The 5th largest spring in Missouri. Massive deep blue spring pool holds trophy-sized trout — sight fish with small nymphs and long leaders.', 'Winter C&R (Nov-Feb): flies and artificial lures ONLY on entire stream. No bait. Great uncrowded fishing.', 'Less crowded than Bennett Spring and Roaring River, especially on weekdays. Beautiful museum and nature center on-site.', 'Scuds and sowbugs are always productive here — dead-drift a #16 tan scud in any zone year-round.'],
+    description: 'Privately operated trout park fed by Missouri\'s 5th largest spring (96M gal/day). Beautiful grounds with nature museum. Three fishing zones with flies-only near the spring pool. Less crowded than state-run parks, especially weekdays.'
   },
 
   // ═══════════════════════════════════════════════════════════════════════
