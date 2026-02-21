@@ -3581,63 +3581,157 @@ function _autoCheckInToPin(pinIdx) {
     _activeAnglerPins.push(shMarker);
     microCoords.push([anglerLat, anglerLng]);
 
-    // Animated casting arc — curved SVG path that "unfurls" from angler to fish
-    var castDist = Math.sqrt(
-      Math.pow((md.fishLat - anglerLat) * 111000, 2) +
-      Math.pow((md.fishLng - anglerLng) * 111000 * Math.cos(md.fishLat * Math.PI / 180), 2)
-    );
-    // Control point for casting arc — perpendicular to the line, offset for curve
-    var midLat = (anglerLat + md.fishLat) / 2;
-    var midLng = (anglerLng + md.fishLng) / 2;
-    var dLat = md.fishLat - anglerLat;
-    var dLng = md.fishLng - anglerLng;
-    var arcOffset = 0.00003; // subtle curve amount (~3m perpendicular)
-    var cpLat = midLat + (-dLng) * arcOffset / Math.max(0.00001, Math.sqrt(dLat*dLat + dLng*dLng));
-    var cpLng = midLng + (dLat) * arcOffset / Math.max(0.00001, Math.sqrt(dLat*dLat + dLng*dLng));
+    // ═══════════════════════════════════════════════════════════════════
+    // CAST LANDING GUARDRAILS — Strict upstream placement per habitat
+    // Cast NEVER lands on the fish. It lands upstream so the natural
+    // drift carries the fly/lure INTO the strike zone. Spooking = fail.
+    // ═══════════════════════════════════════════════════════════════════
+    var degPerM = 0.000009; // ~1 meter in degrees
 
-    // Build points along the bezier curve for Leaflet polyline
+    // Habitat-specific upstream offset (meters) + perpendicular correction
+    // These are researched casting placement rules for each structure type
+    var castPlacement = {
+      'primary-lie':  { up: 3.5, perpShift: 0,    note: 'Dead drift — cast 3.5m upstream, center of the current lane' },
+      'seam-edge':    { up: 3.0, perpShift: 0.8,  note: 'Cast into faster water side, drift crosses seam naturally' },
+      'pocket-water': { up: 2.0, perpShift: 0,    note: 'Short precise cast into pocket mouth, let tumble in' },
+      'undercut-bank':{ up: 2.5, perpShift: -1.0, note: 'Cast tight to bank edge, drift parallel under overhang' },
+      'feeding-lane': { up: 4.0, perpShift: 0,    note: 'Long upstream drift — match the food conveyor lane exactly' },
+      'tail-glide':   { up: 3.0, perpShift: 0,    note: 'Cast above the tail, let presentation glide through thin water' },
+      'riffle-drop':  { up: 2.5, perpShift: 0,    note: 'Cast at top of riffle, drift tumbles over the drop-off' },
+      'eddy-pocket':  { up: 1.5, perpShift: 0.5,  note: 'Short cast — eddy reverses current, less upstream lead needed' },
+      'bank-shadow':  { up: 3.0, perpShift: -0.8, note: 'Cast upstream along shadow line, drift follows the bank' },
+      'deep-slot':    { up: 4.0, perpShift: 0,    note: 'Extra lead time — weighted rig needs distance to sink into slot' }
+    };
+
+    var cp = castPlacement[md.type] || { up: 3, perpShift: 0, note: 'Cast upstream of fish' };
+
+    // Calculate UPSTREAM direction (opposite of downstream)
+    var upstreamLat = -md.downLat;  // reversed downstream direction
+    var upstreamLng = -md.downLng;
+
+    // Cast landing point: fish position + upstream offset + perpendicular shift
+    var castLandLat = md.fishLat + upstreamLat * degPerM * cp.up + md.perpLat * degPerM * cp.perpShift * md.side;
+    var castLandLng = md.fishLng + upstreamLng * degPerM * cp.up + md.perpLng * degPerM * cp.perpShift * md.side;
+
+    // Animated casting arc — pronounced curved path from angler to landing spot
+    var castDist = Math.sqrt(
+      Math.pow((castLandLat - anglerLat) * 111000, 2) +
+      Math.pow((castLandLng - anglerLng) * 111000 * Math.cos(castLandLat * Math.PI / 180), 2)
+    );
+    // Control point for arc — bigger perpendicular offset for visible curve
+    var midLat = (anglerLat + castLandLat) / 2;
+    var midLng = (anglerLng + castLandLng) / 2;
+    var dLat = castLandLat - anglerLat;
+    var dLng = castLandLng - anglerLng;
+    var arcMag = Math.sqrt(dLat*dLat + dLng*dLng);
+    // Arc height scales with distance — more visible curve on longer casts
+    var arcOffset = Math.max(0.00004, arcMag * 0.35);
+    var cpLat = midLat + (-dLng) * arcOffset / Math.max(0.00001, arcMag);
+    var cpLng = midLng + (dLat) * arcOffset / Math.max(0.00001, arcMag);
+
+    // Build points along the bezier curve
     var curvePoints = [];
-    var curveSteps = 16;
+    var curveSteps = 20;
     for (var ci = 0; ci <= curveSteps; ci++) {
       var t = ci / curveSteps;
       var u = 1 - t;
-      var cuLat = u*u*anglerLat + 2*u*t*cpLat + t*t*md.fishLat;
-      var cuLng = u*u*anglerLng + 2*u*t*cpLng + t*t*md.fishLng;
+      var cuLat = u*u*anglerLat + 2*u*t*cpLat + t*t*castLandLat;
+      var cuLng = u*u*anglerLng + 2*u*t*cpLng + t*t*castLandLng;
       curvePoints.push([cuLat, cuLng]);
     }
 
+    // Visible casting arc polyline
     var approachLine = L.polyline(curvePoints, {
       color: '#7cffc7',
-      weight: 1.5,
-      opacity: 0.4,
-      dashArray: '6 8',
+      weight: 2.5,
+      opacity: 0.65,
+      dashArray: '8 6',
       className: 'ht-cast-arc',
       interactive: false
     }).addTo(map);
     _activeApproachLines.push(approachLine);
 
-    // Cast fly/lure dot at the end (fish target)
+    // Glow underlayer for the cast arc — makes it pop on dark satellite
+    var glowLine = L.polyline(curvePoints, {
+      color: '#7cffc7',
+      weight: 6,
+      opacity: 0.12,
+      className: 'ht-cast-arc-glow',
+      interactive: false
+    }).addTo(map);
+    _activeApproachLines.push(glowLine);
+
+    // ── Cast landing zone — splash ring + target dot ──
+    // Outer splash ring (expanding ripple at landing point)
+    var splashIcon = L.divIcon({
+      className: 'ht-cast-splash-pin',
+      html: '<div class="ht-cast-splash-ring"></div><div class="ht-cast-splash-ring ht-cast-splash-ring-2"></div>',
+      iconSize: [30, 30],
+      iconAnchor: [15, 15]
+    });
+    var splashMarker = L.marker([castLandLat, castLandLng], {
+      icon: splashIcon,
+      zIndexOffset: 477,
+      interactive: false
+    }).addTo(map);
+    _activeApproachLines.push(splashMarker);
+
+    // Center target dot at landing point
     var flyDotIcon = L.divIcon({
       className: 'ht-cast-fly-pin',
       html: '<div class="ht-cast-fly-dot"></div>',
-      iconSize: [8, 8],
-      iconAnchor: [4, 4]
+      iconSize: [12, 12],
+      iconAnchor: [6, 6]
     });
-    var flyDot = L.marker([md.fishLat, md.fishLng], {
+    var flyDot = L.marker([castLandLat, castLandLng], {
       icon: flyDotIcon,
-      zIndexOffset: 476,
+      zIndexOffset: 478,
       interactive: false
     }).addTo(map);
     _activeApproachLines.push(flyDot);
 
-    // Approach direction arrow at 70% along the curve (near target)
-    var tArr = 0.7;
+    // "CAST HERE" label near the landing dot
+    var castLabelIcon = L.divIcon({
+      className: 'ht-cast-label-pin',
+      html: '<div class="ht-cast-label">CAST HERE</div>',
+      iconSize: [60, 14],
+      iconAnchor: [30, -6]
+    });
+    var castLabel = L.marker([castLandLat, castLandLng], {
+      icon: castLabelIcon,
+      zIndexOffset: 479,
+      interactive: false
+    }).addTo(map);
+    _activeApproachLines.push(castLabel);
+
+    // Drift direction arrow — shows current flow from landing to fish
+    var driftMidLat = (castLandLat + md.fishLat) / 2;
+    var driftMidLng = (castLandLng + md.fishLng) / 2;
+    var driftAngle = Math.atan2(
+      (md.fishLng - castLandLng) * 111000 * Math.cos(md.fishLat * Math.PI / 180),
+      (md.fishLat - castLandLat) * 111000
+    ) * 180 / Math.PI;
+    var driftIcon = L.divIcon({
+      className: 'ht-drift-arrow-pin',
+      html: '<div class="ht-drift-arrow" style="transform:rotate(' + (driftAngle - 90) + 'deg)">›</div>',
+      iconSize: [14, 14],
+      iconAnchor: [7, 7]
+    });
+    var driftMk = L.marker([driftMidLat, driftMidLng], {
+      icon: driftIcon,
+      zIndexOffset: 476,
+      interactive: false
+    }).addTo(map);
+    _activeApproachLines.push(driftMk);
+
+    // Direction arrow on the cast arc at 65% (near landing)
+    var tArr = 0.65;
     var uArr = 1 - tArr;
-    var arrLat = uArr*uArr*anglerLat + 2*uArr*tArr*cpLat + tArr*tArr*md.fishLat;
-    var arrLng = uArr*uArr*anglerLng + 2*uArr*tArr*cpLng + tArr*tArr*md.fishLng;
+    var arrLat = uArr*uArr*anglerLat + 2*uArr*tArr*cpLat + tArr*tArr*castLandLat;
+    var arrLng = uArr*uArr*anglerLng + 2*uArr*tArr*cpLng + tArr*tArr*castLandLng;
     var aAngle = Math.atan2(
-      (md.fishLng - anglerLng) * 111000 * Math.cos(md.fishLat * Math.PI / 180),
-      (md.fishLat - anglerLat) * 111000
+      (castLandLng - anglerLng) * 111000 * Math.cos(castLandLat * Math.PI / 180),
+      (castLandLat - anglerLat) * 111000
     ) * 180 / Math.PI;
     var arrowIcon = L.divIcon({
       className: 'ht-approach-arrow-pin',

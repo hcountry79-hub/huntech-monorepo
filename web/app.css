@@ -3670,39 +3670,117 @@ body.module-fly #map {
   50%      { box-shadow: 0 0 20px rgba(124, 255, 199, 0.4), inset 0 0 8px rgba(124, 255, 199, 0.2); transform: scale(1.08); }
 }
 
-/* ═══ Animated Casting Arc ═══ */
+/* ═══ Animated Casting Arc — PRONOUNCED & VISIBLE ═══ */
 .ht-cast-arc {
   pointer-events: none !important;
-  animation: castUnfurl 2.5s ease-out infinite;
-  filter: drop-shadow(0 0 3px rgba(124, 255, 199, 0.3));
+  animation: castUnfurl 3s ease-out infinite;
+  filter: drop-shadow(0 0 5px rgba(124, 255, 199, 0.5));
+}
+.ht-cast-arc-glow {
+  pointer-events: none !important;
+  animation: castGlow 3s ease-out infinite;
 }
 @keyframes castUnfurl {
-  0%   { stroke-dashoffset: 60; opacity: 0.1; }
-  30%  { stroke-dashoffset: 20; opacity: 0.5; }
-  60%  { stroke-dashoffset: 0; opacity: 0.4; }
-  80%  { stroke-dashoffset: 0; opacity: 0.3; }
-  100% { stroke-dashoffset: 0; opacity: 0.15; }
+  0%   { stroke-dashoffset: 80; opacity: 0; }
+  15%  { stroke-dashoffset: 50; opacity: 0.5; }
+  40%  { stroke-dashoffset: 10; opacity: 0.8; }
+  55%  { stroke-dashoffset: 0; opacity: 0.7; }
+  70%  { stroke-dashoffset: 0; opacity: 0.55; }
+  85%  { stroke-dashoffset: 0; opacity: 0.35; }
+  100% { stroke-dashoffset: 0; opacity: 0.2; }
+}
+@keyframes castGlow {
+  0%   { opacity: 0; }
+  40%  { opacity: 0.15; }
+  55%  { opacity: 0.2; }
+  100% { opacity: 0; }
 }
 
-/* Cast fly/lure landing dot */
+/* Cast landing splash rings — expanding ripple at landing point */
+.ht-cast-splash-pin {
+  pointer-events: none !important;
+}
+.ht-cast-splash-ring {
+  position: absolute;
+  top: 0; left: 0;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 2px solid rgba(124, 255, 199, 0.6);
+  animation: castSplash 3s ease-out infinite;
+  box-sizing: border-box;
+}
+.ht-cast-splash-ring-2 {
+  animation-delay: 0.4s;
+  border-color: rgba(124, 255, 199, 0.35);
+}
+@keyframes castSplash {
+  0%   { transform: scale(0); opacity: 0; }
+  35%  { transform: scale(0); opacity: 0; }
+  45%  { transform: scale(0.5); opacity: 0.9; border-width: 2.5px; }
+  60%  { transform: scale(1.2); opacity: 0.6; border-width: 1.5px; }
+  80%  { transform: scale(2); opacity: 0.2; border-width: 1px; }
+  100% { transform: scale(2.8); opacity: 0; border-width: 0.5px; }
+}
+
+/* Cast fly/lure landing dot — bright target */
 .ht-cast-fly-pin {
   pointer-events: none !important;
 }
 .ht-cast-fly-dot {
-  width: 6px;
-  height: 6px;
+  width: 10px;
+  height: 10px;
   border-radius: 50%;
-  background: radial-gradient(circle, #7cffc7, rgba(124, 255, 199, 0.3));
-  box-shadow: 0 0 8px rgba(124, 255, 199, 0.4);
-  animation: castLand 2.5s ease-out infinite;
+  background: radial-gradient(circle, #fff, #7cffc7 40%, rgba(124, 255, 199, 0.2));
+  box-shadow: 0 0 10px rgba(124, 255, 199, 0.7), 0 0 20px rgba(124, 255, 199, 0.3);
+  animation: castLand 3s ease-out infinite;
 }
 @keyframes castLand {
   0%   { opacity: 0; transform: scale(0); }
-  25%  { opacity: 0; transform: scale(0); }
-  40%  { opacity: 0.9; transform: scale(1.6); }
-  60%  { opacity: 0.7; transform: scale(1); }
-  80%  { opacity: 0.4; transform: scale(0.8); }
-  100% { opacity: 0.15; transform: scale(0.6); }
+  35%  { opacity: 0; transform: scale(0); }
+  45%  { opacity: 1; transform: scale(1.8); }
+  55%  { opacity: 0.9; transform: scale(1); }
+  70%  { opacity: 0.7; transform: scale(1.1); }
+  85%  { opacity: 0.5; transform: scale(0.9); }
+  100% { opacity: 0.3; transform: scale(0.8); }
+}
+
+/* "CAST HERE" label */
+.ht-cast-label-pin {
+  pointer-events: none !important;
+}
+.ht-cast-label {
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 1.2px;
+  color: #7cffc7;
+  text-shadow: 0 0 6px rgba(0,0,0,0.9), 0 0 12px rgba(124, 255, 199, 0.4);
+  text-align: center;
+  animation: castLabelPulse 3s ease-in-out infinite;
+  white-space: nowrap;
+}
+@keyframes castLabelPulse {
+  0%, 100% { opacity: 0.4; }
+  35%      { opacity: 0; }
+  50%      { opacity: 0.95; }
+  70%      { opacity: 0.7; }
+}
+
+/* Drift direction arrow — shows natural current from landing to fish */
+.ht-drift-arrow-pin {
+  pointer-events: none !important;
+}
+.ht-drift-arrow {
+  font-size: 16px;
+  font-weight: 900;
+  color: #ffe082;
+  text-shadow: 0 0 6px rgba(255, 224, 130, 0.6), 0 0 3px rgba(0,0,0,0.8);
+  opacity: 0.6;
+  animation: driftPulse 2s ease-in-out infinite;
+}
+@keyframes driftPulse {
+  0%, 100% { opacity: 0.3; transform: scale(0.9); }
+  50%      { opacity: 0.8; transform: scale(1.15); }
 }
 
 /* Approach Direction Arrows */
@@ -3713,9 +3791,10 @@ body.module-fly #map {
   pointer-events: none !important;
 }
 .ht-approach-arrow {
-  font-size: 14px;
+  font-size: 16px;
+  font-weight: 900;
   color: #7cffc7;
-  text-shadow: 0 0 5px rgba(124, 255, 199, 0.6);
+  text-shadow: 0 0 6px rgba(124, 255, 199, 0.6), 0 0 3px rgba(0,0,0,0.8);
   opacity: 0.7;
   animation: approachPulse 2.5s ease-in-out infinite;
 }
