@@ -844,114 +844,94 @@ body.module-fly .ht-strategy-panel {
   opacity: 0.85;
 }
 
-/* ═══ WATER FLOW SIMULATION OVERLAY ═══ */
-/* Animated flowing dashes along stream lines */
+/* ═══ WATER FLOW SIMULATION OVERLAY — REALISTIC WATER ═══ */
+/* Base flow line class */
 .ht-flow-line {
   pointer-events: none !important;
 }
-.ht-flow-main {
-  animation: flowDash 1.6s linear infinite;
-  filter: drop-shadow(0 0 4px rgba(43, 212, 255, 0.35));
-}
-.ht-flow-glow {
-  animation: flowDash 1.6s linear infinite;
-  filter: blur(4px);
-}
-.ht-flow-inner {
-  animation: flowDashFast 1.0s linear infinite;
-}
-.ht-flow-side {
-  animation: flowDash 2.2s linear infinite;
-}
-.ht-flow-eddy {
-  animation: flowEddy 3.5s ease-in-out infinite;
-}
-@keyframes flowDash {
-  0%   { stroke-dashoffset: 0; }
-  100% { stroke-dashoffset: -56; }
-}
-@keyframes flowDashFast {
-  0%   { stroke-dashoffset: 0; }
-  100% { stroke-dashoffset: -36; }
-}
-@keyframes flowEddy {
-  0%   { stroke-dashoffset: 0; opacity: 0.2; }
-  30%  { stroke-dashoffset: 20; opacity: 0.45; }
-  60%  { stroke-dashoffset: 40; opacity: 0.35; }
-  100% { stroke-dashoffset: 56; opacity: 0.2; }
+
+/* Water body polygon — semi-transparent water fill */
+.ht-water-body {
+  pointer-events: none !important;
 }
 
-/* Shimmer particles along current */
+/* Inner sheen — lighter core simulating depth/refraction */
+.ht-water-sheen {
+  pointer-events: none !important;
+}
+
+/* Bank edge lines — soft organic borders */
+.ht-water-bank {
+  filter: drop-shadow(0 0 2px rgba(74, 138, 106, 0.2));
+}
+
+/* Center current — very subtle animated flow indicator */
+.ht-flow-current {
+  animation: waterCurrentFlow 3s linear infinite;
+  filter: drop-shadow(0 0 3px rgba(94, 216, 255, 0.15));
+}
+@keyframes waterCurrentFlow {
+  0%   { stroke-dashoffset: 0; }
+  100% { stroke-dashoffset: -64; }
+}
+
+/* Water shimmer particles — glinting sunlight on water surface */
 .ht-flow-particle {
   pointer-events: none !important;
 }
-.ht-flow-dot {
-  width: 3px;
-  height: 3px;
+.ht-water-shimmer {
+  width: 4px;
+  height: 4px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(43, 212, 255, 0.95), rgba(43, 212, 255, 0.1));
-  animation: flowParticle 2.8s ease-in-out infinite;
-  box-shadow: 0 0 6px rgba(43, 212, 255, 0.5), 0 0 12px rgba(43, 212, 255, 0.2);
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.85), rgba(180, 230, 255, 0.2));
+  animation: waterShimmer 4s ease-in-out infinite;
+  box-shadow: 0 0 4px rgba(255, 255, 255, 0.3);
 }
-@keyframes flowParticle {
-  0%   { opacity: 0; transform: scale(0.4); }
-  15%  { opacity: 0.9; transform: scale(1.1); }
-  60%  { opacity: 0.7; transform: scale(1); }
-  85%  { opacity: 0.3; transform: scale(0.8); }
+@keyframes waterShimmer {
+  0%   { opacity: 0; transform: scale(0.3); }
+  20%  { opacity: 0.7; transform: scale(1.2); }
+  40%  { opacity: 0.3; transform: scale(0.8); }
+  60%  { opacity: 0.6; transform: scale(1.1); }
+  80%  { opacity: 0.15; transform: scale(0.6); }
   100% { opacity: 0; transform: scale(0.3); }
 }
 
-/* Obstacle rock markers — enhanced */
-.ht-flow-obstacle {
-  pointer-events: none !important;
-}
-.ht-flow-rock {
-  width: 12px;
-  height: 10px;
-  border-radius: 40% 60% 50% 45%;
-  background: radial-gradient(ellipse at 30% 30%, #9a8a70, #4a3f30);
-  border: 1px solid rgba(0,0,0,0.5);
-  box-shadow: 0 1px 6px rgba(0,0,0,0.6), 0 0 4px rgba(43, 212, 255, 0.12);
-  opacity: 0.85;
-}
-
-/* Ripple effect around obstacles */
-.ht-flow-ripple {
-  pointer-events: none !important;
-}
-.ht-flow-ripple-ring {
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  border: 1.5px solid rgba(43, 212, 255, 0.3);
-  animation: flowRipple 3s ease-out infinite;
-}
-@keyframes flowRipple {
-  0%   { transform: scale(0.5); opacity: 0.5; border-width: 2px; }
-  50%  { transform: scale(1.8); opacity: 0.2; border-width: 1px; }
-  100% { transform: scale(3); opacity: 0; border-width: 0.5px; }
-}
-
-/* Flow direction arrows — enhanced with glow */
+/* Flow direction arrows — subtle chevrons */
 .ht-flow-arrow-pin {
   pointer-events: none !important;
 }
-.ht-flow-arrow {
-  width: 14px;
-  height: 14px;
+.ht-water-arrow {
+  width: 10px;
+  height: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #2bd4ff;
-  font-size: 16px;
+  color: rgba(94, 216, 255, 0.5);
+  font-size: 12px;
   font-weight: 900;
-  opacity: 0.6;
-  text-shadow: 0 0 8px rgba(43,212,255,0.8), 0 0 16px rgba(43,212,255,0.25);
-  animation: flowArrowPulse 2.2s ease-in-out infinite;
+  opacity: 0.4;
+  animation: waterArrowPulse 3.5s ease-in-out infinite;
 }
-@keyframes flowArrowPulse {
-  0%, 100% { opacity: 0.3; transform: scale(0.85); }
-  50%      { opacity: 0.85; transform: scale(1.15); }
+@keyframes waterArrowPulse {
+  0%, 100% { opacity: 0.15; }
+  50%      { opacity: 0.5; }
+}
+
+/* Water ripple at structure points */
+.ht-flow-ripple {
+  pointer-events: none !important;
+}
+.ht-water-ripple {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 1px solid rgba(94, 216, 255, 0.2);
+  animation: waterRipple 4s ease-out infinite;
+}
+@keyframes waterRipple {
+  0%   { transform: scale(0.4); opacity: 0.4; border-width: 1.5px; }
+  50%  { transform: scale(2); opacity: 0.15; border-width: 0.8px; }
+  100% { transform: scale(3.5); opacity: 0; border-width: 0.3px; }
 }
 
 /* ═══ MICRO TROUT PINS — ANIMATED SWIMMING FISH ═══ */
@@ -3663,36 +3643,69 @@ body.module-fly #map {
   cursor: pointer;
 }
 
-/* ═══ Stand-Here Angler Position Pins ═══ */
+/* ═══ Stand-Here Angler Position Pins — Fisherman Silhouette ═══ */
 .ht-stand-here-pin {
   pointer-events: auto !important;
   background: transparent !important;
   border: none !important;
 }
 .ht-stand-here-dot {
-  width: 22px;
-  height: 22px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(124, 255, 199, 0.3), rgba(124, 255, 199, 0.05));
-  border: 2px solid rgba(124, 255, 199, 0.55);
-  box-shadow: 0 0 10px rgba(124, 255, 199, 0.25), inset 0 0 4px rgba(124, 255, 199, 0.15);
+  background: radial-gradient(circle, rgba(124, 255, 199, 0.2), rgba(124, 255, 199, 0.03));
+  border: 2px solid rgba(124, 255, 199, 0.5);
+  box-shadow: 0 0 12px rgba(124, 255, 199, 0.2), inset 0 0 6px rgba(124, 255, 199, 0.1);
   display: flex;
   align-items: center;
   justify-content: center;
   animation: standHerePulse 3s ease-in-out infinite;
   cursor: pointer;
 }
-.ht-stand-here-icon {
-  font-size: 11px;
-  line-height: 1;
-  filter: drop-shadow(0 0 2px rgba(124, 255, 199, 0.4));
+.ht-stand-here-svg {
+  filter: drop-shadow(0 0 3px rgba(124, 255, 199, 0.5));
 }
 @keyframes standHerePulse {
-  0%, 100% { box-shadow: 0 0 10px rgba(124, 255, 199, 0.25), inset 0 0 4px rgba(124, 255, 199, 0.15); transform: scale(1); }
-  50%      { box-shadow: 0 0 18px rgba(124, 255, 199, 0.45), inset 0 0 6px rgba(124, 255, 199, 0.25); transform: scale(1.1); }
+  0%, 100% { box-shadow: 0 0 12px rgba(124, 255, 199, 0.2), inset 0 0 6px rgba(124, 255, 199, 0.1); transform: scale(1); }
+  50%      { box-shadow: 0 0 20px rgba(124, 255, 199, 0.4), inset 0 0 8px rgba(124, 255, 199, 0.2); transform: scale(1.08); }
 }
 
-/* ═══ Approach Direction Lines ═══ */
+/* ═══ Animated Casting Arc ═══ */
+.ht-cast-arc {
+  pointer-events: none !important;
+  animation: castUnfurl 2.5s ease-out infinite;
+  filter: drop-shadow(0 0 3px rgba(124, 255, 199, 0.3));
+}
+@keyframes castUnfurl {
+  0%   { stroke-dashoffset: 60; opacity: 0.1; }
+  30%  { stroke-dashoffset: 20; opacity: 0.5; }
+  60%  { stroke-dashoffset: 0; opacity: 0.4; }
+  80%  { stroke-dashoffset: 0; opacity: 0.3; }
+  100% { stroke-dashoffset: 0; opacity: 0.15; }
+}
+
+/* Cast fly/lure landing dot */
+.ht-cast-fly-pin {
+  pointer-events: none !important;
+}
+.ht-cast-fly-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #7cffc7, rgba(124, 255, 199, 0.3));
+  box-shadow: 0 0 8px rgba(124, 255, 199, 0.4);
+  animation: castLand 2.5s ease-out infinite;
+}
+@keyframes castLand {
+  0%   { opacity: 0; transform: scale(0); }
+  25%  { opacity: 0; transform: scale(0); }
+  40%  { opacity: 0.9; transform: scale(1.6); }
+  60%  { opacity: 0.7; transform: scale(1); }
+  80%  { opacity: 0.4; transform: scale(0.8); }
+  100% { opacity: 0.15; transform: scale(0.6); }
+}
+
+/* Approach Direction Arrows */
 .ht-approach-line {
   pointer-events: none !important;
 }
@@ -3707,8 +3720,8 @@ body.module-fly #map {
   animation: approachPulse 2.5s ease-in-out infinite;
 }
 @keyframes approachPulse {
-  0%, 100% { opacity: 0.45; }
-  50%      { opacity: 0.9; }
+  0%, 100% { opacity: 0.3; }
+  50%      { opacity: 0.8; }
 }
 
 /* ═══ Micro Pin Briefing Popup ═══ */

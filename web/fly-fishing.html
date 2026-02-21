@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -20,11 +20,11 @@
   <link rel="dns-prefetch" href="https://server.arcgisonline.com">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css" />
-  <link rel="stylesheet" href="app.css?v=20260220v">
+  <link rel="stylesheet" href="app.css?v=20260221a">
 
   <!-- AWS Backend Configuration -->
-  <script src="config.js?v=20260220v"></script>
-  <script src="api.js?v=20260220v"></script>
+  <script src="config.js?v=20260221a"></script>
+  <script src="api.js?v=20260221a"></script>
 </head>
 <body class="module-fly">
   <header class="ht-topbar">
@@ -74,7 +74,7 @@
         <svg width="20" height="20" viewBox="0 0 24 24" fill="#2bd4ff">
           <path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
         </svg>
-        <input type="text" placeholder="Search anything: address, business, park, water, or GPS coords�" class="ht-search-input" id="searchInput" autocomplete="off" spellcheck="false">
+        <input type="text" placeholder="Search anything: address, business, park, water, or GPS coordsï¿½" class="ht-search-input" id="searchInput" autocomplete="off" spellcheck="false">
         <button class="ht-search-btn" type="button">Search</button>
         <div class="ht-search-results" id="searchResults"></div>
       </div>
@@ -105,7 +105,7 @@
   <main class="ht-map-container">
     <div id="map"></div>
 
-    <!-- --- HERO SPLASH � cinematic rotating background --- -->
+    <!-- --- HERO SPLASH ï¿½ cinematic rotating background --- -->
     <div class="ht-map-hero" id="mapHero">
       <div class="ht-hero-slide ht-hero-slide--active ht-fly-slide-1" style="background-image:url('assets/fly-hero-1.webp')"></div>
       <div class="ht-hero-slide ht-fly-slide-2" style="background-image:url('assets/fly-hero-2.webp')"></div>
@@ -168,14 +168,14 @@
         </div>
       </div>
 
-      <!-- ------- FISH NOW PANEL � Multi-Step Workflow ------- -->
+      <!-- ------- FISH NOW PANEL ï¿½ Multi-Step Workflow ------- -->
       <div class="ht-stream-panel" id="fishNowPanel">
 
         <!-- ---- Step 0: GPS Locating ---- -->
         <div class="ht-fish-step" id="fishStep0_loading">
           <div class="ht-fish-locate-card">
             <div class="ht-fish-locate-pulse">??</div>
-            <div class="ht-fish-locate-label">Finding your water�</div>
+            <div class="ht-fish-locate-label">Finding your waterï¿½</div>
             <div class="ht-fish-locate-sub">Scanning for nearby trout waters</div>
           </div>
         </div>
@@ -272,7 +272,7 @@
               <div class="ht-briefing-card" id="fishBriefingCard">
                 <div class="ht-briefing-coach">
                   <div class="ht-coach-avatar">??</div>
-                  <div class="ht-coach-intro" id="fishCoachIntro">Loading your AI stream guide�</div>
+                  <div class="ht-coach-intro" id="fishCoachIntro">Loading your AI stream guideï¿½</div>
                 </div>
                 <div class="ht-briefing-body" id="fishBriefingBody"></div>
               </div>
@@ -295,7 +295,7 @@
             <div class="ht-form-row">
               <div class="ht-live-session-bar">
                 <span class="ht-live-dot"></span>
-                <span class="ht-live-water-name" id="liveWaterName2">�</span>
+                <span class="ht-live-water-name" id="liveWaterName2">ï¿½</span>
                 <span class="ht-live-timer" id="liveTimer2">0:00</span>
               </div>
             </div>
@@ -343,7 +343,7 @@
           <div class="ht-form-row">
             <div id="savedSpotsList" class="ht-saved-spots-list">
               <!-- Populated dynamically from localStorage -->
-              <div class="ht-fly-note" style="opacity:.5">No saved spots yet � drop pins during a session</div>
+              <div class="ht-fly-note" style="opacity:.5">No saved spots yet ï¿½ drop pins during a session</div>
             </div>
           </div>
           <div class="ht-form-row">
@@ -470,7 +470,7 @@
   <!-- ------- WATER DETAIL BAR (fly-in panel for selected water) ------- -->
   <div class="ht-fly-water-bar" id="waterDetailBar">
     <div class="ht-fly-water-bar-header">
-      <span class="ht-fly-water-bar-title" id="waterDetailTitle">�</span>
+      <span class="ht-fly-water-bar-title" id="waterDetailTitle">ï¿½</span>
       <button class="ht-fly-water-bar-close" type="button" onclick="closeWaterDetail()">&times;</button>
     </div>
     <div class="ht-fly-water-bar-body" id="waterDetailBody">
@@ -487,7 +487,7 @@
   <!-- ------- EDUCATION TILE (shown on hotspot tap) ------- -->
   <div class="ht-fly-education-tile" id="educationTile" style="display:none">
     <div class="ht-edu-header">
-      <span class="ht-edu-title" id="eduTitle">�</span>
+      <span class="ht-edu-title" id="eduTitle">ï¿½</span>
       <button class="ht-edu-close" type="button" onclick="closeEducationTile()">&times;</button>
     </div>
     <div class="ht-edu-body" id="eduBody">
@@ -529,10 +529,10 @@
     };
   </script>
 
-  <script src="regulations.js?v=20260220v"></script>
-  <script src="fly-fishing-data.js?v=20260220v"></script>
-  <script src="ht-fly-fishing.js?v=20260220v"></script>
-  <script src="main.js?v=20260220v"></script>
+  <script src="regulations.js?v=20260221a"></script>
+  <script src="fly-fishing-data.js?v=20260221a"></script>
+  <script src="ht-fly-fishing.js?v=20260221a"></script>
+  <script src="main.js?v=20260221a"></script>
 
   <script>
     // --- FAILSAFE fishStepCheckIn ---
