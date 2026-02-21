@@ -219,7 +219,7 @@ window.TROUT_WATERS = [
     regulations: { method: 'Three regulated zones. Zone 1 fly only, Zone 2 flies & artificial lures, Zone 3 bait only.', dailyLimit: 4, minSize: null, gearRestrictions: 'Zone 1: fly only. Zone 2: flies & artificial lures. Zone 3: bait ONLY — no flies or lures.', specialRules: 'Daily tag required ($3). Hours 6:30am–30min after sunset. No fishing from bridge. Winter C&R: flies/artificial lures only, entire stream.' },
     access: [
       { name: 'Zone 1 — Fly Only', lat: 37.7189, lng: -92.8585, type: 'zone', methods: ['fly'], notes: 'Spring pool to hatchery dam. Fly fishing ONLY. Crystal clear sight fishing — long leaders, small flies. Shortest zone, most technical.' },
-      { name: 'Zone 2 — Flies & Lures', lat: 37.7260, lng: -92.8550, type: 'zone', methods: ['fly', 'spin'], notes: 'Hatchery dam to Whistle Bridge. Flies and artificial lures allowed. Most popular section — arrive early on weekends.' },
+      { name: 'Zone 2 — Flies & Lures', lat: 37.7233, lng: -92.8561, type: 'zone', methods: ['fly', 'spin'], notes: 'Hatchery dam to Whistle Bridge. Flies and artificial lures allowed. Most popular section — arrive early on weekends.' },
       { name: 'Zone 3 — Bait Only', lat: 37.7310, lng: -92.8574, type: 'zone', methods: ['bait'], notes: 'Whistle Bridge to Niangua River. BAIT ONLY — no flies or artificial lures permitted. Family friendly, least crowded.' }
       // Amenity pins (parking, store, restrooms) removed — no OSM-verified coordinates available
     ],
@@ -239,7 +239,7 @@ window.TROUT_WATERS = [
     bestSeasons: ['spring', 'fall'],
     hatches: { spring: ['BWO #16-20', 'Midges #18-24', 'Scuds #14-16'], summer: ['Caddis #14-16', 'Sulphurs #16-18', 'Terrestrials'], fall: ['BWO #16-20', 'Midges #18-22', 'October Caddis #10-12'], winter: ['Midges #20-24', 'BWO #18-22'] },
     topFlies: ['#16 Pheasant Tail Nymph', '#14 Hares Ear', '#18 Zebra Midge', '#16 Elk Hair Caddis', '#14 Woolly Bugger (olive)'],
-    topLures: ['1/8oz Rooster Tail (white)', '1/8oz Panther Martin (gold)', 'Small Kastmaster (gold)', 'Trout Magnet (white/chartreuse)'],
+    topLures: ['1/8oz Rooster Tail (white)', '1/8oz Panther Martin (gold)', 'Small Kastmaster (gold)', 'Trout Magnet (white/chartreuse)', 'Rapala Original F3 (rainbow trout)', 'Rebel Wee Craw (crawdad)', 'Rapala Countdown CD-3 (gold)'],
     topBait: ['Whole kernel corn (where legal)', 'PowerBait (chartreuse/rainbow)', 'Nightcrawler on small hook', 'Salmon eggs'],
     coachTips: ['Bennett Spring is Missouris most popular trout park. Arrive before 6:30am on weekends or fish midweek.', 'Zone 1 is fly only and the most technical water. If learning, start in Zone 3 with bait.', 'Zone 3 is BAIT ONLY — no flies or lures. Do not bring fly gear into Zone 3.', 'The spring pool produces year-round. Scud and sowbug patterns are deadly in Zone 1.', 'During winter C&R, crowds thin dramatically and the fishing is excellent.'],
     description: 'Missouris most popular trout park. Bennett Spring produces over 100M gallons daily, creating 1.5 miles of crystal-clear trout stream. Three strictly enforced zones: fly only, flies & lures, bait only.'
@@ -277,7 +277,7 @@ window.TROUT_WATERS = [
     bestSeasons: ['spring', 'fall'],
     hatches: { spring: ['BWO #16-20', 'Midges #18-24', 'Early Caddis #16'], summer: ['Caddis #14-16', 'Sulphurs #16-18', 'Terrestrials'], fall: ['BWO #16-20', 'Midges #18-22', 'Crane flies #10'], winter: ['Midges #20-24', 'BWO #18-22'] },
     topFlies: ['#16 Pheasant Tail', '#14 Hares Ear', '#18 Zebra Midge', '#16 Parachute Adams', '#12 Woolly Bugger'],
-    topLures: ['1/8oz Rooster Tail', '1/8oz Panther Martin', 'Small inline spinner', 'Micro crankbait'],
+    topLures: ['1/8oz Rooster Tail', '1/8oz Panther Martin', 'Small inline spinner', 'Micro crankbait', 'Rapala Countdown CD-3 (brook trout)', 'Rapala Original F3 (rainbow trout)'],
     topBait: ['PowerBait', 'Corn', 'Nightcrawlers', 'Salmon eggs'],
     coachTips: ['Montauk has a remote wilderness feel. The Current River flows right past.', 'Zone 1 C&R near the spring holds the biggest fish. Dead drift a #16 scud.', 'After your trout limit, explore the Current River for smallmouth.', 'The lodge dining room serves a great breakfast. Fuel up before your session.'],
     description: 'Deep in the Ozarks on the headwaters of the Current River. Montauk Spring pumps 53M gallons daily into a mile of stocked rainbow trout water. Three zones from C&R fly only to all methods.'
@@ -312,7 +312,7 @@ window.TROUT_WATERS = [
     bestSeasons: ['spring', 'fall'],
     hatches: { spring: ['BWO #16-20', 'Midges #18-24', 'Scuds #14-16'], summer: ['Caddis #14-16', 'Terrestrials', 'Cream variants #16'], fall: ['BWO #18-22', 'Midges #18-22'], winter: ['Midges #20-26', 'BWO #20-24'] },
     topFlies: ['#16 Scud (tan/orange)', '#18 Zebra Midge', '#16 Pheasant Tail', '#14 Elk Hair Caddis', '#10 Woolly Bugger'],
-    topLures: ['1/8oz Rooster Tail', 'Small jig (white/pink)', 'Micro spoon', 'Berkley Gulp minnow'],
+    topLures: ['1/8oz Rooster Tail', 'Small jig (white/pink)', 'Micro spoon', 'Berkley Gulp minnow', 'Rapala Original F3 (brown trout)', 'Small crankbait (crawdad)'],
     topBait: ['PowerBait', 'Corn', 'Nightcrawlers', 'Wax worms'],
     coachTips: ['Roaring River is in the far SW corner of Missouri — beautiful hill country.', 'Zone 2 is flies only — the best zone for skilled anglers. C&R section holds big fish.', 'Fish near the hatchery outflow in Zone 1 for active feeders.', 'Cardiac Hill trail is steep but gives access to less-pressured water.'],
     description: 'In the rugged SW Ozarks. Roaring River Spring emerges from a cave and feeds a mile of stocked rainbow water through a narrow valley. Three zones with strictly enforced methods.'
@@ -355,7 +355,7 @@ window.TROUT_WATERS = [
     bestSeasons: ['spring', 'fall'],
     hatches: { spring: ['BWO #16-20', 'Midge #18-24', 'Caddis #14-16'], summer: ['Caddis #14-16', 'Sulphurs #16', 'Terrestrials'], fall: ['BWO #16-22', 'October Caddis #10-12'], winter: ['Midges #20-24'] },
     topFlies: ['#16 Pheasant Tail', '#14 Hares Ear', '#18 Midge Larva', '#16 Elk Hair Caddis', '#12 Woolly Bugger'],
-    topLures: ['Small Rooster Tail', 'Panther Martin', 'Kastmaster', 'Trout Magnet'],
+    topLures: ['Small Rooster Tail', 'Panther Martin', 'Kastmaster', 'Trout Magnet', 'Rapala Countdown CD-3 (rainbow trout)', 'Rebel Wee Craw (crawdad)'],
     topBait: ['PowerBait', 'Corn', 'Nightcrawlers'],
     coachTips: ['Maramec is privately owned (James Foundation) — not MDC. Separate rules and fees.', 'The 5th largest spring in MO. Massive deep blue pool holds trophy-sized trout.', 'Less crowded than Bennett and Roaring River on weekdays.', 'Beautiful museum and nature center on-site.'],
     description: 'Privately operated trout park fed by Missouris 5th largest spring. Beautiful grounds with nature museum. Less crowded than state-run parks on weekdays.'
@@ -380,7 +380,7 @@ window.TROUT_WATERS = [
     bestSeasons: ['spring', 'fall', 'winter'],
     hatches: { spring: ['BWO #16-20', 'Caddis #14-16', 'Midges #18-22', 'March Browns #12-14'], summer: ['Caddis #14-16', 'Terrestrials (ants #18, beetles #14, hoppers #10)', 'Sulphurs #16-18'], fall: ['BWO #16-22', 'Midges #18-22', 'October Caddis #10-12'], winter: ['Midges #20-26', 'BWO #18-24'] },
     topFlies: ['#16 Pheasant Tail', '#18 CDC BWO Emerger', '#14 Elk Hair Caddis', '#16 Parachute Adams', '#12 Woolly Bugger (black)'],
-    topLures: ['1/16oz inline spinner (gold)', 'Micro Rapala', 'Small spoon (silver)'], topBait: null,
+    topLures: ['1/16oz inline spinner (gold)', 'Micro Rapala (rainbow trout)', 'Small spoon (silver)', 'Rapala Countdown CD-1 (brook trout)'], topBait: null,
     coachTips: ['This is REAL wild trout fishing. Small creek, spooky fish, delicate presentations required.', 'Most trout 7-10 inches. A 14-incher is a genuine trophy.', 'Stealth is everything. Earth tones, stay low, wade slowly.', 'Start downstream and work up. Fish every riffle and pool.', 'One of the most beautiful places in Missouri. Take your time.'],
     description: 'True wild rainbow trout stream in Mark Twain National Forest. Small, intimate creek with spooky wild fish. 18" minimum, flies/artificial only. Backcountry Missouri at its finest.'
   },
@@ -400,7 +400,7 @@ window.TROUT_WATERS = [
     bestSeasons: ['spring', 'fall', 'winter'],
     hatches: { spring: ['BWO #16-20', 'Midges #18-24', 'Caddis #16'], summer: ['Terrestrials', 'Caddis #14-16', 'Cream midges #22'], fall: ['BWO #16-22', 'Midges #18-24'], winter: ['Midges #22-26', 'BWO #20-24'] },
     topFlies: ['#18 Pheasant Tail', '#20 Zebra Midge', '#16 Parachute Adams', '#14 Elk Hair Caddis', '#16 Soft Hackle'],
-    topLures: ['1/32oz micro spinner', 'Micro jig (white)'], topBait: null,
+    topLures: ['1/32oz micro spinner', 'Micro jig (white)', 'Micro Rapala (rainbow trout)'], topBait: null,
     coachTips: ['Mill Creek is small — more brook than river. Delicate presentations mandatory.', 'Fish are spooky. Cast ONLY from a kneeling position in clear pools.', 'Most fish 7-10 inches. Focus on deeper pockets.', 'Mark Twain NF and Bohigian CA. Beautiful, remote.'],
     description: 'Tiny wild rainbow trout creek through Mark Twain National Forest. Extremely intimate — stealth and precision required. Pure wilderness solitude.'
   },
@@ -422,7 +422,7 @@ window.TROUT_WATERS = [
     bestSeasons: ['spring', 'fall', 'winter'],
     hatches: { spring: ['BWO #16-20', 'Caddis #14-16', 'Midges #18-22', 'Stoneflies #10-14'], summer: ['Caddis #14-16', 'Terrestrials', 'Sulphurs #16-18', 'Crane flies #10'], fall: ['BWO #16-22', 'Brown Drake #10 (September!)', 'Midges #18-22', 'October Caddis #10'], winter: ['Midges #20-26', 'BWO #18-24', 'Winter stoneflies #14-16'] },
     topFlies: ['#16 Pheasant Tail', '#14 Elk Hair Caddis', '#12 Woolly Bugger', '#18 BWO CDC Emerger', '#14 Glo-Bug (peach)'],
-    topLures: ['1/16oz spinner (gold)', 'Small Rapala (rainbow trout color)'], topBait: null,
+    topLures: ['1/16oz spinner (gold)', 'Small Rapala (rainbow trout color)', 'Rapala Countdown CD-3 (gold)'], topBait: null,
     coachTips: ['Lane Spring is a gem. The spring pool holds fish year-round.', 'September Brown Drake hatch is legendary. Plan for mid-September.', 'BWO hatches reliable almost daily Oct-Apr. Fish the afternoon.', 'White Ribbon upstream is stocked — good for families wanting to keep fish.', 'Milldam Hollow is the solitude play — fish all day without seeing anyone.'],
     description: 'Outstanding wild trout water fed by Lane Spring. Home to Missouris famous September Brown Drake hatch. Adjacent White Ribbon for families. Lane Spring Rec Area has camping.'
   },
@@ -442,7 +442,7 @@ window.TROUT_WATERS = [
     bestSeasons: ['spring', 'fall'],
     hatches: { spring: ['BWO #16-20', 'Midges #18-24', 'Early Caddis #16'], summer: ['Terrestrials', 'Caddis #14-16', 'Tiny BWO #22'], fall: ['BWO #16-22', 'Midges #18-24'], winter: ['Midges #22-26', 'BWO #20-24'] },
     topFlies: ['#18 Pheasant Tail', '#16 Parachute Adams', '#20 Midge Emerger', '#14 Elk Hair Caddis', '#16 Soft Hackle'],
-    topLures: ['Micro inline spinner', 'Ultra-light spoon'], topBait: null,
+    topLures: ['Micro inline spinner', 'Ultra-light spoon', 'Micro Rapala (brook trout)'], topBait: null,
     coachTips: ['Similar character to Blue Springs and Mill Creek — small, clear, demanding.', 'Fish typically 4-11 inches with occasional 14-inch specimen.', 'Long leaders, light tippet (6X-7X). Delicate presentations in low/clear flows.', 'Upper half crosses private property — respect posted signs.'],
     description: 'Spring-fed Blue Ribbon creek from Relfe Spring to Big Piney River. Six miles of wild trout. Small, clear, demanding. High solitude.'
   },
@@ -463,7 +463,7 @@ window.TROUT_WATERS = [
     bestSeasons: ['spring', 'fall', 'winter'],
     hatches: { spring: ['BWO #16-20', 'Caddis #14-16', 'Midges #18-22'], summer: ['Caddis #14-16', 'Terrestrials', 'Sulphurs #16'], fall: ['BWO #16-22', 'Midges #18-22'], winter: ['Midges #22-26', 'BWO #20-24'] },
     topFlies: ['#16 Pheasant Tail', '#18 Zebra Midge', '#14 Elk Hair Caddis', '#16 Parachute Adams', '#12 Woolly Bugger'],
-    topLures: ['Micro spinner', 'Small spoon'], topBait: null,
+    topLures: ['Micro spinner', 'Small spoon', 'Small Rapala (rainbow trout)', 'Rebel Wee Craw (crawdad)'], topBait: null,
     coachTips: ['Crane Creek CA is in SW Ozarks — beautiful, remote, rarely crowded.', 'Wild rainbows and some brown trout. Fish deeper pools for browns.', 'Spring-fed, stays cool all summer. Fish year-round.', 'Access can be a hike. Good boots required.'],
     description: 'Wild trout in SW Ozarks Conservation Area. Remote, beautiful, rarely crowded. Both wild rainbow and brown trout.'
   },
@@ -486,7 +486,7 @@ window.TROUT_WATERS = [
     bestSeasons: ['spring', 'fall', 'winter'],
     hatches: { spring: ['Stoneflies #8-14 (giant stones in March!)', 'Caddis #14-16', 'BWO #16-20', 'Midges #18-22'], summer: ['Yellow Sallies #14-16', 'Caddis #14-16', 'Terrestrials', 'Sulphurs #16-18'], fall: ['BWO #16-22', 'October Caddis #10-12', 'Midges #18-22'], winter: ['Midges #20-26', 'Winter stoneflies #14-16', 'BWO #18-24'] },
     topFlies: ['#8 Pat Rubber Legs (stonefly)', '#16 Pheasant Tail', '#14 Elk Hair Caddis', '#6 Sculpin (olive)', '#12 Woolly Bugger (black)'],
-    topLures: ['1/8oz Rooster Tail', 'Mepps spinner (gold)', 'Small Rapala'], topBait: null,
+    topLures: ['1/8oz Rooster Tail', 'Mepps spinner (gold)', 'Small Rapala (rainbow trout)', 'Rapala Countdown CD-5 (brown trout)', 'Rebel Wee Craw (crawdad)'], topBait: null,
     coachTips: ['Arguably Missouris best wild trout water. Plan around hatches.', 'March stonefly hatch brings the biggest fish to the surface — dont miss.', 'Kelly Ford to Blair Bridge float is classic. Wade fish the spring branches for trophies.', 'Larger river — felt-sole wading boots essential. Slippery rocks.', 'Consider a float trip with a guide for first-timers.'],
     description: 'Missouris premier wild trout river. Blue Ribbon from Rainbow Springs to Patrick Bridge — 7 miles of trophy water. Famous March stonefly hatches. Wild rainbow and brown trout.'
   },
@@ -512,7 +512,7 @@ window.TROUT_WATERS = [
     bestSeasons: ['spring', 'fall'],
     hatches: { spring: ['Stoneflies #8-14', 'Caddis #14-16', 'BWO #16-20'], summer: ['Yellow Sallies #14', 'Caddis', 'Terrestrials'], fall: ['BWO #16-22', 'October Caddis #10', 'Streamers for pre-spawn browns'], winter: ['Midges #20-26', 'Winter stones #14-16'] },
     topFlies: ['#8 Rubber Legs', '#16 Pheasant Tail', '#8 Woolly Bugger', '#6 Sculpin', '#14 Glo-Bug'],
-    topLures: ['1/8oz Rooster Tail', 'Mepps spinner', 'Small Rapala (brown trout)'], topBait: null,
+    topLures: ['1/8oz Rooster Tail', 'Mepps spinner', 'Small Rapala (brown trout)', 'Rapala Countdown CD-5 (gold)', 'Small crankbait (crawdad)'], topBait: null,
     coachTips: ['Red Ribbon has stocked browns over wild fish — trophy-class potential.', 'Oct-Nov prime for big browns. Streamers at dawn and dusk.', 'Best water: Patrick Bridge downstream past Althea Spring.', 'Less fished than Blue Ribbon. Want solitude on the North Fork? Fish Red Ribbon.'],
     description: 'Red Ribbon section of North Fork. Stocked browns over wild fish create trophy opportunities. Less crowded than Blue Ribbon. 2 fish daily, 15" minimum.'
   },
@@ -535,7 +535,7 @@ window.TROUT_WATERS = [
     bestSeasons: ['spring', 'fall'],
     hatches: { spring: ['BWO #16-20', 'Caddis #14-16', 'Midges #18-22'], summer: ['Caddis', 'Terrestrials'], fall: ['BWO #16-22', 'Midges'], winter: ['Midges #22-26'] },
     topFlies: ['#14 Hares Ear', '#16 Pheasant Tail', '#12 Woolly Bugger', '#14 Elk Hair Caddis'],
-    topLures: ['1/8oz Rooster Tail', 'Panther Martin', 'Trout Magnet (white)', 'Small crankbait'],
+    topLures: ['1/8oz Rooster Tail', 'Panther Martin', 'Trout Magnet (white)', 'Small crankbait', 'Rapala Original F3 (rainbow trout)', 'Rebel Wee Craw (crawdad)'],
     topBait: ['PowerBait (chartreuse/rainbow)', 'Whole kernel corn', 'Nightcrawlers', 'Salmon eggs'],
     coachTips: ['Great family destination. Stocked trout less picky — PowerBait and corn work well.', 'Kids? Set them up at Hwy 63 bridge. Easy access, bankside fishing.', 'Great intro to trout before graduating to Blue Ribbon downstream.', 'Stocking schedule varies — check MDC for dates.'],
     description: 'Stocked White Ribbon near Lane Spring. All methods, 4 fish daily. Perfect intro to trout fishing. Family friendly with easy access.'
@@ -569,7 +569,7 @@ window.TROUT_WATERS = [
     bestSeasons: ['spring', 'fall', 'winter'],
     hatches: { spring: ['BWO', 'Caddis', 'Stoneflies', 'March Browns'], summer: ['Caddis', 'Terrestrials', 'Sulphurs'], fall: ['BWO', 'October Caddis', 'Midges'], winter: ['Midges', 'BWO'] },
     topFlies: ['#14 Woolly Bugger', '#16 Pheasant Tail', '#14 Elk Hair Caddis', '#12 Clouser Minnow', '#10 Muddler Minnow'],
-    topLures: ['1/4oz Rooster Tail', 'Rapala countdown', 'Mepps spinner'],
+    topLures: ['1/4oz Rooster Tail', 'Rapala Countdown CD-5 (rainbow trout)', 'Mepps spinner', 'Rebel Wee Craw (crawdad)', 'Small crankbait (shad)'],
     topBait: ['Nightcrawlers', 'Crawfish tails', 'Corn (where legal)'],
     coachTips: ['The Current River is a national treasure. Float trips are classic.', 'Spring branches along the Current hold wild trout — the real gems.', 'Canoe traffic heavy in summer. Fish early morning or late evening.', 'Upper Current near Montauk has best trout water. Below Round Spring transitions to smallmouth.'],
     description: 'Ozark National Scenic Riverway. One of Americas great spring-fed rivers. Wild trout in spring branches, stocked in main river. World-class float fishing.'
@@ -594,7 +594,7 @@ window.TROUT_WATERS = [
     bestSeasons: ['spring', 'fall', 'winter'],
     hatches: { spring: ['BWO', 'Caddis', 'Stoneflies', 'Midges'], summer: ['Caddis', 'Terrestrials'], fall: ['BWO', 'October Caddis'], winter: ['Midges', 'BWO'] },
     topFlies: ['#14 Woolly Bugger', '#16 Pheasant Tail', '#14 Elk Hair Caddis', '#12 Muddler Minnow'],
-    topLures: ['Rooster Tail', 'Mepps spinner', 'Small Rapala'],
+    topLures: ['Rooster Tail', 'Mepps spinner', 'Small Rapala (rainbow trout)', 'Rapala Countdown CD-5 (gold)', 'Rebel Wee Craw (crawdad)'],
     topBait: ['Nightcrawlers', 'PowerBait'],
     coachTips: ['Greer Spring is world-class. The spring branch is cold, clear, and holds wild trout.', 'Wild and Scenic River — one of Missouris most beautiful floats.', 'Less pressure than Current River. If you want solitude, this is it.', 'Multi-day float trips here are transcendent. Plan 2-3 days.'],
     description: 'Wild and Scenic River fed by Greer Spring — Missouris 2nd largest at 220M gal/day. Wild trout in spring branches. Less crowded than Current. Exceptional solitude.'
@@ -621,7 +621,7 @@ window.TROUT_WATERS = [
     bestSeasons: ['spring', 'fall', 'winter'],
     hatches: { spring: ['Midges #18-24', 'Scuds/Sowbugs', 'Caddis #16-18 (Apr-May)'], summer: ['Midges #20-26', 'Scuds #14-16'], fall: ['Midges #18-24', 'Streamers for pre-spawn browns (Oct-Nov)'], winter: ['Midges #20-26', 'Scuds #14-16', 'Sowbugs #14-16'] },
     topFlies: ['#16 Scud (tan/orange)', '#18 Sowbug (gray)', '#20 Zebra Midge', '#14 Copper John', '#8 Woolly Bugger (black)'],
-    topLures: ['Micro jig (white/pink)', 'Marabou jig 1/32oz', 'Small inline spinner'], topBait: null,
+    topLures: ['Micro jig (white/pink)', 'Marabou jig 1/32oz', 'Small inline spinner', 'Rapala Countdown CD-3 (rainbow trout)', 'Small crankbait (shad)'], topBait: null,
     coachTips: ['World-class tailwater. Trout fat and strong from constant scuds/sowbugs.', 'SAFETY FIRST: When sirens sound, GET OUT OF THE WATER. Flows rise in minutes.', 'Check generation schedule: swl-wc.usace.army.mil for Table Rock releases.', 'Fish scuds/sowbugs #14-16 dead-drifted near bottom — 90% of their diet.', 'Walk past the first quarter-mile for better fish and less pressure.', 'Pre-spawn brown trout Oct-Nov is world-class. Big streamers dawn/dusk.', 'Night fishing legal and productive for trophy browns.'],
     description: 'World-class tailwater below Table Rock Dam. Zone 1 fly/lure only. Fat trout on scuds/sowbugs year-round. DANGER: Dam releases change flows rapidly.'
   },
@@ -644,7 +644,7 @@ window.TROUT_WATERS = [
     bestSeasons: ['spring', 'fall', 'winter'],
     hatches: { spring: ['Scud/Sowbug dominant'], summer: ['Scuds/Sowbugs', 'Midges'], fall: ['Streamers for browns', 'Scuds/Sowbugs'], winter: ['Scuds/Sowbugs', 'Midges'] },
     topFlies: ['#16 Scud (tan)', '#18 Sowbug', '#14 Glo-Bug', '#12 San Juan Worm', '#8 Woolly Bugger'],
-    topLures: ['1/8oz Rooster Tail', 'Small crankbait', 'Marabou jig', 'Trout Magnet'],
+    topLures: ['1/8oz Rooster Tail', 'Small crankbait', 'Marabou jig', 'Trout Magnet', 'Rapala Original F5 (rainbow trout)', 'Rebel Wee Craw (crawdad)'],
     topBait: ['PowerBait (variety)', 'Nightcrawlers', 'Wax worms', 'Corn'],
     coachTips: ['Zone 2 is family-friendly — bait legal, easy dock/bank access.', 'Guide boat trip is the best way to fish the lower 20 miles.', 'PowerBait under a bobber from a dock = family memories.', 'You WILL catch fish here. One of Americas most productive trout fisheries.', 'Same generation safety warning applies. Check flows.'],
     description: 'Lower 20mi of Taneycomo. All methods including bait. Best from boat or dock. Family-friendly. Guide services in Branson.'

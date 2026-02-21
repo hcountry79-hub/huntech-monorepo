@@ -2933,11 +2933,11 @@ function getMethodSpecificRec(water, habitat, method) {
 
     // Lure presentation by habitat
     var lureByHabitat = {
-      riffle: { lure: 'Small inline spinner (Panther Martin #2 or Rooster Tail 1/16oz)', pres: 'Cast upstream, reel just fast enough to feel the blade spin. Let it drift with the current through the riffle.' },
-      pool: { lure: 'Spoon (Kastmaster 1/8oz or Acme Phoebe)', pres: 'Cast to the head, let it flutter down. Slow retrieve with occasional twitches. Count down 3-5 seconds before retrieve.' },
-      run: { lure: 'Inline spinner with willow blade (Mepps #1-2)', pres: 'Cast quartering upstream. Steady retrieve just above bottom. The blade flash mimics a fleeing baitfish.' },
-      tailout: { lure: 'Micro crankbait (Rapala Ultra Light Minnow)', pres: 'Cast upstream, slow twitching retrieve. In thin tailout water, downsizing is critical — 1/16oz max.' },
-      boulder: { lure: 'Jig (1/32-1/16oz, marabou or twister tail)', pres: 'Pitch directly behind boulders. Let it sink into the pocket. Tiny hops off the bottom, 2-3 second pauses.' }
+      riffle: { lure: 'Small inline spinner (Panther Martin #2 or Rooster Tail 1/16oz)', pres: 'Cast upstream, reel just fast enough to feel the blade spin. Let it drift with the current through the riffle. Jerkbaits: try a Rapala F3 twitched slowly through the deeper pockets.' },
+      pool: { lure: 'Spoon (Kastmaster 1/8oz) or small jerkbait (Rapala CD-3)', pres: 'Cast to the head, let it flutter down. For spoons: slow retrieve with twitches. For jerkbaits: let the Rapala CD sink to depth, then slow twitch-pause retrieve. Count down 3-5 seconds before retrieve.' },
+      run: { lure: 'Inline spinner with willow blade (Mepps #1-2) or Rapala Original F3', pres: 'Cast quartering upstream. Spinners: steady retrieve just above bottom. Jerkbaits: twitch-twitch-pause through the seam — the erratic action triggers reflex strikes from holding fish.' },
+      tailout: { lure: 'Micro crankbait (Rapala Ultra Light Minnow or Rebel Wee Craw)', pres: 'Cast upstream, slow twitching retrieve. Crankbaits wobble naturally in thin water — downsize to 1/16oz max. Crawdad crankbaits are deadly in tailouts with gravel bottom.' },
+      boulder: { lure: 'Jig (1/32-1/16oz, marabou or twister tail) or Rapala CD-3', pres: 'Pitch directly behind boulders. Jigs: let sink, tiny hops, 2-3 second pauses. Jerkbaits: cast tight to rock face, let the Countdown sink into the pocket, then twitch once — trout crush it.' }
     };
     var hl = lureByHabitat[habitat] || lureByHabitat.run;
     rec.tackle = hl.lure;
@@ -3685,11 +3685,11 @@ function _showSpotInfoTray(water, zone, spot, microType, microIdx) {
     'feeding-lane': 'Natural food funnel. Position your bait at the top of the lane and let it drift through. Natural presentation is everything — no bobber, just split shot and drift.'
   };
   var microAdviceSpin = {
-    'primary-lie': 'Main feeding position. Cast your lure upstream and retrieve through this holding zone. Slow, steady retrieve — match the current speed.',
-    'seam-edge': 'The seam is spinner territory. Cast across the fast water and let your lure swing into the slow side. The blade flash triggers strikes at the transition.',
-    'pocket-water': 'Pocket behind structure — pitch your lure directly into the calm water. Let it sink 2 seconds, then short twitches. Each pocket is one shot.',
-    'undercut-bank': 'Undercut bank — pitch a jig or small spoon tight to the bank. Let it flutter down along the edge. Big trout ambush from these lies.',
-    'feeding-lane': 'Cast upstream into the lane. Retrieve just fast enough to keep your blade turning. The narrow channel concentrates fish — every cast counts.'
+    'primary-lie': 'Main feeding position. Cast your lure upstream and retrieve through this holding zone. Spinners: slow, steady retrieve matching current speed. Jerkbaits: twitch-pause-twitch through the zone — erratic action triggers strikes.',
+    'seam-edge': 'The seam is spinner and jerkbait territory. Cast across the fast water and let your lure swing into the slow side. Spinners: blade flash at the transition. Jerkbaits: twitch a Rapala through the seam — the pause lets it drift into the strike zone.',
+    'pocket-water': 'Pocket behind structure — pitch your lure directly into the calm water. Spinners: let sink 2 seconds, short twitches. Jerkbaits or crankbaits: one cast per pocket, let sink and twitch once — trout commit fast in pockets.',
+    'undercut-bank': 'Undercut bank — pitch a jig, small spoon, or Countdown Rapala tight to the bank. Jerkbaits: cast parallel to the bank, let the lure sink along the edge. Big trout ambush from these lies.',
+    'feeding-lane': 'Cast upstream into the lane. Spinners: retrieve just fast enough to keep blade turning. Crankbaits: slow wobble through the narrow channel. Jerkbaits: twitch-pause lets the current carry your lure naturally through the lane.'
   };
 
   var adviceMap = method === 'bait' ? microAdviceBait : method === 'spin' ? microAdviceSpin : microAdviceFly;

@@ -527,11 +527,11 @@ body.module-fly .ht-strategy-panel {
   bottom: calc(env(safe-area-inset-bottom) + 16px);
   transform: translateX(-50%);
   z-index: 22000;
-  width: min(92vw, 420px);
+  width: min(96vw, 500px);
   background: linear-gradient(150deg, rgba(12, 32, 44, 0.96), rgba(6, 14, 20, 0.98));
   border: 1px solid rgba(43, 212, 255, 0.35);
   border-radius: 18px;
-  padding: 12px 14px 14px;
+  padding: 16px 18px 18px;
   box-shadow: 0 18px 35px rgba(0, 0, 0, 0.45);
   display: none;
 }
@@ -704,12 +704,12 @@ body.module-fly .ht-strategy-panel {
   filter: drop-shadow(0 0 6px rgba(43, 212, 255, 0.35));
 }
 .ht-fly-water-bar-sub--cmd {
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 800;
   letter-spacing: 2px;
   color: #ffe082;
   text-transform: uppercase;
-  margin-top: 2px;
+  margin-top: 3px;
 }
 .ht-fly-water-bar-actions--single {
   display: flex;
@@ -733,35 +733,36 @@ body.module-fly .ht-strategy-panel {
 
 /* ═══ STREAM COMMAND TRAY ═══ */
 .ht-stream-cmd-body {
-  margin-top: 10px;
+  margin-top: 14px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 16px;
 }
 .ht-stream-cmd-section {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
 }
 .ht-stream-cmd-label {
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 800;
   color: #ffe082;
   text-transform: uppercase;
   letter-spacing: 1.5px;
+  margin-bottom: 2px;
 }
 
 /* Zone Select Pills */
 .ht-zone-select-row {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
 }
 .ht-zone-select-pill {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 14px;
+  padding: 12px 16px;
   border-radius: 12px;
   border: 1.5px solid rgba(43, 212, 255, 0.3);
   background: rgba(10, 28, 38, 0.85);
@@ -778,12 +779,12 @@ body.module-fly .ht-strategy-panel {
   box-shadow: 0 0 12px rgba(124, 255, 199, 0.15);
 }
 .ht-zone-select-name {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 800;
   color: #e8fbff;
 }
 .ht-zone-select-method {
-  font-size: 11px;
+  font-size: 12px;
   color: #9fc3ce;
   font-weight: 600;
 }
@@ -1537,11 +1538,11 @@ body.module-fly .ht-strategy-panel {
 }
 
 .ht-fly-command-tray {
-  width: min(94vw, 460px);
+  width: min(96vw, 500px);
   background: linear-gradient(150deg, rgba(12, 32, 44, 0.96), rgba(6, 14, 20, 0.98));
   border: 1px solid rgba(43, 212, 255, 0.35);
   border-radius: 18px;
-  padding: 14px 16px 16px;
+  padding: 16px 20px 18px;
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.55);
   animation: flyPanelRise 0.35s ease;
 }
@@ -2128,14 +2129,14 @@ body.module-fly .ht-strategy-panel {
 .ht-method-row,
 .ht-session-row {
   display: flex;
-  gap: 6px;
+  gap: 8px;
   flex-wrap: wrap;
 }
 .ht-method-btn,
 .ht-session-btn {
   flex: 1 1 auto;
-  padding: 10px 10px;
-  font-size: 12px;
+  padding: 11px 12px;
+  font-size: 13px;
   font-weight: 800;
   border-radius: 12px;
   border: 1px solid rgba(43, 212, 255, 0.3);
