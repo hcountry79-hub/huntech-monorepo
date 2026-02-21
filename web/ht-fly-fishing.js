@@ -528,8 +528,89 @@ window.showFlyCheckInForm = showFlyCheckInForm;
 window.pickFishZone = function(btn, idx) {
   btn.closest('.ht-zone-select-row').querySelectorAll('.ht-zone-select-pill').forEach(b => b.classList.remove('ht-zone-select-pill--active'));
   btn.classList.add('ht-zone-select-pill--active');
-  if (window._fishFlow) window._fishFlow.selectedZoneIdx = idx;
+  if (window._fishFlow) {
+    window._fishFlow.selectedZoneIdx = idx;
+    window._fishFlow.zoneManuallyPicked = true;
+  }
 };
+
+/* ══ SMART ZONE AUTO-SELECTION ENGINE ══
+   Scores all zones based on user's method, experience, wading, and zone metadata.
+   Returns the index of the best zone for the angler. */
+function _scoreZoneForAngler(zone, fishFlow) {
+  var score = 0;
+  var method = fishFlow.method || 'fly';
+  var experience = fishFlow.experience || 'learning';
+  var wade = fishFlow.wade || 'waders';
+
+  // Method match — all zones now allow all methods, but zone habitat suits some methods better
+  var habitat = (zone.habitat || '').toLowerCase();
+  var depth = (zone.depth || '').toLowerCase();
+  var clarity = (zone.clarity || '').toLowerCase();
+  var pressure = (zone.pressure || '').toLowerCase();
+
+  if (method === 'fly') {
+    // Fly anglers love clear pools and riffles. Spring pool is paradise for fly.
+    if (clarity === 'gin-clear') score += 20;
+    else if (clarity === 'clear') score += 10;
+    if (habitat === 'pool') score += 15;
+    if (habitat === 'riffle-run') score += 12;
+    if (habitat === 'run') score += 5;
+    // Advanced fly anglers prefer challenging water (high pressure)
+    if (experience === 'advanced' && pressure === 'high') score += 10;
+    if (experience === 'confident' && pressure === 'moderate') score += 8;
+  } else if (method === 'spin') {
+    // Lure anglers do best in riffle-runs and runs with structure
+    if (habitat === 'riffle-run') score += 20;
+    if (habitat === 'run') score += 15;
+    if (habitat === 'pool') score += 5;
+    if (depth === 'medium') score += 8;
+    if (pressure === 'moderate') score += 5;
+  } else if (method === 'bait') {
+    // Bait anglers do best in deeper, slower water with less pressure
+    if (habitat === 'run') score += 20;
+    if (habitat === 'riffle-run') score += 10;
+    if (depth === 'medium-deep' || depth === 'deep') score += 15;
+    if (pressure === 'low') score += 12;
+  }
+
+  // Experience-based adjustments
+  if (experience === 'new' || experience === 'learning') {
+    // Beginners benefit from lower pressure, wider water
+    if (pressure === 'low') score += 15;
+    if (pressure === 'moderate') score += 8;
+    if (pressure === 'high') score -= 5;
+    if (depth === 'medium' || depth === 'medium-deep') score += 5;
+  } else if (experience === 'advanced') {
+    // Advanced anglers want the challenge — high pressure crystal water
+    if (pressure === 'high') score += 10;
+    if (clarity === 'gin-clear') score += 8;
+  }
+
+  // Wading preference
+  if (wade === 'streamside') {
+    // Bank anglers need accessible water — wider runs and lower zones
+    if (habitat === 'run') score += 10;
+    if (depth === 'medium-deep') score += 5;
+    if (pressure === 'low') score += 5;
+  } else {
+    // Waders can access everything — slight bonus for riffle-runs
+    if (habitat === 'riffle-run') score += 5;
+  }
+
+  return score;
+}
+
+function _autoSelectBestZone(water, fishFlow) {
+  var zones = (water.access || []).filter(function(a) { return a.type === 'zone'; });
+  if (zones.length === 0) return 0;
+  var bestIdx = 0, bestScore = -Infinity;
+  zones.forEach(function(z, idx) {
+    var s = _scoreZoneForAngler(z, fishFlow);
+    if (s > bestScore) { bestScore = s; bestIdx = idx; }
+  });
+  return bestIdx;
+}
 
 /* ══ LET'S GO — main launch sequence ══ */
 window.fishLetsGo = function() {
@@ -537,7 +618,15 @@ window.fishLetsGo = function() {
   if (!fishFlow || !fishFlow.area) return;
   const water = fishFlow.area;
   const zones = (water.access || []).filter(a => a.type === 'zone');
-  const zoneIdx = typeof fishFlow.selectedZoneIdx === 'number' ? fishFlow.selectedZoneIdx : 0;
+
+  // Smart auto-selection: if user didn't manually pick a zone, AI picks the best one
+  var zoneIdx;
+  if (fishFlow.zoneManuallyPicked && typeof fishFlow.selectedZoneIdx === 'number') {
+    zoneIdx = fishFlow.selectedZoneIdx;
+  } else {
+    zoneIdx = _autoSelectBestZone(water, fishFlow);
+    fishFlow.selectedZoneIdx = zoneIdx;
+  }
   const zone = zones[zoneIdx] || zones[0];
   if (!zone) return;
 
@@ -550,6 +639,9 @@ window.fishLetsGo = function() {
 
   // 1b) Hide the main area pill marker so it doesn't clutter the map
   _hideMainAreaPill();
+
+  // 1c) Zone Focus — clear ALL zone pins so only the selected zone remains
+  clearZonePins();
 
   // 2) Deploy zone polygon (flash then fade)
   if (typeof window.deployZonePolygonWithFade === 'function') {
@@ -1539,6 +1631,8 @@ function clearMicroPins() {
   }
   // Clear flow overlay
   if (typeof clearFlowOverlay === 'function') try { clearFlowOverlay(); } catch {}
+  // Clear boulders
+  if (typeof clearBoulders === 'function') try { clearBoulders(); } catch {}
 }
 
 /* Zone pin icon */
@@ -1567,19 +1661,52 @@ function getTroutMicroPinIcon(habitat) {
   });
 }
 
-/* Angler position pin icon — clear fisherman silhouette */
+/* Angler position pin icon — 3D fly fisherman silhouette */
 function getAnglerPinIcon() {
   return L.divIcon({
     className: 'ht-angler-pin',
-    html: '<div class="ht-angler-pill">' +
-      '<svg viewBox="0 0 24 24" width="18" height="18">' +
-      '<circle cx="12" cy="4" r="2.5" fill="#ffe082"/>' +
-      '<path d="M12 7 L12 15 M8 10 L16 10 M12 15 L9 21 M12 15 L15 21" stroke="#ffe082" stroke-width="2" stroke-linecap="round" fill="none"/>' +
-      '<path d="M16 10 L20 6" stroke="#ffe082" stroke-width="1.5" stroke-linecap="round" fill="none"/>' +
-      '<path d="M20 6 L21 3" stroke="#ffe082" stroke-width="1" stroke-linecap="round" fill="none" opacity="0.7"/>' +
+    html: '<div class="ht-angler-3d">' +
+      '<svg viewBox="0 0 48 64" width="40" height="54" xmlns="http://www.w3.org/2000/svg">' +
+      // Shadow/ground contact
+      '<ellipse cx="24" cy="60" rx="10" ry="3" fill="rgba(0,0,0,0.25)" />' +
+      // Waders/boots — dark olive
+      '<path d="M18 50 L16 58 L20 58 L20 50 Z" fill="#3a5a3a" stroke="#2a4a2a" stroke-width="0.5"/>' +
+      '<path d="M26 50 L24 58 L28 58 L28 50 Z" fill="#3a5a3a" stroke="#2a4a2a" stroke-width="0.5"/>' +
+      // Legs
+      '<path d="M20 40 L19 50 M26 40 L27 50" stroke="#4a6a4a" stroke-width="2.5" stroke-linecap="round" fill="none"/>' +
+      // Body/torso — fishing vest with 3D gradient
+      '<path d="M17 25 Q16 32 18 40 L28 40 Q30 32 29 25 Z" fill="url(#vestGrad)" stroke="#3a5a3a" stroke-width="0.5"/>' +
+      // Vest pockets detail
+      '<rect x="19" y="30" width="4" height="3" rx="0.5" fill="rgba(0,0,0,0.15)" />' +
+      '<rect x="24" y="31" width="3" height="2.5" rx="0.5" fill="rgba(0,0,0,0.12)" />' +
+      // Arms
+      '<path d="M17 27 L10 22 L5 14" stroke="#4a6a4a" stroke-width="2.2" stroke-linecap="round" fill="none"/>' +
+      '<path d="M29 27 L34 30" stroke="#4a6a4a" stroke-width="2.2" stroke-linecap="round" fill="none"/>' +
+      // Hat — wide brim with 3D effect
+      '<ellipse cx="23" cy="19" rx="8" ry="2.5" fill="#5a7a5a" />' +
+      '<path d="M18 19 Q18 13 23 12 Q28 13 28 19" fill="#6a8a6a" stroke="#4a6a4a" stroke-width="0.5"/>' +
+      // Head
+      '<circle cx="23" cy="17" r="4.5" fill="#e8c99b" />' +
+      // Sunglasses
+      '<path d="M20 16.5 L26 16.5" stroke="#333" stroke-width="1.2" stroke-linecap="round"/>' +
+      // Fly rod — long dynamic casting arc
+      '<path d="M5 14 L2 8 Q0 2 6 0" stroke="#8B7355" stroke-width="1.2" stroke-linecap="round" fill="none"/>' +
+      '<path d="M5 14 Q3 10 2 8" stroke="#6a5a45" stroke-width="1.8" stroke-linecap="round" fill="none"/>' +
+      // Fly line arc — graceful casting loop
+      '<path class="ht-angler-flyline" d="M6 0 Q14 -4 22 -2 Q30 0 36 6" stroke="rgba(255,224,130,0.6)" stroke-width="0.8" stroke-linecap="round" fill="none"/>' +
+      // Fly at end of line
+      '<circle cx="36" cy="6" r="1.2" fill="#ffe082" opacity="0.8"/>' +
+      // 3D lighting/gradient defs
+      '<defs>' +
+      '<linearGradient id="vestGrad" x1="0" y1="0" x2="1" y2="1">' +
+      '<stop offset="0%" stop-color="#6a8a5a"/>' +
+      '<stop offset="40%" stop-color="#5a7a4a"/>' +
+      '<stop offset="100%" stop-color="#3a5a3a"/>' +
+      '</linearGradient>' +
+      '</defs>' +
       '</svg></div>',
-    iconSize: [32, 32],
-    iconAnchor: [16, 32]
+    iconSize: [40, 54],
+    iconAnchor: [20, 54]
   });
 }
 
@@ -2557,13 +2684,57 @@ window.deployZonePolygonWithFade = function(water, zone) {
 };
 
 /* ═══════════════════════════════════════════════════════════════════
-   WATER FLOW SIMULATION OVERLAY
-   Draws animated current/flow lines along the stream segment so
-   the user can visualize how water moves around rocks and structure.
+   WATER FLOW SIMULATION OVERLAY — ULTRA REALISTIC
+   High-fidelity stream rendering: multi-layer water body, organic
+   banks with Catmull-Rom interpolation, dynamic current lanes,
+   shimmer particles, ripples, and flow direction indicators.
    ═══════════════════════════════════════════════════════════════════ */
 function clearFlowOverlay() {
   _activeFlowLayers.forEach(function(l) { try { map.removeLayer(l); } catch {} });
   _activeFlowLayers = [];
+}
+
+/* Catmull-Rom spline interpolation for smooth organic curves */
+function _catmullRomInterpolate(points, segments) {
+  if (points.length < 3) return points.slice();
+  var result = [];
+  for (var i = 0; i < points.length - 1; i++) {
+    var p0 = points[Math.max(0, i - 1)];
+    var p1 = points[i];
+    var p2 = points[Math.min(points.length - 1, i + 1)];
+    var p3 = points[Math.min(points.length - 1, i + 2)];
+    for (var t = 0; t < segments; t++) {
+      var tt = t / segments;
+      var tt2 = tt * tt;
+      var tt3 = tt2 * tt;
+      var lat = 0.5 * ((2 * p1[0]) + (-p0[0] + p2[0]) * tt + (2 * p0[0] - 5 * p1[0] + 4 * p2[0] - p3[0]) * tt2 + (-p0[0] + 3 * p1[0] - 3 * p2[0] + p3[0]) * tt3);
+      var lng = 0.5 * ((2 * p1[1]) + (-p0[1] + p2[1]) * tt + (2 * p0[1] - 5 * p1[1] + 4 * p2[1] - p3[1]) * tt2 + (-p0[1] + 3 * p1[1] - 3 * p2[1] + p3[1]) * tt3);
+      result.push([lat, lng]);
+    }
+  }
+  result.push(points[points.length - 1]);
+  return result;
+}
+
+/* Build bank offset path — organic width variation */
+function _buildBankPath(seg, mPerLat, mPerLng, baseWidth, side, seed) {
+  var bank = [];
+  for (var i = 0; i < seg.length; i++) {
+    var lat = seg[i][0], lng = seg[i][1];
+    var dy, dx;
+    if (i === 0) { dy = seg[1][0] - lat; dx = seg[1][1] - lng; }
+    else if (i === seg.length - 1) { dy = lat - seg[i-1][0]; dx = lng - seg[i-1][1]; }
+    else { dy = seg[i+1][0] - seg[i-1][0]; dx = seg[i+1][1] - seg[i-1][1]; }
+    var dyM = dy * mPerLat, dxM = dx * mPerLng;
+    var len = Math.sqrt(dyM * dyM + dxM * dxM);
+    if (len < 0.01) { bank.push([lat, lng]); continue; }
+    var pLat = (-dxM / len) / mPerLat;
+    var pLng = (dyM / len) / mPerLng;
+    // Organic width variation using sin waves with different frequencies
+    var widthVar = baseWidth + Math.sin(i * 1.3 + seed) * 1.8 + Math.sin(i * 0.7 + seed * 2.1) * 1.0;
+    bank.push([lat + pLat * widthVar * side, lng + pLng * widthVar * side]);
+  }
+  return bank;
 }
 
 function deployFlowOverlay(water, zone) {
@@ -2575,118 +2746,136 @@ function deployFlowOverlay(water, zone) {
   var mPerLat = 111000;
   var mPerLng = 111000 * Math.cos(seg[0][0] * R);
 
-  // Build stream corridor polygon — filled water body instead of dashed lines
-  var leftBank = [], rightBank = [];
-  var streamWidth = 5; // 5 meters each side = ~10m wide stream
-  for (var i = 0; i < seg.length; i++) {
-    var lat = seg[i][0], lng = seg[i][1];
-    var dy, dx;
-    if (i === 0) { dy = seg[1][0] - lat; dx = seg[1][1] - lng; }
-    else if (i === seg.length - 1) { dy = lat - seg[i-1][0]; dx = lng - seg[i-1][1]; }
-    else { dy = seg[i+1][0] - seg[i-1][0]; dx = seg[i+1][1] - seg[i-1][1]; }
-    var dyM = dy * mPerLat, dxM = dx * mPerLng;
-    var len = Math.sqrt(dyM * dyM + dxM * dxM);
-    if (len < 0.01) { leftBank.push([lat, lng]); rightBank.push([lat, lng]); continue; }
-    var pLat = (-dxM / len) / mPerLat;
-    var pLng = (dyM / len) / mPerLng;
-    // Gentle width variation for organic look
-    var widthVar = streamWidth + Math.sin(i * 1.7) * 1.5;
-    leftBank.push([lat + pLat * widthVar, lng + pLng * widthVar]);
-    rightBank.push([lat - pLat * widthVar, lng - pLng * widthVar]);
-  }
+  // Interpolate stream path for ultra-smooth curves (4x resolution)
+  var smoothSeg = _catmullRomInterpolate(seg, 4);
 
-  // Build closed polygon: left bank forward, right bank reversed
-  var waterPoly = leftBank.concat(rightBank.slice().reverse());
+  // ── LAYER 1: Deep water body — wide, semi-transparent ──
+  var outerWidth = 7; // 7m each side = ~14m wide visible stream
+  var outerLeft = _buildBankPath(smoothSeg, mPerLat, mPerLng, outerWidth, 1, 0);
+  var outerRight = _buildBankPath(smoothSeg, mPerLat, mPerLng, outerWidth, -1, 1.5);
+  var outerPoly = outerLeft.concat(outerRight.slice().reverse());
 
-  // Main water body — semi-transparent blue fill
-  var waterFill = L.polygon(waterPoly, {
-    color: 'rgba(30, 120, 180, 0.45)',
+  var waterBody = L.polygon(outerPoly, {
+    color: 'transparent',
     weight: 0,
-    fillColor: '#1a6ea0',
-    fillOpacity: 0.22,
-    className: 'ht-water-body',
+    fillColor: '#0a4a6a',
+    fillOpacity: 0.30,
+    className: 'ht-water-body ht-water-body-deep',
     interactive: false
   }).addTo(map);
-  _activeFlowLayers.push(waterFill);
+  _activeFlowLayers.push(waterBody);
 
-  // Inner water sheen — lighter core for depth illusion
-  var innerLeft = [], innerRight = [];
-  var innerWidth = streamWidth * 0.45;
-  for (var j = 0; j < seg.length; j++) {
-    var lat2 = seg[j][0], lng2 = seg[j][1];
-    var dy2, dx2;
-    if (j === 0) { dy2 = seg[1][0] - lat2; dx2 = seg[1][1] - lng2; }
-    else if (j === seg.length - 1) { dy2 = lat2 - seg[j-1][0]; dx2 = lng2 - seg[j-1][1]; }
-    else { dy2 = seg[j+1][0] - seg[j-1][0]; dx2 = seg[j+1][1] - seg[j-1][1]; }
-    var dyM2 = dy2 * mPerLat, dxM2 = dx2 * mPerLng;
-    var len2 = Math.sqrt(dyM2 * dyM2 + dxM2 * dxM2);
-    if (len2 < 0.01) { innerLeft.push([lat2, lng2]); innerRight.push([lat2, lng2]); continue; }
-    var pLat2 = (-dxM2 / len2) / mPerLat;
-    var pLng2 = (dyM2 / len2) / mPerLng;
-    innerLeft.push([lat2 + pLat2 * innerWidth, lng2 + pLng2 * innerWidth]);
-    innerRight.push([lat2 - pLat2 * innerWidth, lng2 - pLng2 * innerWidth]);
-  }
-  var innerPoly = innerLeft.concat(innerRight.slice().reverse());
-  var innerFill = L.polygon(innerPoly, {
+  // ── LAYER 2: Mid-depth water — slightly narrower, lighter ──
+  var midWidth = 5.5;
+  var midLeft = _buildBankPath(smoothSeg, mPerLat, mPerLng, midWidth, 1, 0.8);
+  var midRight = _buildBankPath(smoothSeg, mPerLat, mPerLng, midWidth, -1, 2.3);
+  var midPoly = midLeft.concat(midRight.slice().reverse());
+
+  var midWater = L.polygon(midPoly, {
+    color: 'transparent',
+    weight: 0,
+    fillColor: '#1a7aaa',
+    fillOpacity: 0.18,
+    className: 'ht-water-body ht-water-mid',
+    interactive: false
+  }).addTo(map);
+  _activeFlowLayers.push(midWater);
+
+  // ── LAYER 3: Shallow/sheen core — bright refraction center ──
+  var coreWidth = 2.5;
+  var coreLeft = _buildBankPath(smoothSeg, mPerLat, mPerLng, coreWidth, 1, 0.3);
+  var coreRight = _buildBankPath(smoothSeg, mPerLat, mPerLng, coreWidth, -1, 1.8);
+  var corePoly = coreLeft.concat(coreRight.slice().reverse());
+
+  var coreWater = L.polygon(corePoly, {
     color: 'transparent',
     weight: 0,
     fillColor: '#3dd8ff',
-    fillOpacity: 0.08,
+    fillOpacity: 0.10,
     className: 'ht-water-sheen',
     interactive: false
   }).addTo(map);
-  _activeFlowLayers.push(innerFill);
+  _activeFlowLayers.push(coreWater);
 
-  // Bank edge lines — soft, organic borders
-  var bankLeft = L.polyline(leftBank, {
-    color: '#4a8a6a',
-    weight: 1.2,
-    opacity: 0.35,
-    className: 'ht-flow-line ht-water-bank',
+  // ── LAYER 4: Bank edge lines — organic, earth-toned borders ──
+  var bankSmoothedLeft = _catmullRomInterpolate(outerLeft, 2);
+  var bankSmoothedRight = _catmullRomInterpolate(outerRight, 2);
+
+  var bankL = L.polyline(bankSmoothedLeft, {
+    color: '#5a8a6a',
+    weight: 1.8,
+    opacity: 0.45,
+    className: 'ht-flow-line ht-water-bank ht-bank-left',
     interactive: false
   }).addTo(map);
-  _activeFlowLayers.push(bankLeft);
-  var bankRight = L.polyline(rightBank, {
-    color: '#4a8a6a',
-    weight: 1.2,
-    opacity: 0.35,
-    className: 'ht-flow-line ht-water-bank',
+  _activeFlowLayers.push(bankL);
+
+  var bankR = L.polyline(bankSmoothedRight, {
+    color: '#5a8a6a',
+    weight: 1.8,
+    opacity: 0.45,
+    className: 'ht-flow-line ht-water-bank ht-bank-right',
     interactive: false
   }).addTo(map);
-  _activeFlowLayers.push(bankRight);
+  _activeFlowLayers.push(bankR);
 
-  // Current flow line — thin, subtle animated center current
-  var centerCurrent = L.polyline(seg, {
+  // ── LAYER 5: Multiple current lanes — fast center, slower edges ──
+  // Main current (center)
+  var mainCurrent = L.polyline(smoothSeg, {
     color: '#5ed8ff',
-    weight: 1.5,
-    opacity: 0.25,
-    dashArray: '12 20',
+    weight: 1.8,
+    opacity: 0.30,
+    dashArray: '14 22',
     className: 'ht-flow-line ht-flow-current',
     interactive: false
   }).addTo(map);
-  _activeFlowLayers.push(centerCurrent);
+  _activeFlowLayers.push(mainCurrent);
 
-  // Water shimmer particles — scattered across the water surface
-  for (var sp = 0; sp < seg.length; sp++) {
-    // Place 2 shimmer dots per segment node — offset to left and right of center
+  // Left seam current (where fast water meets slow — trout lie here!)
+  var seamWidth = 3.5;
+  var seamLeft = _buildBankPath(smoothSeg, mPerLat, mPerLng, seamWidth, 1, 0.5);
+  var seamLeftLine = L.polyline(seamLeft, {
+    color: '#4ac8ee',
+    weight: 1.0,
+    opacity: 0.18,
+    dashArray: '8 18',
+    className: 'ht-flow-line ht-flow-seam ht-flow-seam-left',
+    interactive: false
+  }).addTo(map);
+  _activeFlowLayers.push(seamLeftLine);
+
+  // Right seam current
+  var seamRight = _buildBankPath(smoothSeg, mPerLat, mPerLng, seamWidth, -1, 2.0);
+  var seamRightLine = L.polyline(seamRight, {
+    color: '#4ac8ee',
+    weight: 1.0,
+    opacity: 0.18,
+    dashArray: '8 18',
+    className: 'ht-flow-line ht-flow-seam ht-flow-seam-right',
+    interactive: false
+  }).addTo(map);
+  _activeFlowLayers.push(seamRightLine);
+
+  // ── LAYER 6: Water shimmer particles — sunlight glints ──
+  for (var sp = 0; sp < smoothSeg.length; sp += 2) {
     for (var shimSide = -1; shimSide <= 1; shimSide += 2) {
-      var sLat = seg[sp][0], sLng = seg[sp][1];
+      var sLat = smoothSeg[sp][0], sLng = smoothSeg[sp][1];
       var sDy, sDx;
-      if (sp === 0) { sDy = seg[1][0] - sLat; sDx = seg[1][1] - sLng; }
-      else if (sp === seg.length - 1) { sDy = sLat - seg[sp-1][0]; sDx = sLng - seg[sp-1][1]; }
-      else { sDy = seg[sp+1][0] - seg[sp-1][0]; sDx = seg[sp+1][1] - seg[sp-1][1]; }
+      if (sp === 0) { sDy = smoothSeg[1][0] - sLat; sDx = smoothSeg[1][1] - sLng; }
+      else if (sp >= smoothSeg.length - 1) { sDy = sLat - smoothSeg[sp-1][0]; sDx = sLng - smoothSeg[sp-1][1]; }
+      else { sDy = smoothSeg[sp+1][0] - smoothSeg[sp-1][0]; sDx = smoothSeg[sp+1][1] - smoothSeg[sp-1][1]; }
       var sDyM = sDy * mPerLat, sDxM = sDx * mPerLng;
       var sLenV = Math.sqrt(sDyM * sDyM + sDxM * sDxM);
       if (sLenV < 0.01) continue;
       var spLat = (-sDxM / sLenV) / mPerLat;
       var spLng = (sDyM / sLenV) / mPerLng;
-      var shimOffset = (2 + Math.random() * 3) * shimSide;
+      var shimOffset = (1.5 + Math.random() * 4.5) * shimSide;
       var shimDotLat = sLat + spLat * shimOffset;
       var shimDotLng = sLng + spLng * shimOffset;
-      var spDelay = (sp * 0.5 + shimSide * 0.3) % 4;
+      var spDelay = ((sp * 0.3 + shimSide * 0.5) % 5).toFixed(1);
       var shimIcon = L.divIcon({
         className: 'ht-flow-particle',
-        html: '<div class="ht-water-shimmer" style="animation-delay:' + spDelay.toFixed(1) + 's"></div>',
+        html: '<div class="ht-water-shimmer" style="animation-delay:' + spDelay + 's"></div>',
         iconSize: [4, 4],
         iconAnchor: [2, 2]
       });
@@ -2699,17 +2888,17 @@ function deployFlowOverlay(water, zone) {
     }
   }
 
-  // Subtle flow direction indicators — small chevrons, very faded
-  for (var a = 2; a < seg.length - 1; a += 3) {
-    var aLat = seg[a][0], aLng = seg[a][1];
-    var aDy = seg[a+1][0] - seg[a-1][0];
-    var aDx = seg[a+1][1] - seg[a-1][1];
+  // ── LAYER 7: Flow direction chevrons — subtle animated arrows ──
+  for (var a = 4; a < smoothSeg.length - 2; a += 6) {
+    var aLat = smoothSeg[a][0], aLng = smoothSeg[a][1];
+    var aDy = smoothSeg[a+2][0] - smoothSeg[a-2][0];
+    var aDx = smoothSeg[a+2][1] - smoothSeg[a-2][1];
     var aAngle = Math.atan2(aDx * mPerLng, aDy * mPerLat) * 180 / Math.PI;
     var arrowIcon = L.divIcon({
       className: 'ht-flow-arrow-pin',
-      html: '<div class="ht-water-arrow" style="transform:rotate(' + (aAngle - 90) + 'deg)">‹</div>',
-      iconSize: [10, 10],
-      iconAnchor: [5, 5]
+      html: '<div class="ht-water-arrow" style="transform:rotate(' + (aAngle - 90) + 'deg)">›</div>',
+      iconSize: [12, 12],
+      iconAnchor: [6, 6]
     });
     var arrowMarker = L.marker([aLat, aLng], {
       icon: arrowIcon,
@@ -2719,26 +2908,138 @@ function deployFlowOverlay(water, zone) {
     _activeFlowLayers.push(arrowMarker);
   }
 
-  // Obstacle indicators — subtle rock markers at structure points
-  for (var k = 3; k < seg.length - 1; k += 4) {
-    var oLat = seg[k][0], oLng = seg[k][1];
-    // Small ripple at obstacle
-    var rippleDelay = (k * 0.8) % 3;
-    var rippleIcon = L.divIcon({
-      className: 'ht-flow-ripple',
-      html: '<div class="ht-water-ripple" style="animation-delay:' + rippleDelay.toFixed(1) + 's"></div>',
-      iconSize: [14, 14],
-      iconAnchor: [7, 7]
-    });
-    var rippleMarker = L.marker([oLat, oLng], {
-      icon: rippleIcon,
-      zIndexOffset: 295,
-      interactive: false
-    }).addTo(map);
-    _activeFlowLayers.push(rippleMarker);
+  // ── LAYER 8: Edge ripples — where current hits banks ──
+  for (var k = 3; k < smoothSeg.length - 1; k += 5) {
+    for (var rSide = -1; rSide <= 1; rSide += 2) {
+      var rLat = smoothSeg[k][0], rLng = smoothSeg[k][1];
+      var rDy, rDx;
+      if (k === 0) { rDy = smoothSeg[1][0] - rLat; rDx = smoothSeg[1][1] - rLng; }
+      else if (k >= smoothSeg.length - 1) { rDy = rLat - smoothSeg[k-1][0]; rDx = rLng - smoothSeg[k-1][1]; }
+      else { rDy = smoothSeg[k+1][0] - smoothSeg[k-1][0]; rDx = smoothSeg[k+1][1] - smoothSeg[k-1][1]; }
+      var rDyM = rDy * mPerLat, rDxM = rDx * mPerLng;
+      var rLen = Math.sqrt(rDyM * rDyM + rDxM * rDxM);
+      if (rLen < 0.01) continue;
+      var rpLat = (-rDxM / rLen) / mPerLat;
+      var rpLng = (rDyM / rLen) / mPerLng;
+      var edgeOffset = (outerWidth - 0.5) * rSide;
+      var eLat = rLat + rpLat * edgeOffset;
+      var eLng = rLng + rpLng * edgeOffset;
+      var ripDelay = ((k * 0.6 + rSide * 1.2) % 4).toFixed(1);
+      var edgeRipIcon = L.divIcon({
+        className: 'ht-flow-ripple',
+        html: '<div class="ht-water-ripple ht-edge-ripple" style="animation-delay:' + ripDelay + 's"></div>',
+        iconSize: [10, 10],
+        iconAnchor: [5, 5]
+      });
+      var edgeRipMarker = L.marker([eLat, eLng], {
+        icon: edgeRipIcon,
+        zIndexOffset: 285,
+        interactive: false
+      }).addTo(map);
+      _activeFlowLayers.push(edgeRipMarker);
+    }
   }
 }
 window.deployFlowOverlay = deployFlowOverlay;
+
+/* ═══════════════════════════════════════════════════════════════════
+   BOULDER SYSTEM — Realistic rocks with water flowing around them
+   Places boulders at natural positions along the stream (bends, riffles)
+   with animated V-wake, upstream pillow, and downstream eddy effects.
+   ═══════════════════════════════════════════════════════════════════ */
+var _activeBoulderLayers = [];
+
+function clearBoulders() {
+  _activeBoulderLayers.forEach(function(l) { try { map.removeLayer(l); } catch {} });
+  _activeBoulderLayers = [];
+}
+
+function deployBoulders(water, zone) {
+  clearBoulders();
+  var seg = getZoneStreamSegment(water, zone);
+  if (!seg || seg.length < 4 || !map) return;
+
+  var R = Math.PI / 180;
+  var mPerLat = 111000;
+  var mPerLng = 111000 * Math.cos(seg[0][0] * R);
+
+  // Place boulders at interesting stream positions: bends, mid-riffles, transitions
+  // Detect curvature to find natural boulder spots
+  var boulderSpots = [];
+  for (var i = 2; i < seg.length - 2; i++) {
+    // Calculate turning angle at this point
+    var dx1 = (seg[i][1] - seg[i-1][1]) * mPerLng;
+    var dy1 = (seg[i][0] - seg[i-1][0]) * mPerLat;
+    var dx2 = (seg[i+1][1] - seg[i][1]) * mPerLng;
+    var dy2 = (seg[i+1][0] - seg[i][0]) * mPerLat;
+    var angle1 = Math.atan2(dy1, dx1);
+    var angle2 = Math.atan2(dy2, dx2);
+    var curvature = Math.abs(angle2 - angle1);
+    if (curvature > Math.PI) curvature = 2 * Math.PI - curvature;
+
+    // Boulders appear at bends (high curvature) or at regular intervals in straights
+    if (curvature > 0.15 || i % 5 === 0) {
+      boulderSpots.push({ idx: i, curvature: curvature });
+    }
+  }
+
+  // Limit to reasonable number of boulders
+  if (boulderSpots.length > 12) {
+    boulderSpots.sort(function(a, b) { return b.curvature - a.curvature; });
+    boulderSpots = boulderSpots.slice(0, 12);
+  }
+
+  boulderSpots.forEach(function(spot) {
+    var i = spot.idx;
+    var lat = seg[i][0], lng = seg[i][1];
+
+    // Offset boulder slightly from center — toward one bank
+    var dy, dx;
+    if (i === 0) { dy = seg[1][0] - lat; dx = seg[1][1] - lng; }
+    else if (i >= seg.length - 1) { dy = lat - seg[i-1][0]; dx = lng - seg[i-1][1]; }
+    else { dy = seg[i+1][0] - seg[i-1][0]; dx = seg[i+1][1] - seg[i-1][1]; }
+    var dyM = dy * mPerLat, dxM = dx * mPerLng;
+    var len = Math.sqrt(dyM * dyM + dxM * dxM);
+    if (len < 0.01) return;
+    var pLat = (-dxM / len) / mPerLat;
+    var pLng = (dyM / len) / mPerLng;
+
+    // Offset 1-4m toward a bank (alternating sides)
+    var side = (i % 2 === 0) ? 1 : -1;
+    var offset = 1.5 + (spot.curvature * 3);
+    var bLat = lat + pLat * offset * side;
+    var bLng = lng + pLng * offset * side;
+
+    // Flow direction angle for wake orientation
+    var flowAngle = Math.atan2(dx * mPerLng, dy * mPerLat) * 180 / Math.PI;
+    var isLarge = spot.curvature > 0.3;
+    var sizeClass = isLarge ? ' ht-boulder-rock-lg' : '';
+    var animDelay = ((i * 0.7) % 4).toFixed(1);
+
+    var boulderHtml = '<div class="ht-boulder-wrap" style="transform:rotate(' + flowAngle + 'deg)">' +
+      '<div class="ht-boulder-pillow" style="animation-delay:' + animDelay + 's"></div>' +
+      '<div class="ht-boulder-rock' + sizeClass + '"></div>' +
+      '<div class="ht-boulder-wake" style="animation-delay:' + animDelay + 's"></div>' +
+      '<div class="ht-boulder-eddy" style="animation-delay:' + animDelay + 's"></div>' +
+      '</div>';
+
+    var boulderIcon = L.divIcon({
+      className: 'ht-boulder-pin',
+      html: boulderHtml,
+      iconSize: [20, 20],
+      iconAnchor: [10, 10]
+    });
+
+    var boulderMarker = L.marker([bLat, bLng], {
+      icon: boulderIcon,
+      zIndexOffset: 300,
+      interactive: false
+    }).addTo(map);
+    _activeBoulderLayers.push(boulderMarker);
+  });
+}
+window.deployBoulders = deployBoulders;
+window.clearBoulders = clearBoulders;
 
 /* ── AI Fishing Pin Calculator — ranks spots by user inputs ── */
 window.deployAiFishingPins = function(water, zone, fishFlow) {
@@ -4047,6 +4348,9 @@ function _autoCheckInToPin(pinIdx) {
 
   // Deploy water flow simulation overlay
   try { deployFlowOverlay(water, zone); } catch(fErr) {}
+
+  // Deploy boulders with water-around animation
+  try { deployBoulders(water, zone); } catch(bErr) {}
 
   if (accepted.length === 0) {
     // status suppressed

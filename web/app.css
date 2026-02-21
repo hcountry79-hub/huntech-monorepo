@@ -844,35 +844,64 @@ body.module-fly .ht-strategy-panel {
   opacity: 0.85;
 }
 
-/* ═══ WATER FLOW SIMULATION OVERLAY — REALISTIC WATER ═══ */
+/* ═══ WATER FLOW SIMULATION — ULTRA REALISTIC STREAM RENDERING ═══ */
 /* Base flow line class */
 .ht-flow-line {
   pointer-events: none !important;
 }
 
-/* Water body polygon — semi-transparent water fill */
+/* Water body polygons — layered depth system */
 .ht-water-body {
   pointer-events: none !important;
+}
+.ht-water-body-deep {
+  filter: blur(1px);
+}
+.ht-water-mid {
+  filter: blur(0.5px);
 }
 
 /* Inner sheen — lighter core simulating depth/refraction */
 .ht-water-sheen {
   pointer-events: none !important;
+  filter: blur(0.3px);
 }
 
-/* Bank edge lines — soft organic borders */
+/* Bank edge lines — organic earth-toned borders */
 .ht-water-bank {
-  filter: drop-shadow(0 0 2px rgba(74, 138, 106, 0.2));
+  filter: drop-shadow(0 0 3px rgba(74, 138, 106, 0.25));
+}
+.ht-bank-left, .ht-bank-right {
+  animation: bankShimmer 8s ease-in-out infinite;
+}
+@keyframes bankShimmer {
+  0%, 100% { opacity: 0.45; }
+  50% { opacity: 0.55; }
 }
 
-/* Center current — very subtle animated flow indicator */
+/* Center current — animated flow indicator */
 .ht-flow-current {
   animation: waterCurrentFlow 3s linear infinite;
-  filter: drop-shadow(0 0 3px rgba(94, 216, 255, 0.15));
+  filter: drop-shadow(0 0 3px rgba(94, 216, 255, 0.2));
 }
 @keyframes waterCurrentFlow {
   0%   { stroke-dashoffset: 0; }
-  100% { stroke-dashoffset: -64; }
+  100% { stroke-dashoffset: -72; }
+}
+
+/* Current seam lines — where fast meets slow (trout holding water!) */
+.ht-flow-seam {
+  animation: seamCurrentFlow 5s linear infinite;
+}
+.ht-flow-seam-left {
+  animation-delay: -0.5s;
+}
+.ht-flow-seam-right {
+  animation-delay: -1.5s;
+}
+@keyframes seamCurrentFlow {
+  0%   { stroke-dashoffset: 0; }
+  100% { stroke-dashoffset: -52; }
 }
 
 /* Water shimmer particles — glinting sunlight on water surface */
@@ -883,41 +912,41 @@ body.module-fly .ht-strategy-panel {
   width: 4px;
   height: 4px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(255, 255, 255, 0.85), rgba(180, 230, 255, 0.2));
-  animation: waterShimmer 4s ease-in-out infinite;
-  box-shadow: 0 0 4px rgba(255, 255, 255, 0.3);
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.9), rgba(180, 230, 255, 0.15));
+  animation: waterShimmer 4.5s ease-in-out infinite;
+  box-shadow: 0 0 5px rgba(255, 255, 255, 0.35);
 }
 @keyframes waterShimmer {
-  0%   { opacity: 0; transform: scale(0.3); }
-  20%  { opacity: 0.7; transform: scale(1.2); }
-  40%  { opacity: 0.3; transform: scale(0.8); }
-  60%  { opacity: 0.6; transform: scale(1.1); }
-  80%  { opacity: 0.15; transform: scale(0.6); }
-  100% { opacity: 0; transform: scale(0.3); }
+  0%   { opacity: 0; transform: scale(0.2); }
+  15%  { opacity: 0.8; transform: scale(1.3); }
+  35%  { opacity: 0.2; transform: scale(0.7); }
+  55%  { opacity: 0.7; transform: scale(1.15); }
+  75%  { opacity: 0.1; transform: scale(0.5); }
+  100% { opacity: 0; transform: scale(0.2); }
 }
 
-/* Flow direction arrows — subtle chevrons */
+/* Flow direction arrows — subtle animated chevrons */
 .ht-flow-arrow-pin {
   pointer-events: none !important;
 }
 .ht-water-arrow {
-  width: 10px;
-  height: 10px;
+  width: 12px;
+  height: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: rgba(94, 216, 255, 0.5);
-  font-size: 12px;
+  color: rgba(94, 216, 255, 0.55);
+  font-size: 14px;
   font-weight: 900;
-  opacity: 0.4;
+  opacity: 0.35;
   animation: waterArrowPulse 3.5s ease-in-out infinite;
 }
 @keyframes waterArrowPulse {
-  0%, 100% { opacity: 0.15; }
-  50%      { opacity: 0.5; }
+  0%, 100% { opacity: 0.12; transform: scale(0.9); }
+  50%      { opacity: 0.45; transform: scale(1.1); }
 }
 
-/* Water ripple at structure points */
+/* Water ripples — expanding ring animation */
 .ht-flow-ripple {
   pointer-events: none !important;
 }
@@ -925,13 +954,126 @@ body.module-fly .ht-strategy-panel {
   width: 14px;
   height: 14px;
   border-radius: 50%;
-  border: 1px solid rgba(94, 216, 255, 0.2);
+  border: 1px solid rgba(94, 216, 255, 0.25);
   animation: waterRipple 4s ease-out infinite;
 }
+.ht-edge-ripple {
+  width: 8px;
+  height: 8px;
+  border-color: rgba(94, 216, 255, 0.15);
+  animation: edgeRipple 5s ease-out infinite;
+}
 @keyframes waterRipple {
-  0%   { transform: scale(0.4); opacity: 0.4; border-width: 1.5px; }
-  50%  { transform: scale(2); opacity: 0.15; border-width: 0.8px; }
-  100% { transform: scale(3.5); opacity: 0; border-width: 0.3px; }
+  0%   { transform: scale(0.4); opacity: 0.5; border-width: 1.5px; }
+  50%  { transform: scale(2.5); opacity: 0.15; border-width: 0.8px; }
+  100% { transform: scale(4); opacity: 0; border-width: 0.3px; }
+}
+@keyframes edgeRipple {
+  0%   { transform: scale(0.3); opacity: 0.3; }
+  60%  { transform: scale(1.8); opacity: 0.1; }
+  100% { transform: scale(2.5); opacity: 0; }
+}
+
+/* ═══ BOULDER SYSTEM — Rocks with water flowing around them ═══ */
+.ht-boulder-pin {
+  pointer-events: none !important;
+}
+.ht-boulder-wrap {
+  position: relative;
+  width: 20px;
+  height: 20px;
+}
+.ht-boulder-rock {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 12px;
+  height: 10px;
+  border-radius: 40% 50% 45% 55%;
+  background: linear-gradient(135deg, #7a7a6a 0%, #5a5a4a 40%, #4a4a3a 100%);
+  border: 1px solid rgba(0,0,0,0.2);
+  box-shadow: 1px 1px 3px rgba(0,0,0,0.35), inset -1px -1px 2px rgba(255,255,255,0.08);
+  z-index: 3;
+}
+.ht-boulder-rock-lg {
+  width: 16px;
+  height: 13px;
+}
+/* V-wake behind boulder (downstream) */
+.ht-boulder-wake {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -30%);
+  width: 22px;
+  height: 18px;
+  border-radius: 50%;
+  z-index: 1;
+  animation: boulderWake 3s ease-in-out infinite;
+}
+.ht-boulder-wake::before,
+.ht-boulder-wake::after {
+  content: '';
+  position: absolute;
+  top: 60%;
+  width: 10px;
+  height: 6px;
+  border-bottom: 1.5px solid rgba(255, 255, 255, 0.2);
+  border-radius: 0 0 50% 50%;
+  animation: wakeSpread 3.5s ease-out infinite;
+}
+.ht-boulder-wake::before {
+  left: -2px;
+  transform: rotate(-25deg);
+}
+.ht-boulder-wake::after {
+  right: -2px;
+  transform: rotate(25deg);
+}
+/* Upstream pillow — water piling up */
+.ht-boulder-pillow {
+  position: absolute;
+  top: 20%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 14px;
+  height: 4px;
+  border-top: 1.5px solid rgba(180, 230, 255, 0.25);
+  border-radius: 50% 50% 0 0;
+  z-index: 2;
+  animation: pillowPulse 4s ease-in-out infinite;
+}
+/* Eddy behind boulder */
+.ht-boulder-eddy {
+  position: absolute;
+  top: 70%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 8px;
+  height: 8px;
+  border: 1px solid rgba(94, 216, 255, 0.15);
+  border-radius: 50%;
+  z-index: 2;
+  animation: eddySpin 6s linear infinite;
+}
+@keyframes boulderWake {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 0.8; }
+}
+@keyframes wakeSpread {
+  0% { transform: scaleX(0.5) rotate(-25deg); opacity: 0.4; }
+  50% { transform: scaleX(1.2) rotate(-25deg); opacity: 0.15; }
+  100% { transform: scaleX(0.5) rotate(-25deg); opacity: 0.4; }
+}
+@keyframes pillowPulse {
+  0%, 100% { opacity: 0.2; transform: translate(-50%, -50%) scaleX(0.9); }
+  50% { opacity: 0.45; transform: translate(-50%, -50%) scaleX(1.15); }
+}
+@keyframes eddySpin {
+  0% { transform: translate(-50%, -50%) rotate(0deg) scale(0.8); opacity: 0.2; }
+  50% { transform: translate(-50%, -50%) rotate(180deg) scale(1.2); opacity: 0.35; }
+  100% { transform: translate(-50%, -50%) rotate(360deg) scale(0.8); opacity: 0.2; }
 }
 
 /* ═══ MICRO TROUT PINS — ANIMATED SWIMMING FISH ═══ */
@@ -3742,23 +3884,39 @@ body.module-fly #map {
   50% { transform: translateY(-3px); }
 }
 
-/* ═══ Angler Position Pin ═══ */
+/* ═══ Angler Position Pin — 3D Fly Fisherman ═══ */
 .ht-angler-pin {
   background: transparent !important;
   border: none !important;
 }
-.ht-angler-pill {
+.ht-angler-3d {
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   justify-content: center;
-  width: 28px;
-  height: 28px;
-  font-size: 18px;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(255, 224, 130, 0.3), rgba(6, 18, 26, 0.85));
-  border: 1.5px solid rgba(255, 224, 130, 0.6);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5), 0 0 8px rgba(255, 224, 130, 0.2);
+  filter: drop-shadow(1px 2px 4px rgba(0, 0, 0, 0.5)) drop-shadow(0 0 8px rgba(124, 255, 199, 0.3));
+  animation: anglerBreathe 4s ease-in-out infinite;
   cursor: pointer;
+}
+.ht-angler-3d svg {
+  overflow: visible;
+}
+.ht-angler-flyline {
+  animation: flyLineCast 5s ease-in-out infinite;
+  transform-origin: 6px 0;
+}
+@keyframes anglerBreathe {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-1.5px); }
+}
+@keyframes flyLineCast {
+  0%, 100% { opacity: 0.6; stroke-dashoffset: 0; }
+  25% { opacity: 0.9; }
+  50% { opacity: 0.5; }
+  75% { opacity: 0.8; }
+}
+/* Legacy .ht-angler-pill kept for backwards compat */
+.ht-angler-pill {
+  display: none;
 }
 
 /* ═══ Stand-Here Angler Position Pins — Fisherman Silhouette ═══ */
