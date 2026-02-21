@@ -8,6 +8,13 @@
   --panel-edge: rgba(255, 193, 7, 0.5);
   --accent: #00d2ff;
   --topbar-height: 60px;
+  --toolbar-offset: 72px;
+}
+
+body {
+  font-family: 'Sora', system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
 body.module-shed {
@@ -2525,15 +2532,17 @@ html, body {
   background: var(--gold);
   border: none;
   border-radius: 10px;
-  padding: 4px 9px;
+  padding: 10px 14px;
   font-weight: 600;
   cursor: pointer;
   font-size: 12px;
+  min-height: 44px;
+  touch-action: manipulation;
 }
 
 .ht-gps-btn {
-  width: 30px;
-  height: 30px;
+  width: 44px;
+  height: 44px;
   border-radius: 10px;
   border: 1px solid rgba(255, 193, 7, 0.7);
   background: linear-gradient(135deg, var(--gold), var(--gold-dark));
@@ -2543,6 +2552,7 @@ html, body {
   padding: 0;
   cursor: pointer;
   box-shadow: 0 8px 16px rgba(255, 193, 7, 0.35);
+  touch-action: manipulation;
 }
 
 .ht-gps-btn:hover {
@@ -2687,22 +2697,7 @@ body.module-fly.ht-field-step-2 #defineAreaPanel {
   }
 }
 
-.ht-gps-btn {
-  background: linear-gradient(135deg, var(--gold), var(--gold-dark));
-  border: 1px solid rgba(255, 193, 7, 0.85);
-  color: #000;
-  border-radius: 10px;
-  padding: 6px 12px;
-  font-weight: 800;
-  letter-spacing: 0.3px;
-  cursor: pointer;
-  box-shadow: 0 8px 18px rgba(255, 193, 7, 0.35);
-}
-
-.ht-gps-btn:hover {
-  background: linear-gradient(135deg, #ffd24d, #ffb300);
-  color: #000;
-}
+/* duplicate .ht-gps-btn removed — consolidated at L2540 */
 
 .ht-pill-row {
   display: flex;
@@ -7244,7 +7239,7 @@ body.module-fly .leaflet-control-layers-toggle {
   color: var(--gold);
   border: 1px solid rgba(255, 193, 7, 0.55);
   border-radius: 12px;
-  padding: 5px 8px;
+  padding: 8px 10px;
   font-weight: 800;
   font-size: 11px;
   letter-spacing: 0.4px;
@@ -7257,7 +7252,8 @@ body.module-fly .leaflet-control-layers-toggle {
   justify-content: center;
   text-align: center;
   line-height: 1;
-  min-height: 34px;
+  min-height: 44px;
+  touch-action: manipulation;
   box-sizing: border-box;
   white-space: nowrap;
   overflow: hidden;
@@ -7757,12 +7753,12 @@ body.ht-saved-hunt-preview #planRoutePanel {
   border: 1.5px solid var(--gold);
   background: #0b0b0b;
   color: var(--gold);
-  padding: 5px 12px;
+  padding: 8px 14px;
   font-size: 11px;
   font-weight: 800;
   letter-spacing: 0.4px;
   cursor: pointer;
-  min-height: 30px;
+  min-height: 44px;
   touch-action: manipulation;
   line-height: 1;
 }
@@ -8717,9 +8713,11 @@ body.ht-toolbar-collapsed .ht-map-left-panel {
 }
 
 .ht-pill-locate {
-  padding: 3px 10px;
+  padding: 8px 14px;
   font-size: 12px;
   border-radius: 999px;
+  min-height: 44px;
+  touch-action: manipulation;
 }
 
 .ht-pill-locate-row {
@@ -8966,11 +8964,13 @@ body.ht-hunt-active .ht-hunt-only {
 }
 
 .ht-btn-sm {
-  padding: 5px 6px !important;
-  font-size: 10px !important;
+  padding: 8px 10px !important;
+  font-size: 11px !important;
   border-radius: 8px !important;
   letter-spacing: 0.3px;
   text-align: center;
+  min-height: 44px;
+  touch-action: manipulation;
 }
 
 .ht-btn-danger {
@@ -9052,10 +9052,12 @@ body.ht-hunt-active .ht-hunt-only {
   background: rgba(255, 193, 7, 0.12);
   border: 1px solid rgba(255, 193, 7, 0.4);
   color: #fff;
-  padding: 4px 8px;
+  padding: 8px 12px;
   border-radius: 8px;
   font-size: 11px;
   cursor: pointer;
+  min-height: 44px;
+  touch-action: manipulation;
 }
 
 .ht-select {
@@ -9073,8 +9075,9 @@ body.ht-hunt-active .ht-hunt-only {
 }
 
 .ht-toolbar .ht-pill-btn {
-  padding: 4px 10px;
-  font-size: 10px;
+  padding: 8px 12px;
+  font-size: 11px;
+  min-height: 44px;
 }
 
 .ht-select option,
@@ -9104,11 +9107,12 @@ body.ht-hunt-active .ht-hunt-only {
   background: rgba(255, 193, 7, 0.12);
   border: 1px solid rgba(255, 193, 7, 0.5);
   color: #fff;
-  padding: 6px 8px;
+  padding: 10px 12px;
   border-radius: 8px;
   cursor: pointer;
   font-weight: 600;
   font-size: 12px;
+  min-height: 44px;
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
 }
@@ -9263,7 +9267,7 @@ body.ht-hunt-active .ht-hunt-only {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  z-index: 998;
+  z-index: 1500;
   width: min(520px, calc(100vw - 32px));
   max-width: 520px;
 }

@@ -6151,7 +6151,7 @@ function escapeHtml(value) {
 
 function maybeBindPopup(layer, html) {
   if (!UI_POPUPS_ENABLED || !layer || !layer.bindPopup) return;
-  layer.bindPopup(html);
+  layer.bindPopup(html, { maxWidth: 280, autoPan: true, autoPanPadding: [20, 20] });
 }
 
 function getMdcLogoUrl() {
@@ -9394,7 +9394,7 @@ function startLocationWatch() {
         }
       }
     },
-    () => {},
+    (err) => { if (err && err.code === 1) console.warn('HUNTECH: Location permission denied'); },
     getPreciseGeolocationOptions()
   );
 }
@@ -9830,7 +9830,7 @@ function showNearestHotspotEducationInternal() {
     if (nearest && nearest.__hotspotData) {
       showNotice('Nearest hotspot selected. Tap the pin to see details.', 'info', 3600);
     }
-  }, null, getPreciseGeolocationOptions({ timeout: 12000 }));
+  }, (err) => { console.warn('HUNTECH: Geolocation error:', err && err.message); }, getPreciseGeolocationOptions({ timeout: 12000 }));
 }
 
 function setPublicLandEnabled(enabled) {
@@ -11193,7 +11193,7 @@ window.logHuntWaypoint = function() {
         showNotice(isMushroomModule() ? 'Waypoint logged to forage journal.' : 'Waypoint logged to hunt journal.', 'success', 3200);
       }
     });
-  }, null, getPreciseGeolocationOptions({ timeout: 12000 }));
+  }, (err) => { console.warn('HUNTECH: Geolocation error:', err && err.message); }, getPreciseGeolocationOptions({ timeout: 12000 }));
 };
 
 window.logTurkeyPinOnMap = function() {
@@ -11258,7 +11258,7 @@ function logShedFind() {
           showNotice(isMush ? 'Mushroom logged! Check nearby for more — they cluster.' : 'Shed logged successfully. Check nearby for the matching side!', 'success', 4200);
         }
       });
-    }, null, getPreciseGeolocationOptions({ timeout: 12000 }));
+    }, (err) => { console.warn('HUNTECH: Geolocation error:', err && err.message); }, getPreciseGeolocationOptions({ timeout: 12000 }));
   } else {
     showNotice('GPS not available. Enable location services.', 'error');
   }
@@ -13708,7 +13708,7 @@ function ensureThermalOverlay() {
     spawnParticles();
     scheduleThermalSeedRefresh();
   });
-  map.on('move', scheduleThermalSeedRefresh);
+  map.on('moveend', scheduleThermalSeedRefresh);
   map.on('zoom', scheduleThermalSeedRefresh);
 
   const seedProfile = {
@@ -14754,7 +14754,7 @@ window.setRadiusFromLocation = function() {
     mapClickMode = 'radius-draw';
     startRadiusDraft(centerLatlng);
     showNotice('Drag the side bubbles to size your radius, then tap to lock it.', 'info', 5200);
-  }, null, getPreciseGeolocationOptions({ timeout: 12000 }));
+  }, (err) => { console.warn('HUNTECH: Geolocation error:', err && err.message); }, getPreciseGeolocationOptions({ timeout: 12000 }));
 };
 
 window.togglePublicLand = function(force) {
@@ -16333,6 +16333,8 @@ document.addEventListener('DOMContentLoaded', () => {
   window.addEventListener('orientationchange', updateTopbarHeight);
   window.addEventListener('resize', updateLocateMeOffset);
   window.addEventListener('orientationchange', updateLocateMeOffset);
+  window.addEventListener('resize', () => { if (map && typeof map.invalidateSize === 'function') map.invalidateSize(); });
+  window.addEventListener('orientationchange', () => { setTimeout(() => { if (map && typeof map.invalidateSize === 'function') map.invalidateSize(); }, 200); });
 
   setupPillFastTap();
 

@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -14,11 +14,11 @@
   <title>HUNTECH — Whitetail Hunting Command Center</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css" />
-  <link rel="stylesheet" href="app.css?v=20260220e">
+  <link rel="stylesheet" href="app.css?v=20260220f">
 
   <!-- AWS Backend Configuration -->
-  <script src="config.js?v=20260220e"></script>
-  <script src="api.js?v=20260220e"></script>
+  <script src="config.js?v=20260220f"></script>
+  <script src="api.js?v=20260220f"></script>
 </head>
 <body class="module-whitetail ht-toolbar-collapsed">
   <header class="ht-topbar">
@@ -263,7 +263,7 @@
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js?v=20260220e')
+        navigator.serviceWorker.register('/sw.js?v=20260220f')
           .then(() => console.log('HUNTECH: Service Worker registered'))
           .catch(err => console.log('Service Worker registration failed:', err));
       });
@@ -271,9 +271,9 @@
   </script>
 
   <!-- Whitetail data engine (biology, regs, pin system) — load BEFORE main.js -->
-  <script src="whitetail-data.js?v=20260220e"></script>
-  <script src="regulations.js?v=20260220e"></script>
-  <script src="main.js?v=20260220e"></script>
+  <script src="whitetail-data.js?v=20260220f"></script>
+  <script src="regulations.js?v=20260220f"></script>
+  <script src="main.js?v=20260220f"></script>
 
   <script>
     // ── Whitetail Module Init ──

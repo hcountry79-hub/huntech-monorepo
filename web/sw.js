@@ -2,8 +2,8 @@
 // HUNTECH — Service Worker with Offline Tile Caching
 // ═══════════════════════════════════════════════════════════════════════
 
-const SW_VERSION = 'huntech-sw-v17';
-const APP_SHELL_CACHE = 'huntech-shell-v15';
+const SW_VERSION = 'huntech-sw-v18';
+const APP_SHELL_CACHE = 'huntech-shell-v16';
 const TILE_CACHE = 'huntech-tiles-v1';
 
 // Max tile cache size (~500 MB at ~30KB avg/tile ≈ 16 000 tiles)
