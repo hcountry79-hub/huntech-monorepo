@@ -3089,7 +3089,7 @@ function _buildSpotStrategy(habitat, method, wade, skill, water, zone) {
   return strat;
 }
 
-/* ── Mission Summary Popup ── */
+/* ── Strategy Summary Tray — pops after LET'S GO ── */
 window.showMissionSummary = function(water, zone, fishFlow) {
   // Remove existing
   if (_missionSummaryEl) { try { _missionSummaryEl.remove(); } catch {} }
@@ -3097,19 +3097,60 @@ window.showMissionSummary = function(water, zone, fishFlow) {
   var spots = _aiFishingSpots;
   var topSpot = spots[0];
   var method = fishFlow.method || 'fly';
+  var wade = fishFlow.wade || 'waders';
+  var skill = fishFlow.experience || 'learning';
   var mRec = getMethodSpecificRec(water, topSpot ? topSpot.habitat : 'riffle', method);
+  var c = _getRealTimeConditions();
   var totalSpots = spots.length;
-  var methodName = method === 'fly' ? 'fly fishing' : method === 'spin' ? 'lure fishing' : 'bait fishing';
+  var methodName = method === 'fly' ? 'Fly Fishing' : method === 'spin' ? 'Lure Fishing' : 'Bait Fishing';
+  var season = c.season.charAt(0).toUpperCase() + c.season.slice(1);
+  var topHabitat = topSpot ? _capitalize(topSpot.habitat) : 'Run';
+  var hatches = (water.hatches && water.hatches[c.season]) || [];
 
+  // ── Leader & Tippet recommendations (researched by method + skill) ──
+  var leaderRec = _getLeaderTippetRec(method, skill, c, topSpot ? topSpot.habitat : 'riffle');
+
+  // ── Rig setup ──
+  var rigRec = _getRigSetup(method, skill, topSpot ? topSpot.habitat : 'riffle', c);
+
+  // ── Flies / Lures / Bait to bring ──
+  var tackleBag = _getTackleBag(method, water, c);
+
+  // ── Where to begin ──
+  var startPlan = 'Start at Spot #1 — your highest-ranked ' + topHabitat.toLowerCase() +
+    '. Walk to the green angler pin to find your exact casting position. ' +
+    (wade === 'waders'
+      ? 'Wade in quietly and position yourself at the stand-here marker before making your first cast.'
+      : 'Stay on the bank near the angler pin. Keep low and avoid casting your shadow on the water.');
+
+  // ── How to work each spot ──
+  var workPlan = 'Each zone pin on the map marks a fishing spot ranked by score. ' +
+    'Tap any zone pin to check in — I will deploy individual fish micro-spots with precise ' +
+    methodName.toLowerCase() + ' instructions, a casting arc showing exactly where to land your ' +
+    (method === 'fly' ? 'fly' : method === 'spin' ? 'lure' : 'bait') +
+    ', and a CAST HERE marker upstream of each fish so you don\'t spook it. ' +
+    'Tap any fish icon for a tailored strategy explaining the approach, best presentation, and why that fish is there.';
+
+  // ── Overall spoken/readable strategy ──
   var summaryText = 'Welcome to ' + water.name + ', ' + zone.name + '. ' +
-    'I\'ve deployed ' + totalSpots + ' fishing spots ranked for your ' + methodName + ' setup. ' +
-    'Your #1 spot is a ' + (topSpot ? topSpot.habitat : 'run') + '. ' +
+    'I\'ve deployed ' + totalSpots + ' fishing spots ranked for your ' + methodName.toLowerCase() + ' setup. ' +
+    'Your number one spot is a ' + topHabitat.toLowerCase() + '. ' +
     mRec.conditionNote + ' ' +
+
+    'Leader setup: ' + leaderRec.leader + '. Tippet: ' + leaderRec.tippet + '. ' +
+    (leaderRec.note ? leaderRec.note + ' ' : '') +
+
+    'Primary rig: ' + rigRec.name + '. ' + rigRec.description + ' ' +
+
     'Start with ' + mRec.primary + '. ' +
     (mRec.backup ? 'Backup: ' + mRec.backup + '. ' : '') +
-    'Tap any pin to check in — I\'ll deploy trout micro-spots with precise ' + methodName + ' instructions. ' +
-    'Report back with voice — tell me what you see and I\'ll update your strategy in real time. Tight lines!';
 
+    startPlan + ' ' +
+    workPlan + ' ' +
+
+    'Report back with voice — tell me what you see and I will update your strategy in real time. Tight lines!';
+
+  // ── Spots list HTML ──
   var spotsListHtml = '';
   spots.forEach(function(s) {
     var col = s.rank === 1 ? '#7cffc7' : s.rank === 2 ? '#2bd4ff' : '#ffe082';
@@ -3120,25 +3161,93 @@ window.showMissionSummary = function(water, zone, fishFlow) {
     '</div>';
   });
 
+  // ── Tackle bag list ──
+  var tackleHtml = '';
+  tackleBag.forEach(function(item) {
+    tackleHtml += '<div class="ht-strat-tackle-item">' + escapeHtml(item) + '</div>';
+  });
+
+  // ── Hatches ──
+  var hatchHtml = '';
+  if (hatches.length) {
+    hatchHtml = '<div class="ht-strat-section"><div class="ht-strat-section-label">🦟 ' + season + ' HATCHES</div>' +
+      '<div class="ht-strat-section-body">' + escapeHtml(hatches.join(' • ')) + '</div></div>';
+  }
+
   var el = document.createElement('div');
   el.className = 'ht-mission-summary-overlay';
-  el.innerHTML = `
-    <div class="ht-mission-summary-card">
-      <div class="ht-mission-summary-header">
-        <div class="ht-mission-summary-title">MISSION BRIEFING</div>
-        <div class="ht-mission-summary-sub">${escapeHtml(water.name)} — ${escapeHtml(zone.name)}</div>
-      </div>
-      <div class="ht-mission-summary-body">
-        <div class="ht-mission-summary-text" id="missionSummaryText">${escapeHtml(summaryText)}</div>
-        <div class="ht-mission-summary-spots">${spotsListHtml}</div>
-      </div>
-      <div class="ht-mission-summary-actions">
-        <button class="ht-mission-btn ht-mission-btn--listen" type="button" onclick="window._listenMission()">Listen</button>
-        <button class="ht-mission-btn ht-mission-btn--save" type="button" onclick="window._saveMissionToJournal()">Save to Journal</button>
-        <button class="ht-mission-btn ht-mission-btn--close" type="button" onclick="window._closeMissionSummary()">Close & Fish</button>
-      </div>
-    </div>
-  `;
+  el.innerHTML =
+    '<div class="ht-mission-summary-card">' +
+      '<div class="ht-mission-summary-header">' +
+        '<div class="ht-mission-summary-title">STRATEGY SUMMARY</div>' +
+        '<div class="ht-mission-summary-sub">' + escapeHtml(water.name) + ' — ' + escapeHtml(zone.name) + '</div>' +
+        '<div class="ht-strat-method-badge">' + escapeHtml(methodName) + ' • ' + escapeHtml(wade === 'waders' ? 'Wading' : 'Bank') + ' • ' + escapeHtml(_capitalize(skill)) + '</div>' +
+      '</div>' +
+      '<div class="ht-mission-summary-body" id="strategySummaryBody">' +
+
+        // Leader & Tippet
+        '<div class="ht-strat-section">' +
+          '<div class="ht-strat-section-label">🎣 LEADER & TIPPET</div>' +
+          '<div class="ht-strat-row"><span class="ht-strat-key">Leader</span><span class="ht-strat-val">' + escapeHtml(leaderRec.leader) + '</span></div>' +
+          '<div class="ht-strat-row"><span class="ht-strat-key">Tippet</span><span class="ht-strat-val">' + escapeHtml(leaderRec.tippet) + '</span></div>' +
+          (leaderRec.note ? '<div class="ht-strat-note">' + escapeHtml(leaderRec.note) + '</div>' : '') +
+        '</div>' +
+
+        // Rig Setup
+        '<div class="ht-strat-section">' +
+          '<div class="ht-strat-section-label">⚙️ RECOMMENDED RIG</div>' +
+          '<div class="ht-strat-rig-name">' + escapeHtml(rigRec.name) + '</div>' +
+          '<div class="ht-strat-section-body">' + escapeHtml(rigRec.description) + '</div>' +
+          (rigRec.alt ? '<div class="ht-strat-note">Backup rig: ' + escapeHtml(rigRec.alt) + '</div>' : '') +
+        '</div>' +
+
+        // What to Bring
+        '<div class="ht-strat-section">' +
+          '<div class="ht-strat-section-label">' + (method === 'fly' ? '🪰' : method === 'spin' ? '🎣' : '🪱') + ' WHAT TO BRING</div>' +
+          '<div class="ht-strat-tackle-grid">' + tackleHtml + '</div>' +
+        '</div>' +
+
+        // Condition Awareness
+        '<div class="ht-strat-section">' +
+          '<div class="ht-strat-section-label">🌤️ CONDITIONS</div>' +
+          '<div class="ht-strat-section-body">' + escapeHtml(mRec.conditionNote) + '</div>' +
+          (mRec.color ? '<div class="ht-strat-note">' + escapeHtml(mRec.color) + '</div>' : '') +
+        '</div>' +
+
+        // Hatches (if any)
+        hatchHtml +
+
+        // Where to begin
+        '<div class="ht-strat-section">' +
+          '<div class="ht-strat-section-label">📍 WHERE TO BEGIN</div>' +
+          '<div class="ht-strat-section-body">' + escapeHtml(startPlan) + '</div>' +
+        '</div>' +
+
+        // How to Fish Each Spot
+        '<div class="ht-strat-section">' +
+          '<div class="ht-strat-section-label">🗺️ HOW TO FISH EACH SPOT</div>' +
+          '<div class="ht-strat-section-body">' + escapeHtml(workPlan) + '</div>' +
+        '</div>' +
+
+        // Spot Rankings
+        '<div class="ht-strat-section">' +
+          '<div class="ht-strat-section-label">🏆 SPOT RANKINGS</div>' +
+          '<div class="ht-mission-summary-spots">' + spotsListHtml + '</div>' +
+        '</div>' +
+
+      '</div>' +
+
+      // Hidden full text for TTS
+      '<div id="missionSummaryText" style="display:none;">' + escapeHtml(summaryText) + '</div>' +
+
+      // Action pills
+      '<div class="ht-strat-pill-row">' +
+        '<button class="ht-strat-pill ht-strat-pill--listen" type="button" onclick="window._listenMission()">🔊 Listen</button>' +
+        '<button class="ht-strat-pill ht-strat-pill--save" type="button" onclick="window._saveMissionToJournal()">💾 Save Trip</button>' +
+        '<button class="ht-strat-pill ht-strat-pill--close" type="button" onclick="window._closeMissionSummary()">✕ Close</button>' +
+      '</div>' +
+    '</div>';
+
   document.body.appendChild(el);
   _missionSummaryEl = el;
 
@@ -3148,14 +3257,186 @@ window.showMissionSummary = function(water, zone, fishFlow) {
   });
 };
 
+/* ── Leader & Tippet recommendation engine ── */
+function _getLeaderTippetRec(method, skill, c, habitat) {
+  var r = { leader: '', tippet: '', note: '' };
+
+  if (method === 'fly') {
+    // Leader length & taper
+    if (habitat === 'tailout' || habitat === 'pool') {
+      r.leader = '12ft tapered leader, 5X';
+      if (skill === 'new') r.leader = '9ft tapered leader, 4X';
+    } else if (habitat === 'riffle' || habitat === 'run') {
+      r.leader = '9ft tapered leader, 4X';
+    } else {
+      r.leader = '7.5ft tapered leader, 3X';
+    }
+
+    // Tippet
+    if (c.season === 'winter' || c.waterTemp < 50) {
+      r.tippet = '6X fluorocarbon, 24-30 inches';
+      r.note = 'Cold water = spooky fish. Go lighter — 6X fluoro is near-invisible and sinks below surface film.';
+    } else if (c.light === 'bright-sun') {
+      r.tippet = '5X-6X fluorocarbon, 18-24 inches';
+      r.note = 'Bright sun means pressured fish. Fluorocarbon won\'t flash like nylon. Add extra tippet length for clear water.';
+    } else if (c.light === 'low-light' || c.light === 'dark' || c.light === 'evening') {
+      r.tippet = '4X-5X nylon, 18 inches';
+      r.note = 'Low light — fish are less line-shy. Heavier tippet gives better control and turnover.';
+    } else {
+      r.tippet = '5X fluorocarbon, 18-24 inches';
+      r.note = 'Standard conditions. Fluorocarbon for subsurface, nylon for dry flies.';
+    }
+
+    // Skill adjustments
+    if (skill === 'new') {
+      r.note += ' Beginner tip: Go no lighter than 5X — you need the control. Tie improved clinch knots.';
+    } else if (skill === 'advanced') {
+      r.note += ' Pro tip: Consider 6X-7X for micro-dries and midges. Double surgeon\'s knot for tippet rings.';
+    }
+
+  } else if (method === 'spin') {
+    r.leader = '4-6lb fluorocarbon leader, 24-36 inches';
+    r.tippet = 'No tippet needed — tie lure directly to fluoro leader';
+    if (c.waterTemp < 50) {
+      r.note = 'Cold water: drop to 2-4lb test. Fish are lethargic and line-shy. Slow retrieve.';
+    } else {
+      r.note = 'Fluorocarbon leader is less visible than mono. Attach to main line with double uni knot.';
+    }
+    if (skill === 'new') r.note += ' Beginner: Use a snap swivel for quick lure changes.';
+
+  } else { // bait
+    r.leader = '4-6lb monofilament, 18-24 inches below sinker';
+    r.tippet = 'No tippet — tie hook directly to leader';
+    if (c.waterTemp < 50) {
+      r.note = 'Cold water: downsize to #10-12 hooks and pea-sized bait. Fish are sluggish.';
+    } else {
+      r.note = 'Use a sliding egg sinker above a barrel swivel. Leader runs free — trout won\'t feel resistance.';
+    }
+  }
+
+  return r;
+}
+
+/* ── Rig setup engine ── */
+function _getRigSetup(method, skill, habitat, c) {
+  var r = { name: '', description: '', alt: '' };
+
+  if (method === 'fly') {
+    if (skill === 'new' || skill === 'learning') {
+      // Simpler rigs for beginners
+      if (habitat === 'riffle' || habitat === 'run') {
+        r.name = 'Dry-Dropper Rig';
+        r.description = 'Tie a high-floating dry fly (Stimulator #12 or Chubby Chernobyl) as your indicator. Drop 18-22 inches of 5X tippet off the hook bend, tie on a beadhead nymph. The dry floats and signals strikes while the nymph does the catching.';
+        r.alt = 'Indicator nymph rig: Yarn indicator + split shot + 2-nymph tandem (heavy point fly, smaller dropper).';
+      } else if (habitat === 'pool' || habitat === 'tailout') {
+        r.name = 'Indicator Nymph Rig';
+        r.description = 'Thingamabobber indicator set at 1.5x water depth. 18 inches of tippet to point fly (beadhead Pheasant Tail #16). Add a #20 midge dropper 14 inches below. Small split shot 8 inches above point fly.';
+        r.alt = 'Single dry fly rig — 12ft leader, 6X tippet, #18 Parachute Adams for sight fishing risers.';
+      } else {
+        r.name = 'Short-Line Nymph Rig';
+        r.description = 'Heavy point fly (Pat\'s Rubber Legs #10) with a #16 Pheasant Tail dropper 16 inches below. Short leader. High-stick: hold rod tip up, keep contact, feel for the take.';
+        r.alt = 'Single large streamer (#8 Woolly Bugger) stripped past boulders and structure.';
+      }
+    } else {
+      // Advanced / confident rigs
+      if (habitat === 'riffle' || habitat === 'run') {
+        r.name = 'Euro Nymphing / Tight-Line Rig';
+        r.description = 'Mono leader to colored sighter. Point fly: #14 Perdigon or Jig Pheasant Tail. Tag nymph 20 inches above: #18 Waltz Worm or micro midge. No indicator — feel the take through the sighter. Leader-to-fly connection stays at 10-2 o\'clock.';
+        r.alt = 'Dry-dropper with a CDC emerger on top for ultra-selective risers.';
+      } else if (habitat === 'pool') {
+        r.name = 'Streamer Rig';
+        r.description = 'Short stout leader (7.5ft, 2X-3X). Articulated streamer or Woolly Bugger. Strip-set only — never trout-set on streamers. Vary strip speed: short sharp strips in warm water, slow strips in cold.';
+        r.alt = 'Deep indicator nymph rig: 2 weighted nymphs below a large indicator set 4-5ft deep.';
+      } else if (habitat === 'tailout') {
+        r.name = 'Dry Fly Rig (Match the Hatch)';
+        r.description = '12ft leader tapered to 6X-7X. Single dry fly matched to the current hatch. Drag-free drift is everything. Consider a parachute post for visibility. Apply floatant to leader butt but NOT to tippet.';
+        r.alt = 'Soft hackle swing rig — wet fly on 5X swung through the tailout at the end of each drift.';
+      } else {
+        r.name = 'Heavy Pocket Nymph Rig';
+        r.description = 'Tungsten-beadhead point fly (#12 Stonefly or Copper John) with a #16 tag nymph. Short leader (7.5ft, 4X). Tight-line approach: lift, lead, set. Each pocket gets 2-3 drifts max.';
+        r.alt = 'Large streamer stripped past structure — sculpin patterns produce trophy fish near boulders.';
+      }
+    }
+  } else if (method === 'spin') {
+    if (habitat === 'riffle' || habitat === 'run') {
+      r.name = 'Upstream Spinner Retrieve';
+      r.description = 'Cast upstream at 45 degrees. Reel just fast enough to keep the blade spinning. Let the current do the work — the lure swings naturally through the feeding lanes.';
+      r.alt = 'Small jerkbait (Rapala F3): twitch-pause retrieve through runs.';
+    } else if (habitat === 'pool') {
+      r.name = 'Count-Down Spoon Retrieve';
+      r.description = 'Cast to the head of the pool. Count down 3-5 seconds. Slow flutter retrieve with twitches. Spoons wobble and flash as they fall — the strike often comes on the drop.';
+      r.alt = 'Swim jig (1/16oz, white marabou) hopped along the bottom.';
+    } else {
+      r.name = 'Pocket-Water Pitch';
+      r.description = 'Short accurate pitches to pocket water. Let the lure sink behind boulders and through gaps. Retrieve with short hops and pauses.';
+      r.alt = 'Micro crankbait bumped along the bottom near structure.';
+    }
+  } else { // bait
+    if (habitat === 'pool') {
+      r.name = 'Bottom Rig (Sliding Sinker)';
+      r.description = 'Sliding egg sinker (1/4oz) above a barrel swivel. 18-24 inches of 4lb mono leader to a #12 treble hook. Mold PowerBait into a marble-sized ball or thread on 2-3 corn kernels. Cast to the pool, let it settle, wait.';
+      r.alt = 'Carolina rig with live nightcrawler.';
+    } else if (habitat === 'riffle' || habitat === 'run') {
+      r.name = 'Drift Rig';
+      r.description = 'Small split shot 12-18 inches above a #8 bait hook. Thread on a worm or Mice Tail. Cast upstream, let it tumble through the riffle naturally. The bait should bounce along the bottom like natural food.';
+      r.alt = 'Float rig: small bobber with bait suspended just off the bottom.';
+    } else {
+      r.name = 'Float Rig';
+      r.description = 'Small clip-on float set at 1.5x water depth. #10 bait hook on 4lb leader. Hook a single salmon egg, worm piece, or floating Mice Tail. Cast upstream and let it drift through the target zone.';
+      r.alt = 'Bottom rig behind structure with PowerBait.';
+    }
+  }
+
+  return r;
+}
+
+/* ── Tackle bag builder — what to bring ── */
+function _getTackleBag(method, water, c) {
+  var bag = [];
+  var season = c.season;
+
+  if (method === 'fly') {
+    // Top flies from the water data
+    if (water.topFlies && water.topFlies.length) {
+      bag = water.topFlies.slice(0, 5);
+    } else {
+      bag = ['#16 Pheasant Tail Nymph', '#14 Hare\'s Ear', '#18 Zebra Midge', '#14 Elk Hair Caddis', '#10 Woolly Bugger'];
+    }
+    // Season bonus
+    if (season === 'winter') bag.push('#22 Black Midge (must-have for winter)');
+    if (season === 'spring') bag.push('#16 BWO Emerger (match the spring hatch)');
+    if (season === 'summer') bag.push('#12 Hopper (grasshopper season)');
+    if (season === 'fall') bag.push('#10 October Caddis (fall classic)');
+
+  } else if (method === 'spin') {
+    if (water.topLures && water.topLures.length) {
+      bag = water.topLures.slice(0, 5);
+    } else {
+      bag = ['1/8oz Rooster Tail (white)', '1/8oz Panther Martin (gold)', 'Rapala Countdown CD-3', 'Small Kastmaster (gold)', 'Rebel Wee Craw'];
+    }
+    if (c.waterTemp < 50) bag.push('Slow it down — lightweight jig (1/32oz) in cold water');
+
+  } else {
+    if (water.topBait && water.topBait.length) {
+      bag = water.topBait.slice(0, 4);
+    } else {
+      bag = ['PowerBait (chartreuse)', 'PowerBait (rainbow)', 'Nightcrawler', 'Corn'];
+    }
+    bag.push('#8-12 bait hooks + split shot assortment');
+    bag.push('Small treble hooks (#14) for dough bait');
+  }
+
+  return bag;
+}
+
 window._listenMission = function() {
   var textEl = document.getElementById('missionSummaryText');
   if (!textEl) return;
+  var text = textEl.textContent || textEl.innerText;
   if (typeof window.speakText === 'function') {
-    window.speakText(textEl.textContent);
-    // status suppressed
+    window.speakText(text);
   } else if (typeof speakTextBrowser === 'function') {
-    speakTextBrowser(textEl.textContent);
+    speakTextBrowser(text);
   } else {
     showNotice('TTS not available', 'warning', 2000);
   }
@@ -3167,6 +3448,7 @@ window._saveMissionToJournal = function() {
     if (!fishFlow || !fishFlow.area) return;
     var key = 'huntech_fish_journal_v1';
     var journal = JSON.parse(localStorage.getItem(key) || '[]');
+    var textEl = document.getElementById('missionSummaryText');
     journal.push({
       id: Date.now(),
       water: fishFlow.area.name,
@@ -3177,10 +3459,10 @@ window._saveMissionToJournal = function() {
       wade: fishFlow.wade,
       spots: _aiFishingSpots.length,
       date: new Date().toISOString(),
-      summary: document.getElementById('missionSummaryText') ? document.getElementById('missionSummaryText').textContent : ''
+      summary: textEl ? (textEl.textContent || textEl.innerText) : ''
     });
     localStorage.setItem(key, JSON.stringify(journal));
-    showNotice('📓 Session saved to your fishing journal!', 'success', 2500);
+    showNotice('💾 Trip saved! Access it in your journal anytime.', 'success', 2500);
   } catch (e) {
     showNotice('Could not save: ' + e.message, 'error', 3000);
   }
