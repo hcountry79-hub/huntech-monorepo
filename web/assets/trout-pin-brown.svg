@@ -1,6 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="48" height="24" viewBox="0 0 48 24">
   <defs>
-    <!-- Brown trout body gradient — dark olive dorsal → golden-bronze lateral → cream belly -->
     <linearGradient id="brownBody" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0%" stop-color="#2a3a12"/>
       <stop offset="15%" stop-color="#4a5a28"/>
@@ -11,40 +10,57 @@
       <stop offset="90%" stop-color="#f0e0a8"/>
       <stop offset="100%" stop-color="#f8f0d8"/>
     </linearGradient>
-    <!-- Tail fin gradient — amber-brown -->
     <linearGradient id="brownTail" x1="0" y1="0" x2="1" y2="0">
       <stop offset="0%" stop-color="#8a6a2a"/>
       <stop offset="100%" stop-color="#5a4a1a"/>
     </linearGradient>
-    <!-- Dorsal fin gradient -->
     <linearGradient id="brownDorsal" x1="0" y1="1" x2="0" y2="0">
       <stop offset="0%" stop-color="#5a5a28"/>
       <stop offset="100%" stop-color="#3a3a14"/>
     </linearGradient>
-    <!-- Swimming animation -->
-    <animateTransform id="swimBrown" attributeName="transform" type="translate"
-      values="0,0; 0.3,-0.15; 0,0; -0.3,0.15; 0,0" dur="2.8s" repeatCount="indefinite"/>
   </defs>
   <g>
     <animateTransform attributeName="transform" type="translate"
-      values="0,0; 0.35,-0.18; 0,0; -0.35,0.18; 0,0" dur="3s" repeatCount="indefinite"/>
-    <!-- Tail fin — natural fork -->
+      values="0,0; 0.25,-0.1; 0.1,0; -0.2,0.1; 0,0" dur="2.8s" repeatCount="indefinite"/>
+
+    <!-- TAIL — multi-joint articulated swimming (brown trout slightly lazier stroke) -->
     <g>
       <animateTransform attributeName="transform" type="rotate"
-        values="0 40 12; 3 40 12; 0 40 12; -3 40 12; 0 40 12" dur="1.5s" repeatCount="indefinite"/>
-      <path d="M37 8 Q40 5 44 6 Q42 9 42 12 Q42 15 44 18 Q40 19 37 16 Q39 12 37 8z"
-        fill="url(#brownTail)" stroke="#1a1a0a" stroke-width="0.7" opacity="0.9"/>
-      <path d="M39 9.5 Q41 7.5 43 7" stroke="#3a3a1a" stroke-width="0.3" fill="none" opacity="0.3"/>
-      <path d="M39 14.5 Q41 16.5 43 17" stroke="#3a3a1a" stroke-width="0.3" fill="none" opacity="0.3"/>
+        values="0 34 12; 4.5 34 12; 0 34 12; -4.5 34 12; 0 34 12" dur="1s" repeatCount="indefinite"/>
+      <path d="M33 9.5 Q35 8 37 8.5 L37 15.5 Q35 16 33 14.5 Z"
+        fill="url(#brownBody)" stroke="#1a1a0a" stroke-width="0.5" opacity="0.85"/>
+      <g>
+        <animateTransform attributeName="transform" type="rotate"
+          values="0 37 12; 7 37 12; 1.5 37 12; -7 37 12; -1.5 37 12; 0 37 12" dur="0.75s" repeatCount="indefinite"/>
+        <!-- Upper tail lobe -->
+        <path d="M37 9 Q39 5.5 44 4.5 Q43 7 41 9.5 Q39 11 37 12Z"
+          fill="url(#brownTail)" stroke="#1a1a0a" stroke-width="0.6" opacity="0.92"/>
+        <!-- Lower tail lobe -->
+        <path d="M37 12 Q39 13 41 14.5 Q43 17 44 19.5 Q39 18.5 37 15Z"
+          fill="url(#brownTail)" stroke="#1a1a0a" stroke-width="0.6" opacity="0.92"/>
+        <!-- Fork notch -->
+        <path d="M38 10.5 Q40 12 38 13.5" stroke="#3a3a1a" stroke-width="0.4" fill="none" opacity="0.3"/>
+        <!-- Fin rays -->
+        <path d="M37.5 9.5 Q40 6.5 43 5.5" stroke="#3a3a1a" stroke-width="0.25" fill="none" opacity="0.3"/>
+        <path d="M37.5 10.5 Q40 8 42 7" stroke="#3a3a1a" stroke-width="0.2" fill="none" opacity="0.25"/>
+        <path d="M37.5 13.5 Q40 16 42 17" stroke="#3a3a1a" stroke-width="0.2" fill="none" opacity="0.25"/>
+        <path d="M37.5 14.5 Q40 17.5 43 18.5" stroke="#3a3a1a" stroke-width="0.25" fill="none" opacity="0.3"/>
+      </g>
     </g>
-    <!-- Main body -->
-    <path d="M3 12C3 12 5 4.5 14 3.5c4.5-.5 9 1 14 2.5l5-1.5c1.5-.5 3.5-.2 5 .8l3 2.2c.6.5.6 1.2 0 1.7l-3 2.2c-1.5 1-3.5 1.3-5 .8L32 11c-3.5 1.5-9 3-14 2.8C8 13.5 3 12 3 12z"
-      fill="url(#brownBody)" stroke="#0a0a00" stroke-width="1.5" stroke-linejoin="round"/>
-    <!-- Golden-amber lateral band (brown trout characteristic) -->
-    <path d="M7 11.3 Q15 10.5 25 11 Q32 11.3 37 11" stroke="#c4881a" stroke-width="1.5" fill="none" opacity="0.3"/>
-    <!-- Lateral line -->
-    <path d="M8 11h27" stroke="#4a3a1a" stroke-width="0.35" opacity="0.4"/>
-    <!-- Dark spots — large scattered (brown trout signature) -->
+    <!-- Main body with flex -->
+    <path d="M3 12C3 12 5 4.5 14 3.5c4.5-.5 9 1 14 2.5l4-1c1.5-.5 3-.2 4.5.6l2.5 1.8c.5.4.5 1 0 1.4l-2.5 1.8c-1.5.8-3 1.1-4.5.6L27 11c-3.5 1.5-9 3-14 2.8C8 13.5 3 12 3 12z"
+      fill="url(#brownBody)" stroke="#0a0a00" stroke-width="1.5" stroke-linejoin="round">
+      <animate attributeName="d" dur="2s" repeatCount="indefinite"
+        values="M3 12C3 12 5 4.5 14 3.5c4.5-.5 9 1 14 2.5l4-1c1.5-.5 3-.2 4.5.6l2.5 1.8c.5.4.5 1 0 1.4l-2.5 1.8c-1.5.8-3 1.1-4.5.6L27 11c-3.5 1.5-9 3-14 2.8C8 13.5 3 12 3 12z;
+               M3 12C3 12 5 4.7 14 3.7c4.5-.5 9 0.9 14 2.3l4-0.9c1.5-.5 3-.2 4.5.6l2.5 1.7c.5.4.5 1 0 1.4l-2.5 1.7c-1.5.8-3 1.1-4.5.6L27 10.9c-3.5 1.4-9 2.9-14 2.6C8 13.2 3 12 3 12z;
+               M3 12C3 12 5 4.5 14 3.5c4.5-.5 9 1 14 2.5l4-1c1.5-.5 3-.2 4.5.6l2.5 1.8c.5.4.5 1 0 1.4l-2.5 1.8c-1.5.8-3 1.1-4.5.6L27 11c-3.5 1.5-9 3-14 2.8C8 13.5 3 12 3 12z;
+               M3 12C3 12 5 4.3 14 3.3c4.5-.5 9 1.1 14 2.7l4-1.1c1.5-.5 3-.2 4.5.6l2.5 1.9c.5.4.5 1 0 1.4l-2.5 1.9c-1.5.8-3 1.1-4.5.6L27 11.1c-3.5 1.6-9 3.1-14 2.9C8 13.8 3 12 3 12z;
+               M3 12C3 12 5 4.5 14 3.5c4.5-.5 9 1 14 2.5l4-1c1.5-.5 3-.2 4.5.6l2.5 1.8c.5.4.5 1 0 1.4l-2.5 1.8c-1.5.8-3 1.1-4.5.6L27 11c-3.5 1.5-9 3-14 2.8C8 13.5 3 12 3 12z"/>
+    </path>
+    <!-- Golden lateral band -->
+    <path d="M7 11.3 Q15 10.5 25 11 Q30 11.3 34 11" stroke="#c4881a" stroke-width="1.5" fill="none" opacity="0.3"/>
+    <path d="M8 11h25" stroke="#4a3a1a" stroke-width="0.35" opacity="0.4"/>
+    <!-- Dark spots -->
     <circle cx="11" cy="7" r="1.1" fill="#1a0a00" opacity="0.5"/>
     <circle cx="16" cy="6.5" r="0.95" fill="#1a0a00" opacity="0.45"/>
     <circle cx="21" cy="6" r="1.0" fill="#1a0a00" opacity="0.5"/>
@@ -53,7 +69,7 @@
     <circle cx="14" cy="9" r="0.7" fill="#1a0a00" opacity="0.35"/>
     <circle cx="23" cy="8.5" r="0.75" fill="#1a0a00" opacity="0.4"/>
     <circle cx="18" cy="8" r="0.65" fill="#1a0a00" opacity="0.35"/>
-    <!-- Red/orange spots with cream halos (brown trout distinguishing feature) -->
+    <!-- Red/orange spots with cream halos -->
     <circle cx="13" cy="10.5" r="0.8" fill="#f0e0c0" opacity="0.5"/>
     <circle cx="13" cy="10.5" r="0.5" fill="#e04020" opacity="0.55"/>
     <circle cx="18" cy="10" r="0.75" fill="#f0e0c0" opacity="0.45"/>
@@ -64,36 +80,35 @@
     <circle cx="28" cy="10" r="0.35" fill="#e04020" opacity="0.45"/>
     <circle cx="10" cy="9.5" r="0.6" fill="#f0e0c0" opacity="0.4"/>
     <circle cx="10" cy="9.5" r="0.35" fill="#d83818" opacity="0.45"/>
-    <!-- Dorsal fin with animation -->
+    <!-- Dorsal fin -->
     <g>
       <animateTransform attributeName="transform" type="rotate"
-        values="0 18 4; -2 18 4; 0 18 4; 2 18 4; 0 18 4" dur="3.2s" repeatCount="indefinite"/>
+        values="0 18 4; -2 18 4; 0 18 4; 2 18 4; 0 18 4" dur="2.6s" repeatCount="indefinite"/>
       <path d="M16 4.5 Q18 1 22 2.5 Q20 3.5 18.5 4.5" fill="url(#brownDorsal)" stroke="#0a0a00" stroke-width="0.6" opacity="0.85"/>
       <path d="M17 4 Q18 2 19 2.5" stroke="#3a3a14" stroke-width="0.25" fill="none" opacity="0.35"/>
       <path d="M18.5 3.8 Q19 2.2 20 2.8" stroke="#3a3a14" stroke-width="0.25" fill="none" opacity="0.35"/>
     </g>
-    <!-- Adipose fin (salmonid feature) -->
-    <ellipse cx="32" cy="5.5" rx="1.5" ry="1" fill="#8a6a2a" stroke="#0a0a00" stroke-width="0.4" opacity="0.55"/>
+    <!-- Adipose fin -->
+    <ellipse cx="30" cy="5.5" rx="1.5" ry="1" fill="#8a6a2a" stroke="#0a0a00" stroke-width="0.4" opacity="0.55"/>
     <!-- Pectoral fin -->
     <g>
       <animateTransform attributeName="transform" type="rotate"
-        values="0 13 14; 4 13 14; 0 13 14; -3 13 14; 0 13 14" dur="2.2s" repeatCount="indefinite"/>
+        values="0 13 14; 5 13 14; 0 13 14; -3 13 14; 0 13 14" dur="1.4s" repeatCount="indefinite"/>
       <path d="M12 13.5 Q10 16.5 14 15.5 Q13 14 12 13.5z" fill="#c4a050" stroke="#0a0a00" stroke-width="0.4" opacity="0.65"/>
     </g>
     <!-- Pelvic fin -->
     <path d="M20 14 Q19 16 22 15 Q21 14.2 20 14z" fill="#c4a050" stroke="#0a0a00" stroke-width="0.3" opacity="0.55"/>
     <!-- Anal fin -->
-    <path d="M28 14 Q27 16.5 30 15 Q29 14 28 14z" fill="#b89848" stroke="#0a0a00" stroke-width="0.3" opacity="0.55"/>
+    <path d="M26 14 Q25 16.5 28 15 Q27 14 26 14z" fill="#b89848" stroke="#0a0a00" stroke-width="0.3" opacity="0.55"/>
     <!-- Gill plate -->
     <path d="M10 6.5 Q9 10 10 14.5" stroke="#0a0a00" stroke-width="0.6" fill="none" opacity="0.3"/>
     <path d="M10.5 7 Q9.5 10 10.5 14" stroke="#c48830" stroke-width="0.4" fill="none" opacity="0.15"/>
-    <!-- Eye — large, amber iris (brown trout characteristic) -->
+    <!-- Eye — amber iris -->
     <circle cx="7" cy="9.5" r="1.6" fill="#111" stroke="#c4a050" stroke-width="0.5"/>
     <circle cx="7.2" cy="9.2" r="0.8" fill="#2a1a0a"/>
     <circle cx="6.7" cy="9" r="0.4" fill="#fff" opacity="0.75"/>
-    <!-- Mouth — slightly hooked jaw (brown trout feature) -->
+    <!-- Mouth — hooked jaw -->
     <path d="M3 12 Q2.5 11.3 3.5 10.8" stroke="#0a0a00" stroke-width="0.5" fill="none" opacity="0.5"/>
-    <!-- Subtle body sheen -->
-    <path d="M8 7 Q18 5.5 30 7" stroke="#fff" stroke-width="0.3" fill="none" opacity="0.1"/>
+    <path d="M8 7 Q18 5.5 28 7" stroke="#fff" stroke-width="0.3" fill="none" opacity="0.1"/>
   </g>
 </svg>

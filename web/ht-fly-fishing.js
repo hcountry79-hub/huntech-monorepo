@@ -1519,6 +1519,20 @@ function getFlyCheckInLatLng() {
   return null;
 }
 
+/* ── Point-in-polygon ray-casting (strict zone boundary enforcement) ── */
+function _pointInPolygon(lat, lng, polygon) {
+  if (!polygon || polygon.length < 3) return false;
+  var inside = false;
+  for (var i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+    var yi = polygon[i][0], xi = polygon[i][1];
+    var yj = polygon[j][0], xj = polygon[j][1];
+    if (((yi > lat) !== (yj > lat)) && (lng < (xj - xi) * (lat - yi) / (yj - yi) + xi)) {
+      inside = !inside;
+    }
+  }
+  return inside;
+}
+
 /* Build a polygon corridor around a stream path (array of [lat,lng] pairs) */
 function buildStreamCorridor(path, bufferM) {
   if (!path || path.length < 2) return null;
@@ -3063,6 +3077,9 @@ window.deployAiFishingPins = function(water, zone, fishFlow) {
   var wade = fishFlow.wade || 'waders';
   var skill = fishFlow.experience || 'learning';
 
+  // Build zone corridor polygon for strict boundary enforcement
+  var zoneCorridor = buildStreamCorridor(segment, 45);
+
   // Generate fishing spots along the zone segment
   var habitats = ['riffle', 'run', 'pool', 'tailout', 'boulder'];
   var numSpots = Math.min(6, Math.max(3, Math.floor(segment.length * 0.8)));
@@ -3074,6 +3091,9 @@ window.deployAiFishingPins = function(water, zone, fishFlow) {
     var habitat = habitats[i % habitats.length];
     var lat = segment[pIdx][0];
     var lng = segment[pIdx][1];
+
+    // STRICT: Only deploy pins INSIDE the zone polygon
+    if (zoneCorridor && !_pointInPolygon(lat, lng, zoneCorridor)) continue;
 
     // Score this spot based on user inputs
     var score = _scoreSpot(habitat, method, wade, skill, i, numSpots);
@@ -3897,6 +3917,10 @@ function _autoCheckInToPin(pinIdx) {
   _activeAnglerPins = [];
   _activeApproachLines.forEach(function(l) { try { map.removeLayer(l); } catch {} });
   _activeApproachLines = [];
+  // Also clear zone polygon if it's still visible
+  if (_activeZonePolygon) { try { map.removeLayer(_activeZonePolygon); } catch {} _activeZonePolygon = null; }
+  // Clear legacy layers
+  if (typeof clearMicroPins === 'function') try { clearMicroPins(); } catch {}
   if (typeof clearFlowOverlay === 'function') try { clearFlowOverlay(); } catch {}
   if (typeof clearBoulders === 'function') try { clearBoulders(); } catch {}
 
@@ -3938,6 +3962,9 @@ function _autoCheckInToPin(pinIdx) {
                     'tail-glide', 'riffle-drop', 'eddy-pocket', 'bank-shadow', 'deep-slot'];
   var seg = getZoneStreamSegment(water, zone) || [];
   var cIdx = spot.segmentIdx;
+
+  // Build zone corridor polygon for strict boundary enforcement
+  var _zoneCorridor = buildStreamCorridor(seg, 45);
 
   // Distance helper (meters between two lat/lng points)
   var _dist = function(lat1, lng1, lat2, lng2) {
@@ -3991,6 +4018,9 @@ function _autoCheckInToPin(pinIdx) {
         }
       }
       if (tooClose) continue;
+
+      // STRICT: Only accept candidates INSIDE the zone polygon
+      if (_zoneCorridor && !_pointInPolygon(ipLat, ipLng, _zoneCorridor)) continue;
 
       // Score: prefer moderate distance, downstream bias, varied spread
       var microScore = 60;
@@ -4071,6 +4101,12 @@ function _autoCheckInToPin(pinIdx) {
     var offsetDeg = 0.000027;
     var placeLat = mc.lat + perpLat * offsetDeg * side;
     var placeLng = mc.lng + perpLng * offsetDeg * side;
+
+    // STRICT: If fish position is outside zone polygon, snap back to stream center
+    if (_zoneCorridor && !_pointInPolygon(placeLat, placeLng, _zoneCorridor)) {
+      placeLat = mc.lat;
+      placeLng = mc.lng;
+    }
 
     // Random mix of rainbow and brown trout
     var troutSvg = (Math.random() < 0.4) ? 'assets/trout-pin-brown.svg' : 'assets/trout-pin.svg';
@@ -4166,6 +4202,18 @@ function _autoCheckInToPin(pinIdx) {
     var anglerLat = md.fishLat + md.downLat * degPerM * dist.down + md.perpLat * degPerM * dist.perp * md.side;
     var anglerLng = md.fishLng + md.downLng * degPerM * dist.down + md.perpLng * degPerM * dist.perp * md.side;
 
+    // STRICT: If angler position is outside zone polygon, clamp to a safe position near the fish
+    if (_zoneCorridor && !_pointInPolygon(anglerLat, anglerLng, _zoneCorridor)) {
+      // Move angler closer — halve the offset until inside, or fall back next to fish
+      var tryDist = { down: dist.down * 0.5, perp: dist.perp * 0.5 };
+      anglerLat = md.fishLat + md.downLat * degPerM * tryDist.down + md.perpLat * degPerM * tryDist.perp * md.side;
+      anglerLng = md.fishLng + md.downLng * degPerM * tryDist.down + md.perpLng * degPerM * tryDist.perp * md.side;
+      if (!_pointInPolygon(anglerLat, anglerLng, _zoneCorridor)) {
+        anglerLat = md.fishLat + md.downLat * degPerM * 3;
+        anglerLng = md.fishLng + md.downLng * degPerM * 3;
+      }
+    }
+
     // Stand-here pin — clear angler silhouette SVG
     var shIcon = L.divIcon({
       className: 'ht-stand-here-pin',
@@ -4228,6 +4276,12 @@ function _autoCheckInToPin(pinIdx) {
     // Cast landing point: fish position + upstream offset + perpendicular shift
     var castLandLat = md.fishLat + upstreamLat * degPerM * cp.up + md.perpLat * degPerM * cp.perpShift * md.side;
     var castLandLng = md.fishLng + upstreamLng * degPerM * cp.up + md.perpLng * degPerM * cp.perpShift * md.side;
+
+    // STRICT: If cast landing is outside zone polygon, clamp to fish position + minimal upstream
+    if (_zoneCorridor && !_pointInPolygon(castLandLat, castLandLng, _zoneCorridor)) {
+      castLandLat = md.fishLat + upstreamLat * degPerM * 1.5;
+      castLandLng = md.fishLng + upstreamLng * degPerM * 1.5;
+    }
 
     // Animated casting arc — pronounced curved path from angler to landing spot
     var castDist = Math.sqrt(
