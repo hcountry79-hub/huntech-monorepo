@@ -212,7 +212,7 @@ window.TROUT_WATERS = [
   //  Zone 3: Whistle Bridge → Niangua River — BAIT ONLY (no flies/lures)
   {
     id: 'bennett-spring', name: 'Bennett Spring State Park', category: 'trout-park', ribbon: 'Trout Park',
-    region: 'central-ozarks', lat: 37.7166, lng: -92.8568, acres: null, streamMiles: 1.5,
+    region: 'central-ozarks', lat: 37.7166, lng: -92.8568, acres: null, streamMiles: 1.5, avgStreamWidth: 12,
     species: ['rainbow'], waterType: 'spring-creek', flowSource: 'Bennett Spring (100M gal/day)',
     usgsSiteId: null, generationWarning: false, troutStampRequired: true,
     seasonDates: { open: 'March 1', close: 'October 31', catchRelease: 'Nov 1 - Feb 28' },
@@ -256,7 +256,7 @@ window.TROUT_WATERS = [
   //  Zone 3 (All): Lower Current River section — all legal methods incl bait
   {
     id: 'montauk', name: 'Montauk State Park', category: 'trout-park', ribbon: 'Trout Park',
-    region: 'eastern-ozarks', lat: 37.4605, lng: -91.6834, acres: null, streamMiles: 1.0,
+    region: 'eastern-ozarks', lat: 37.4605, lng: -91.6834, acres: null, streamMiles: 1.0, avgStreamWidth: 15,
     species: ['rainbow'], waterType: 'spring-creek', flowSource: 'Montauk Spring (53M gal/day)',
     usgsSiteId: null, generationWarning: false, troutStampRequired: true,
     seasonDates: { open: 'March 1', close: 'October 31', catchRelease: 'Nov 1 - Feb 28' },
@@ -294,7 +294,7 @@ window.TROUT_WATERS = [
   //  Zone 3: Old dam → park boundary — all methods incl natural bait
   {
     id: 'roaring-river', name: 'Roaring River State Park', category: 'trout-park', ribbon: 'Trout Park',
-    region: 'southwest-ozarks', lat: 36.5915, lng: -93.8324, acres: null, streamMiles: 1.0,
+    region: 'southwest-ozarks', lat: 36.5915, lng: -93.8324, acres: null, streamMiles: 1.0, avgStreamWidth: 10,
     species: ['rainbow'], waterType: 'spring-creek', flowSource: 'Roaring River Spring (20M gal/day)',
     usgsSiteId: null, generationWarning: false, troutStampRequired: true,
     seasonDates: { open: 'March 1', close: 'October 31', catchRelease: 'Nov 1 - Feb 28' },
@@ -331,7 +331,7 @@ window.TROUT_WATERS = [
   //  Boundary 2 (Zone 2/3): ~37.9591, -91.5368  (stream path index 21, upper straight)
   {
     id: 'maramec-spring', name: 'Maramec Spring Park', category: 'trout-park', ribbon: 'Trout Park',
-    region: 'eastern-ozarks', lat: 37.9534, lng: -91.5328, acres: null, streamMiles: 1.0,
+    region: 'eastern-ozarks', lat: 37.9534, lng: -91.5328, acres: null, streamMiles: 1.0, avgStreamWidth: 14,
     species: ['rainbow'], waterType: 'spring-creek', flowSource: 'Maramec Spring (96M gal/day, 5th largest in MO)',
     usgsSiteId: null, generationWarning: false, troutStampRequired: true,
     seasonDates: { open: 'March 1', close: 'October 31', catchRelease: 'Nov 1 - Feb 28' },

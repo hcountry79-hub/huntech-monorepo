@@ -867,16 +867,16 @@ body.module-fly .ht-strategy-panel {
   filter: blur(0.3px);
 }
 
-/* Bank edge lines — organic earth-toned borders */
+/* Bank edge lines — earth-toned borders tracing actual bank positions */
 .ht-water-bank {
-  filter: drop-shadow(0 0 3px rgba(74, 138, 106, 0.25));
+  filter: drop-shadow(0 0 2px rgba(90, 70, 40, 0.3));
 }
 .ht-bank-left, .ht-bank-right {
-  animation: bankShimmer 8s ease-in-out infinite;
+  animation: bankShimmer 10s ease-in-out infinite;
 }
 @keyframes bankShimmer {
-  0%, 100% { opacity: 0.45; }
-  50% { opacity: 0.55; }
+  0%, 100% { opacity: 0.55; }
+  50% { opacity: 0.62; }
 }
 
 /* Center current — animated flow indicator */
@@ -3898,31 +3898,36 @@ body.module-fly #map {
   display: none;
 }
 
-/* ═══ Stand-Here Angler Position Pins — Fisherman Silhouette ═══ */
+/* ═══ Stand-Here Angler Position Pins — Wading Fisherman ═══ */
 .ht-stand-here-pin {
   pointer-events: auto !important;
   background: transparent !important;
   border: none !important;
 }
 .ht-stand-here-dot {
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(124, 255, 199, 0.2), rgba(124, 255, 199, 0.03));
-  border: 2px solid rgba(124, 255, 199, 0.5);
-  box-shadow: 0 0 12px rgba(124, 255, 199, 0.2), inset 0 0 6px rgba(124, 255, 199, 0.1);
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   justify-content: center;
-  animation: standHerePulse 3s ease-in-out infinite;
+  filter: drop-shadow(1px 2px 4px rgba(0, 0, 0, 0.55)) drop-shadow(0 0 8px rgba(124, 255, 199, 0.25));
+  animation: standHerePulse 4s ease-in-out infinite;
   cursor: pointer;
 }
 .ht-stand-here-svg {
-  filter: drop-shadow(0 0 3px rgba(124, 255, 199, 0.5));
+  overflow: visible;
+}
+.ht-stand-flyline {
+  animation: standFlyLineCast 5s ease-in-out infinite;
+  transform-origin: 2px 1px;
 }
 @keyframes standHerePulse {
-  0%, 100% { box-shadow: 0 0 12px rgba(124, 255, 199, 0.2), inset 0 0 6px rgba(124, 255, 199, 0.1); transform: scale(1); }
-  50%      { box-shadow: 0 0 20px rgba(124, 255, 199, 0.4), inset 0 0 8px rgba(124, 255, 199, 0.2); transform: scale(1.08); }
+  0%, 100% { filter: drop-shadow(1px 2px 4px rgba(0, 0, 0, 0.55)) drop-shadow(0 0 8px rgba(124, 255, 199, 0.25)); transform: scale(1); }
+  50%      { filter: drop-shadow(1px 2px 4px rgba(0, 0, 0, 0.55)) drop-shadow(0 0 14px rgba(124, 255, 199, 0.4)); transform: scale(1.04); }
+}
+@keyframes standFlyLineCast {
+  0%, 100% { opacity: 0.6; stroke-dashoffset: 0; }
+  25% { opacity: 0.9; }
+  50% { opacity: 0.5; }
+  75% { opacity: 0.8; }
 }
 
 /* ═══ Animated Casting Arc — PRONOUNCED & VISIBLE ═══ */
