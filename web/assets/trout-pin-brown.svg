@@ -1,101 +1,52 @@
-﻿<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 56 28">
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="16" viewBox="0 0 32 16">
+  <!-- Body silhouette — brown trout coloring -->
+  <path d="M1 8.5C1 8.5 3.5 3 10 2.5c3.5-.3 7 .8 10 2l4-1.5c1-.4 2.5-.2 3.5.5l2.5 2c.5.4.5 1 0 1.4L28 8.5l2 1.5c.4.4.3 1-.2 1.3l-2.5 1.2c-1 .5-2.2.6-3.2.2L20 11c-3 1.2-6.5 2-10 1.8C4 12.5 1 8.5 1 8.5z"
+    fill="url(#brownBody)" stroke="#0a0a0a" stroke-width="1.4" stroke-linejoin="round"/>
   <defs>
+    <!-- Gradient: olive-brown → golden → cream belly -->
     <linearGradient id="brownBody" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#2a3a12"/>
-      <stop offset="18%" stop-color="#4a5a28"/>
-      <stop offset="35%" stop-color="#8a7a38"/>
-      <stop offset="50%" stop-color="#c4a448"/>
-      <stop offset="65%" stop-color="#d4a840"/>
-      <stop offset="82%" stop-color="#e8c870"/>
+      <stop offset="0%" stop-color="#3a4a1a"/>
+      <stop offset="25%" stop-color="#6a6a2a"/>
+      <stop offset="45%" stop-color="#c4a44a"/>
+      <stop offset="60%" stop-color="#d4a840"/>
+      <stop offset="78%" stop-color="#e8c870"/>
       <stop offset="100%" stop-color="#f0e0a8"/>
     </linearGradient>
-    <linearGradient id="brownTail" x1="0" y1="0" x2="1" y2="0">
-      <stop offset="0%" stop-color="#8a6a2a"/>
-      <stop offset="100%" stop-color="#5a4a1a"/>
-    </linearGradient>
-    <linearGradient id="brownDorsal" x1="0" y1="1" x2="0" y2="0">
-      <stop offset="0%" stop-color="#5a5a28"/>
-      <stop offset="100%" stop-color="#3a3a14"/>
-    </linearGradient>
   </defs>
-  <g>
-    <animateTransform attributeName="transform" type="translate"
-      values="0,0; 0.25,-0.1; 0,0; -0.2,0.1; 0,0" dur="2.8s" repeatCount="indefinite"/>
-    <!-- TAIL  peduncle + deeply forked caudal fin -->
-    <g>
-      <animateTransform attributeName="transform" type="rotate"
-        values="0 40 14; 4.5 40 14; 0 40 14; -4.5 40 14; 0 40 14" dur="1s" repeatCount="indefinite"/>
-      <path d="M39,10.5 Q42,12 44,13 L44,15 Q42,16 39,17.5"
-        fill="url(#brownBody)" stroke="#161608" stroke-width="0.4"/>
-      <g>
-        <animateTransform attributeName="transform" type="rotate"
-          values="0 44 14; 5.5 44 14; 0 44 14; -5.5 44 14; 0 44 14" dur="0.7s" repeatCount="indefinite"/>
-        <!-- Upper lobe -->
-        <path d="M44,13 C44.5,10 46,6.5 48,4.5 C49.5,3 51.5,2 53.5,2 C54.5,2.5 55,3.5 54.5,5 C53,7.5 50.5,10.5 48,12.5 L44,14 Z"
-          fill="url(#brownTail)" stroke="#161608" stroke-width="0.5" opacity="0.92"/>
-        <!-- Lower lobe -->
-        <path d="M44,14 L48,15.5 C50.5,17.5 53,20.5 54.5,23 C55,24.5 54.5,25.5 53.5,26 C51.5,26 49.5,25 48,23.5 C46,21.5 44.5,18 44,15 Z"
-          fill="url(#brownTail)" stroke="#161608" stroke-width="0.5" opacity="0.92"/>
-        <!-- Fin rays -->
-        <path d="M44.5,13 Q48,7 53,3" stroke="#3a3a14" stroke-width="0.2" fill="none" opacity="0.2"/>
-        <path d="M45,14.5 Q49,19 52,22.5" stroke="#3a3a14" stroke-width="0.18" fill="none" opacity="0.15"/>
-      </g>
-    </g>
-    <!-- BODY  streamlined torpedo -->
-    <path d="M4,14 C4,7.5 8,4 16,3 C23,2 29,3 36,5.5 Q40,7.5 42,10.5 L42,17.5 Q40,20.5 36,22.5 C29,25 23,26 16,25 C8,24 4,20.5 4,14 Z"
-      fill="url(#brownBody)" stroke="#080804" stroke-width="1.3" stroke-linejoin="round">
-      <animate attributeName="d" dur="2.2s" repeatCount="indefinite"
-        values="M4,14 C4,7.5 8,4 16,3 C23,2 29,3 36,5.5 Q40,7.5 42,10.5 L42,17.5 Q40,20.5 36,22.5 C29,25 23,26 16,25 C8,24 4,20.5 4,14 Z;
-               M4,14 C4,8 8,4.5 16,3.5 C23,2.5 29,3.3 36,5.8 Q40,7.8 42,11 L42,17 Q40,20 36,22 C29,24.5 23,25.5 16,24.5 C8,23.5 4,20 4,14 Z;
-               M4,14 C4,7.5 8,4 16,3 C23,2 29,3 36,5.5 Q40,7.5 42,10.5 L42,17.5 Q40,20.5 36,22.5 C29,25 23,26 16,25 C8,24 4,20.5 4,14 Z"/>
-    </path>
-    <!-- GOLDEN LATERAL BAND -->
-    <path d="M9,13.5 Q20,12.5 32,13.5 Q38,14 42,14" stroke="#c48818" stroke-width="1.8" fill="none" opacity="0.3"/>
-    <path d="M9,14 L41,14.2" stroke="#4a3a18" stroke-width="0.3" opacity="0.4"/>
-    <!-- Large dark spots -->
-    <circle cx="14" cy="7.5" r="1.0" fill="#1a0800" opacity="0.5"/>
-    <circle cx="20" cy="6.5" r="0.9" fill="#1a0800" opacity="0.45"/>
-    <circle cx="26" cy="7" r="0.95" fill="#1a0800" opacity="0.45"/>
-    <circle cx="32" cy="8" r="0.85" fill="#1a0800" opacity="0.4"/>
-    <circle cx="37" cy="9" r="0.75" fill="#1a0800" opacity="0.35"/>
-    <circle cx="17" cy="10.5" r="0.65" fill="#1a0800" opacity="0.35"/>
-    <circle cx="28" cy="10" r="0.7" fill="#1a0800" opacity="0.35"/>
-    <!-- Red/orange spots with cream halos -->
-    <circle cx="14" cy="12" r="0.7" fill="#f0e0c0" opacity="0.45"/>
-    <circle cx="14" cy="12" r="0.45" fill="#e04020" opacity="0.5"/>
-    <circle cx="20" cy="11.5" r="0.65" fill="#f0e0c0" opacity="0.4"/>
-    <circle cx="20" cy="11.5" r="0.4" fill="#e04020" opacity="0.45"/>
-    <circle cx="26" cy="12" r="0.6" fill="#f0e0c0" opacity="0.4"/>
-    <circle cx="26" cy="12" r="0.35" fill="#d83818" opacity="0.45"/>
-    <circle cx="32" cy="11.5" r="0.55" fill="#f0e0c0" opacity="0.35"/>
-    <circle cx="32" cy="11.5" r="0.3" fill="#e04020" opacity="0.4"/>
-    <!-- Dorsal fin -->
-    <g>
-      <animateTransform attributeName="transform" type="rotate"
-        values="0 23 5; -2 23 5; 0 23 5; 2 23 5; 0 23 5" dur="2.6s" repeatCount="indefinite"/>
-      <path d="M20,5 Q23,1 27,3.5 Q25,4.5 22,5.5" fill="url(#brownDorsal)" stroke="#080804" stroke-width="0.5" opacity="0.85"/>
-    </g>
-    <!-- Adipose fin -->
-    <ellipse cx="38" cy="6.5" rx="1.4" ry="0.8" fill="#8a6a28" stroke="#080804" stroke-width="0.3" opacity="0.5"/>
-    <!-- Pectoral fin -->
-    <g>
-      <animateTransform attributeName="transform" type="rotate"
-        values="0 15 18; 4 15 18; 0 15 18; -3 15 18; 0 15 18" dur="1.4s" repeatCount="indefinite"/>
-      <path d="M14,17 Q12,20.5 16,19.5 Q15,18 14,17 Z" fill="#c4a050" stroke="#080804" stroke-width="0.3" opacity="0.6"/>
-    </g>
-    <!-- Pelvic + Anal fins -->
-    <path d="M24,18.5 Q23,21 26,20 Q25,19 24,18.5 Z" fill="#c4a050" stroke="#080804" stroke-width="0.25" opacity="0.5"/>
-    <path d="M30,19 Q29,21.5 33,20 Q31,19 30,19 Z" fill="#b89848" stroke="#080804" stroke-width="0.25" opacity="0.5"/>
-    <!-- Gill plate -->
-    <path d="M13,6 Q12,11 13,19.5" stroke="#080804" stroke-width="0.5" fill="none" opacity="0.3"/>
-    <path d="M13.5,7 Q12.5,11 13.5,19" stroke="#c48830" stroke-width="0.3" fill="none" opacity="0.15"/>
-    <!-- Eye  amber iris -->
-    <circle cx="8.5" cy="11.5" r="1.9" fill="#111" stroke="#c4a050" stroke-width="0.5"/>
-    <circle cx="8.7" cy="11.2" r="0.9" fill="#2a1a0a"/>
-    <circle cx="8.2" cy="10.9" r="0.45" fill="#fff" opacity="0.75"/>
-    <!-- Mouth  hooked jaw -->
-    <path d="M4,14 Q3.3,12.8 4.5,12" stroke="#080804" stroke-width="0.5" fill="none" opacity="0.45"/>
-    <!-- Specular highlight -->
-    <path d="M10,5 Q22,3 34,5.5" stroke="#fff" stroke-width="0.4" fill="none" opacity="0.1"/>
-  </g>
+  <!-- Golden-amber lateral band -->
+  <path d="M5 8h18" stroke="#c4881a" stroke-width="0.6" opacity="0.35"/>
+  <!-- Lateral line -->
+  <path d="M5 8.3h18" stroke="#4a3a1a" stroke-width="0.3" opacity="0.4"/>
+  <!-- Large dark spots — brown trout signature -->
+  <circle cx="8" cy="5.5" r="0.8" fill="#1a0a00" opacity="0.55"/>
+  <circle cx="11" cy="4.5" r="0.7" fill="#1a0a00" opacity="0.5"/>
+  <circle cx="14" cy="5" r="0.75" fill="#1a0a00" opacity="0.5"/>
+  <circle cx="17" cy="5.5" r="0.6" fill="#1a0a00" opacity="0.45"/>
+  <circle cx="16" cy="7" r="0.5" fill="#1a0a00" opacity="0.4"/>
+  <!-- Red spots with cream halos -->
+  <circle cx="10" cy="7" r="0.6" fill="#f0e0c0" opacity="0.4"/>
+  <circle cx="10" cy="7" r="0.4" fill="#c83020" opacity="0.5"/>
+  <circle cx="13" cy="7.5" r="0.55" fill="#f0e0c0" opacity="0.35"/>
+  <circle cx="13" cy="7.5" r="0.35" fill="#c83020" opacity="0.45"/>
+  <circle cx="7" cy="9" r="0.5" fill="#f0e0c0" opacity="0.35"/>
+  <circle cx="7" cy="9" r="0.3" fill="#c83020" opacity="0.45"/>
+  <!-- Dorsal fin -->
+  <path d="M12 3.5 Q14 1 16 3" fill="#5a5a28" stroke="#0a0a0a" stroke-width="0.6" opacity="0.8"/>
+  <!-- Pectoral fin -->
+  <path d="M9 9.5 Q8 11.5 10.5 10.5" fill="#c4a050" stroke="#0a0a0a" stroke-width="0.4" opacity="0.7"/>
+  <!-- Tail fin — realistic forked caudal -->
+  <!-- Upper lobe -->
+  <path d="M27.5 6.5 C28.5 5 30 3.5 31.5 3.5 C31 5 29.5 6.8 28 7.8 Z"
+    fill="#8a6a2a" stroke="#0a0a0a" stroke-width="0.5" opacity="0.85"/>
+  <!-- Lower lobe -->
+  <path d="M28 8.7 C29.5 9.7 31 11.5 31.5 13 C30 13 28.5 11.5 27.5 10 Z"
+    fill="#8a6a2a" stroke="#0a0a0a" stroke-width="0.5" opacity="0.85"/>
+  <!-- Fin rays -->
+  <path d="M28 6.5 L30.5 4.5" stroke="#3a3a14" stroke-width="0.25" fill="none" opacity="0.3"/>
+  <path d="M28.5 9.5 L30.5 12" stroke="#3a3a14" stroke-width="0.25" fill="none" opacity="0.3"/>
+  <!-- Eye — amber iris -->
+  <circle cx="5" cy="7" r="1.1" fill="#111" stroke="#c4a050" stroke-width="0.3"/>
+  <circle cx="4.7" cy="6.8" r="0.35" fill="#fff"/>
+  <!-- Gill line -->
+  <path d="M7 5.5 Q6.5 8 7 10" stroke="#0a0a0a" stroke-width="0.5" fill="none" opacity="0.4"/>
 </svg>
