@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -20,7 +20,7 @@
   <link rel="dns-prefetch" href="https://server.arcgisonline.com">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css" />
-  <link rel="stylesheet" href="app.css?v=20260223b">
+  <link rel="stylesheet" href="app.css?v=20260223d">
 
   <!-- AWS Backend Configuration -->
   <script src="config.js?v=20260221g"></script>
@@ -74,7 +74,7 @@
         <svg width="20" height="20" viewBox="0 0 24 24" fill="#2bd4ff">
           <path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
         </svg>
-        <input type="text" placeholder="Search anything: address, business, park, water, or GPS coordsï¿½" class="ht-search-input" id="searchInput" autocomplete="off" spellcheck="false">
+        <input type="text" placeholder="Search anything: address, business, park, water, or GPS coords�" class="ht-search-input" id="searchInput" autocomplete="off" spellcheck="false">
         <button class="ht-search-btn" type="button">Search</button>
         <div class="ht-search-results" id="searchResults"></div>
       </div>
@@ -105,7 +105,7 @@
   <main class="ht-map-container">
     <div id="map"></div>
 
-    <!-- --- HERO SPLASH ï¿½ cinematic rotating background --- -->
+    <!-- --- HERO SPLASH � cinematic rotating background --- -->
     <div class="ht-map-hero" id="mapHero">
       <div class="ht-hero-slide ht-hero-slide--active ht-fly-slide-1" style="background-image:url('assets/fly-hero-1.webp')"></div>
       <div class="ht-hero-slide ht-fly-slide-2" style="background-image:url('assets/fly-hero-2.webp')"></div>
@@ -149,33 +149,43 @@
 
     <div class="ht-toolbar-content" id="toolbarContent">
 
-      <!-- ------ PILL NAVIGATION ------ -->
-      <div class="ht-stream-pills" id="streamPills">
-        <button class="ht-stream-pill ht-stream-pill--active ht-stream-pill--primary" data-panel="fishNowPanel" onclick="showStreamPanel('fishNowPanel')">FISH NOW</button>
-        <button class="ht-stream-pill" onclick="showMap()">MAP</button>
-        <button class="ht-stream-pill" data-panel="tripPlannerPanel" onclick="showStreamPanel('tripPlannerPanel')">PLANNER</button>
-        <button class="ht-stream-pill" data-panel="flyBoxPanel" onclick="showStreamPanel('flyBoxPanel')">FLY BOX</button>
+      <!-- ------ STREAM COMMAND HUB (default view) ------ -->
+      <div class="ht-sc-hub" id="streamCommandHub">
+        <button class="ht-sc-hub-pill" type="button" onclick="scHubNav('fishNowPanel')">
+          <span class="ht-sc-hub-icon">??</span>
+          <span class="ht-sc-hub-label">Check In / Fish Now</span>
+        </button>
+        <button class="ht-sc-hub-pill" type="button" onclick="scHubNav('tripPlannerPanel')">
+          <span class="ht-sc-hub-icon">???</span>
+          <span class="ht-sc-hub-label">Trip Planner</span>
+        </button>
+        <button class="ht-sc-hub-pill" type="button" onclick="scHubNav('mySpotsPanel')">
+          <span class="ht-sc-hub-icon">??</span>
+          <span class="ht-sc-hub-label">My Saved Spots</span>
+        </button>
+        <button class="ht-sc-hub-pill" type="button" onclick="scHubNav('myGearPanel')">
+          <span class="ht-sc-hub-icon">??</span>
+          <span class="ht-sc-hub-label">My Gear</span>
+        </button>
+        <button class="ht-sc-hub-pill" type="button" onclick="scHubNav('flyBoxPanel')">
+          <span class="ht-sc-hub-icon">??</span>
+          <span class="ht-sc-hub-label">My Fly Box</span>
+        </button>
       </div>
 
-      <!-- ------ FAVORITES QUICK ACCESS ------ -->
-      <div class="ht-stream-favorites" id="streamFavorites">
-        <div class="ht-favorites-label">My Saved Spots</div>
-        <div class="ht-favorites-grid" id="favoritesGrid">
-          <button class="ht-favorite-chip" onclick="loadFavoriteWater('montauk')">Montauk</button>
-          <button class="ht-favorite-chip" onclick="loadFavoriteWater('little-piney-blue')">Lane Springs</button>
-          <button class="ht-favorite-chip" onclick="loadFavoriteWater('roaring-river')">Cardiac Hill</button>
-          <button class="ht-favorite-chip" onclick="loadFavoriteWater('lake-taneycomo-z1')">Tan Vat</button>
-        </div>
+      <!-- Back-to-hub pill (hidden by default, shown when inside a sub-panel) -->
+      <div class="ht-sc-back-row" id="scBackRow" style="display:none">
+        <button class="ht-sc-back-btn" type="button" onclick="scHubBack()">? Stream Command</button>
       </div>
 
-      <!-- ------- FISH NOW PANEL ï¿½ Multi-Step Workflow ------- -->
+      <!-- ------- FISH NOW PANEL � Multi-Step Workflow ------- -->
       <div class="ht-stream-panel" id="fishNowPanel">
 
         <!-- ---- Step 0: GPS Locating ---- -->
         <div class="ht-fish-step" id="fishStep0_loading">
           <div class="ht-fish-locate-card">
             <div class="ht-fish-locate-pulse">??</div>
-            <div class="ht-fish-locate-label">Finding your waterï¿½</div>
+            <div class="ht-fish-locate-label">Finding your water�</div>
             <div class="ht-fish-locate-sub">Scanning for nearby trout waters</div>
           </div>
         </div>
@@ -272,7 +282,7 @@
               <div class="ht-briefing-card" id="fishBriefingCard">
                 <div class="ht-briefing-coach">
                   <div class="ht-coach-avatar">??</div>
-                  <div class="ht-coach-intro" id="fishCoachIntro">Loading your AI stream guideï¿½</div>
+                  <div class="ht-coach-intro" id="fishCoachIntro">Loading your AI stream guide�</div>
                 </div>
                 <div class="ht-briefing-body" id="fishBriefingBody"></div>
               </div>
@@ -295,7 +305,7 @@
             <div class="ht-form-row">
               <div class="ht-live-session-bar">
                 <span class="ht-live-dot"></span>
-                <span class="ht-live-water-name" id="liveWaterName2">ï¿½</span>
+                <span class="ht-live-water-name" id="liveWaterName2">�</span>
                 <span class="ht-live-timer" id="liveTimer2">0:00</span>
               </div>
             </div>
@@ -343,7 +353,7 @@
           <div class="ht-form-row">
             <div id="savedSpotsList" class="ht-saved-spots-list">
               <!-- Populated dynamically from localStorage -->
-              <div class="ht-fly-note" style="opacity:.5">No saved spots yet ï¿½ drop pins during a session</div>
+              <div class="ht-fly-note" style="opacity:.5">No saved spots yet � drop pins during a session</div>
             </div>
           </div>
           <div class="ht-form-row">
@@ -464,13 +474,41 @@
         </div>
       </div>
 
+      <!-- ------- MY GEAR PANEL ------- -->
+      <div class="ht-stream-panel" id="myGearPanel" style="display:none">
+        <div class="ht-accordion-header ht-accordion-header-center">
+          <span class="ht-define-title">My Gear</span>
+        </div>
+        <div class="ht-form-grid">
+          <div class="ht-form-row">
+            <div class="ht-fly-note">Your rods, reels, waders, and tackle</div>
+          </div>
+          <div class="ht-form-row">
+            <div id="myGearList" class="ht-saved-spots-list">
+              <div class="ht-fly-note" style="opacity:.5">No gear logged yet � add your setup below</div>
+            </div>
+          </div>
+          <div class="ht-form-row">
+            <div class="ht-toolbar-btns ht-toolbar-btns-stack">
+              <div class="ht-pill-stack">
+                <button class="ht-gold-btn" type="button" onclick="addGearItem()">? Add Gear</button>
+              </div>
+              <div class="ht-pill-stack">
+                <button class="ht-gold-btn" type="button" onclick="openGearCategory('rods')">?? Rods</button>
+              </div>
+              <div class="ht-pill-stack">
+                <button class="ht-gold-btn" type="button" onclick="openGearCategory('lines')">?? Lines</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
     </div>
   </div>
-
-  <!-- ------- WATER DETAIL BAR (fly-in panel for selected water) ------- -->
   <div class="ht-fly-water-bar" id="waterDetailBar">
     <div class="ht-fly-water-bar-header">
-      <span class="ht-fly-water-bar-title" id="waterDetailTitle">ï¿½</span>
+      <span class="ht-fly-water-bar-title" id="waterDetailTitle">�</span>
       <button class="ht-fly-water-bar-close" type="button" onclick="closeWaterDetail()">&times;</button>
     </div>
     <div class="ht-fly-water-bar-body" id="waterDetailBody">
@@ -487,7 +525,7 @@
   <!-- ------- EDUCATION TILE (shown on hotspot tap) ------- -->
   <div class="ht-fly-education-tile" id="educationTile" style="display:none">
     <div class="ht-edu-header">
-      <span class="ht-edu-title" id="eduTitle">ï¿½</span>
+      <span class="ht-edu-title" id="eduTitle">�</span>
       <button class="ht-edu-close" type="button" onclick="closeEducationTile()">&times;</button>
     </div>
     <div class="ht-edu-body" id="eduBody">
@@ -529,10 +567,10 @@
     };
   </script>
 
-  <script src="regulations.js?v=20260223b"></script>
-  <script src="fly-fishing-data.js?v=20260223b"></script>
-  <script src="ht-fly-fishing.js?v=20260223b"></script>
-  <script src="main.js?v=20260223b"></script>
+  <script src="regulations.js?v=20260223d"></script>
+  <script src="fly-fishing-data.js?v=20260223d"></script>
+  <script src="ht-fly-fishing.js?v=20260223d"></script>
+  <script src="main.js?v=20260223d"></script>
 
   <script>
     // --- FAILSAFE fishStepCheckIn ---

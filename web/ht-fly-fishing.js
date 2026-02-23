@@ -2730,60 +2730,127 @@ function _catmullRomInterpolate(points, segments) {
   return result;
 }
 
-/* Build bank offset path — follows stream centerline geometry precisely.
-   Width is derived from water.avgStreamWidth (meters, half-width each side).
-   Minimal natural variation (+/- 0.3m) based on path curvature only — NO
-   fake sine waves. The result hugs the OSM centerline at measured distances
-   so the rendered banks match the actual physical bank lines. */
-function _buildBankPath(seg, mPerLat, mPerLng, baseWidth, side, _unused) {
+/* ═══════════════════════════════════════════════════════════════════════
+   PER-POINT BANK WIDTH SYSTEM — bank lines from measured bankWidths data
+   ═══════════════════════════════════════════════════════════════════════
+   GUARDRAILS:
+   1. Uses water.bankWidths[i] = [leftMeters, rightMeters] at each streamPath point
+   2. Falls back to avgStreamWidth/2 if bankWidths is missing/wrong length
+   3. Each bank side computed independently — no fake symmetric offsets
+   4. Width NEVER goes below 2m or above 12m per side (physical sanity)
+   5. Interpolated points get linearly-interpolated widths (no jumps)
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* Get zone segment + matching bankWidths slice in sync */
+function _getZoneSegmentWithWidths(water, zone) {
+  var path = water.streamPath;
+  var bw = water.bankWidths || null;
+  if (!path || path.length < 2) return { seg: null, widths: null };
+
+  // Find zone bounds indices (same logic as getZoneStreamSegment)
+  var startIdx = 0, endIdx = path.length - 1;
+  if (zone.zoneBounds && zone.zoneBounds.length === 2) {
+    startIdx = _nearestPathIdx(path, zone.zoneBounds[0][0], zone.zoneBounds[0][1]);
+    endIdx   = _nearestPathIdx(path, zone.zoneBounds[1][0], zone.zoneBounds[1][1]);
+    if (startIdx > endIdx) { var tmp = startIdx; startIdx = endIdx; endIdx = tmp; }
+  } else {
+    var zones = (water.access || []).filter(function(a) { return a.type === 'zone'; });
+    if (zones.length >= 2) {
+      var zoneIndexes = zones.map(function(z) { return { zone: z, idx: _nearestPathIdx(path, z.lat, z.lng) }; });
+      zoneIndexes.sort(function(a, b) { return a.idx - b.idx; });
+      var myPos = -1;
+      for (var i = 0; i < zoneIndexes.length; i++) { if (zoneIndexes[i].zone === zone) { myPos = i; break; } }
+      if (myPos >= 0) {
+        if (myPos > 0) startIdx = Math.round((zoneIndexes[myPos - 1].idx + zoneIndexes[myPos].idx) / 2);
+        if (myPos < zoneIndexes.length - 1) endIdx = Math.round((zoneIndexes[myPos].idx + zoneIndexes[myPos + 1].idx) / 2);
+      }
+    }
+  }
+
+  var seg = path.slice(startIdx, endIdx + 1);
+  var widths = null;
+  if (bw && bw.length === path.length) {
+    widths = bw.slice(startIdx, endIdx + 1);
+  }
+  return { seg: seg, widths: widths };
+}
+
+/* Build bank offset path using PER-POINT widths from bankWidths data.
+   side: 0 = left bank (widths[i][0]), 1 = right bank (widths[i][1])
+   scale: fraction 0-1 (1.0 = full bank edge, 0.6 = seam line, etc.) */
+function _buildBankPath(seg, mPerLat, mPerLng, widthsArr, bankSide, scale, fallbackHalf) {
   var bank = [];
+  var perpSign = bankSide === 0 ? 1 : -1; // left = +1 perp, right = -1 perp
   for (var i = 0; i < seg.length; i++) {
     var lat = seg[i][0], lng = seg[i][1];
-    var dy, dx;
     // Use ±2 node window for smoother perpendicular direction at bends
     var bk = Math.max(0, i - 2);
     var fw = Math.min(seg.length - 1, i + 2);
-    dy = seg[fw][0] - seg[bk][0];
-    dx = seg[fw][1] - seg[bk][1];
+    var dy = seg[fw][0] - seg[bk][0];
+    var dx = seg[fw][1] - seg[bk][1];
     var dyM = dy * mPerLat, dxM = dx * mPerLng;
     var len = Math.sqrt(dyM * dyM + dxM * dxM);
     if (len < 0.01) { bank.push([lat, lng]); continue; }
     var pLat = (-dxM / len) / mPerLat;
     var pLng = (dyM / len) / mPerLng;
-    // Curvature-based width variation: tighter bends are slightly wider
-    var curveFactor = 0;
-    if (i > 0 && i < seg.length - 1) {
-      var ax = seg[i][0] - seg[i-1][0], ay = seg[i][1] - seg[i-1][1];
-      var bx = seg[i+1][0] - seg[i][0], by = seg[i+1][1] - seg[i][1];
-      var cross = Math.abs(ax * by - ay * bx);
-      curveFactor = Math.min(0.3, cross * 800000); // max 0.3m wider at tight bends
+    // Get width for this point — from measured bankWidths or fallback
+    var w;
+    if (widthsArr && i < widthsArr.length) {
+      w = widthsArr[i][bankSide] * scale;
+    } else {
+      w = fallbackHalf * scale;
     }
-    var width = baseWidth + curveFactor;
-    bank.push([lat + pLat * width * side, lng + pLng * width * side]);
+    // GUARDRAIL: clamp to physical sanity (2m min, 12m max per side)
+    w = Math.max(2 * scale, Math.min(12 * scale, w));
+    bank.push([lat + pLat * w * perpSign, lng + pLng * w * perpSign]);
   }
   return bank;
 }
 
+/* Interpolate widths alongside Catmull-Rom path interpolation.
+   For each original segment, generates 'segments' interpolated points
+   with linearly interpolated widths. */
+function _interpolateWidths(widthsArr, origLen, interpSegments) {
+  if (!widthsArr || widthsArr.length < 2) return null;
+  var result = [];
+  for (var i = 0; i < origLen - 1; i++) {
+    var w0 = widthsArr[Math.min(i, widthsArr.length - 1)];
+    var w1 = widthsArr[Math.min(i + 1, widthsArr.length - 1)];
+    for (var t = 0; t < interpSegments; t++) {
+      var frac = t / interpSegments;
+      result.push([
+        w0[0] + (w1[0] - w0[0]) * frac,
+        w0[1] + (w1[1] - w0[1]) * frac
+      ]);
+    }
+  }
+  result.push(widthsArr[widthsArr.length - 1]);
+  return result;
+}
+
 function deployFlowOverlay(water, zone) {
   clearFlowOverlay();
-  var seg = getZoneStreamSegment(water, zone);
+  var zoneData = _getZoneSegmentWithWidths(water, zone);
+  var seg = zoneData.seg;
+  var rawWidths = zoneData.widths; // [leftM, rightM] per raw seg point
   if (!seg || seg.length < 3 || !map) return;
 
   var R = Math.PI / 180;
   var mPerLat = 111000;
   var mPerLng = 111000 * Math.cos(seg[0][0] * R);
 
-  // ── Stream width from measured data (meters, half-width each side) ──
-  // avgStreamWidth is the full bank-to-bank width. Half = each side offset.
-  var fullWidth = (water && water.avgStreamWidth) ? water.avgStreamWidth : 12;
-  var halfWidth = fullWidth / 2; // meters from centerline to bank edge
+  // Fallback: if no bankWidths, use avgStreamWidth/2
+  var fallbackHalf = ((water && water.avgStreamWidth) ? water.avgStreamWidth : 8) / 2;
 
   // Interpolate stream path for smooth curves (4x resolution)
-  var smoothSeg = _catmullRomInterpolate(seg, 4);
+  var interpFactor = 4;
+  var smoothSeg = _catmullRomInterpolate(seg, interpFactor);
+  // Interpolate widths to match smooth path length
+  var smoothWidths = _interpolateWidths(rawWidths, seg.length, interpFactor);
 
   // ── LAYER 1: Water body polygon — full bank-to-bank width ──
-  var bankLeft  = _buildBankPath(smoothSeg, mPerLat, mPerLng, halfWidth, 1, 0);
-  var bankRight = _buildBankPath(smoothSeg, mPerLat, mPerLng, halfWidth, -1, 0);
+  var bankLeft  = _buildBankPath(smoothSeg, mPerLat, mPerLng, smoothWidths, 0, 1.0, fallbackHalf);
+  var bankRight = _buildBankPath(smoothSeg, mPerLat, mPerLng, smoothWidths, 1, 1.0, fallbackHalf);
   var bankPoly  = bankLeft.concat(bankRight.slice().reverse());
 
   var waterBody = L.polygon(bankPoly, {
@@ -2797,9 +2864,8 @@ function deployFlowOverlay(water, zone) {
   _activeFlowLayers.push(waterBody);
 
   // ── LAYER 2: Mid-depth water — 80% of bank width ──
-  var midHalf = halfWidth * 0.80;
-  var midLeft  = _buildBankPath(smoothSeg, mPerLat, mPerLng, midHalf, 1, 0);
-  var midRight = _buildBankPath(smoothSeg, mPerLat, mPerLng, midHalf, -1, 0);
+  var midLeft  = _buildBankPath(smoothSeg, mPerLat, mPerLng, smoothWidths, 0, 0.80, fallbackHalf);
+  var midRight = _buildBankPath(smoothSeg, mPerLat, mPerLng, smoothWidths, 1, 0.80, fallbackHalf);
   var midPoly  = midLeft.concat(midRight.slice().reverse());
 
   var midWater = L.polygon(midPoly, {
@@ -2812,10 +2878,9 @@ function deployFlowOverlay(water, zone) {
   }).addTo(map);
   _activeFlowLayers.push(midWater);
 
-  // ── LAYER 3: Shallow/sheen core — 35% of bank width ──
-  var coreHalf = halfWidth * 0.35;
-  var coreLeft  = _buildBankPath(smoothSeg, mPerLat, mPerLng, coreHalf, 1, 0);
-  var coreRight = _buildBankPath(smoothSeg, mPerLat, mPerLng, coreHalf, -1, 0);
+  // ── LAYER 3: Core sheen — 35% of bank width ──
+  var coreLeft  = _buildBankPath(smoothSeg, mPerLat, mPerLng, smoothWidths, 0, 0.35, fallbackHalf);
+  var coreRight = _buildBankPath(smoothSeg, mPerLat, mPerLng, smoothWidths, 1, 0.35, fallbackHalf);
   var corePoly  = coreLeft.concat(coreRight.slice().reverse());
 
   var coreWater = L.polygon(corePoly, {
@@ -2828,7 +2893,7 @@ function deployFlowOverlay(water, zone) {
   }).addTo(map);
   _activeFlowLayers.push(coreWater);
 
-  // ── LAYER 4: Bank edge lines — trace the actual bank positions ──
+  // ── LAYER 4: Bank edge lines — trace the measured bank positions ──
   var bankSmoothedLeft  = _catmullRomInterpolate(bankLeft, 2);
   var bankSmoothedRight = _catmullRomInterpolate(bankRight, 2);
 
@@ -2850,7 +2915,7 @@ function deployFlowOverlay(water, zone) {
   }).addTo(map);
   _activeFlowLayers.push(bankR);
 
-  // ── LAYER 5: Multiple current lanes — fast center, slower edges ──
+  // ── LAYER 5: Center current lane ──
   var mainCurrent = L.polyline(smoothSeg, {
     color: '#5ed8ff',
     weight: 1.8,
@@ -2861,9 +2926,8 @@ function deployFlowOverlay(water, zone) {
   }).addTo(map);
   _activeFlowLayers.push(mainCurrent);
 
-  // Seam lines at ~60% of bank width (where fast meets slow = trout habitat)
-  var seamHalf = halfWidth * 0.60;
-  var seamLeft = _buildBankPath(smoothSeg, mPerLat, mPerLng, seamHalf, 1, 0);
+  // Seam lines at ~60% of bank width
+  var seamLeft = _buildBankPath(smoothSeg, mPerLat, mPerLng, smoothWidths, 0, 0.60, fallbackHalf);
   var seamLeftLine = L.polyline(seamLeft, {
     color: '#4ac8ee',
     weight: 1.0,
@@ -2874,7 +2938,7 @@ function deployFlowOverlay(water, zone) {
   }).addTo(map);
   _activeFlowLayers.push(seamLeftLine);
 
-  var seamRight = _buildBankPath(smoothSeg, mPerLat, mPerLng, seamHalf, -1, 0);
+  var seamRight = _buildBankPath(smoothSeg, mPerLat, mPerLng, smoothWidths, 1, 0.60, fallbackHalf);
   var seamRightLine = L.polyline(seamRight, {
     color: '#4ac8ee',
     weight: 1.0,
@@ -2885,7 +2949,7 @@ function deployFlowOverlay(water, zone) {
   }).addTo(map);
   _activeFlowLayers.push(seamRightLine);
 
-  // ── LAYER 6: Water shimmer particles ──
+  // ── LAYER 6: Water shimmer particles — placed within measured widths ──
   for (var sp = 0; sp < smoothSeg.length; sp += 2) {
     for (var shimSide = -1; shimSide <= 1; shimSide += 2) {
       var sLat = smoothSeg[sp][0], sLng = smoothSeg[sp][1];
@@ -2898,8 +2962,12 @@ function deployFlowOverlay(water, zone) {
       if (sLenV < 0.01) continue;
       var spLat = (-sDxM / sLenV) / mPerLat;
       var spLng = (sDyM / sLenV) / mPerLng;
-      // Place shimmer between center and bank edge (within measured width)
-      var shimOffset = (halfWidth * 0.2 + Math.random() * halfWidth * 0.7) * shimSide;
+      // Get the measured bank width for this side at this point
+      var localW = fallbackHalf;
+      if (smoothWidths && sp < smoothWidths.length) {
+        localW = shimSide > 0 ? smoothWidths[sp][0] : smoothWidths[sp][1];
+      }
+      var shimOffset = (localW * 0.15 + Math.random() * localW * 0.7) * shimSide;
       var shimDotLat = sLat + spLat * shimOffset;
       var shimDotLng = sLng + spLng * shimOffset;
       var spDelay = ((sp * 0.3 + shimSide * 0.5) % 5).toFixed(1);
@@ -2938,7 +3006,7 @@ function deployFlowOverlay(water, zone) {
     _activeFlowLayers.push(arrowMarker);
   }
 
-  // ── LAYER 8: Edge ripples at bank lines ──
+  // ── LAYER 8: Edge ripples at measured bank positions ──
   for (var k = 3; k < smoothSeg.length - 1; k += 5) {
     for (var rSide = -1; rSide <= 1; rSide += 2) {
       var rLat = smoothSeg[k][0], rLng = smoothSeg[k][1];
@@ -2951,8 +3019,12 @@ function deployFlowOverlay(water, zone) {
       if (rLen < 0.01) continue;
       var rpLat = (-rDxM / rLen) / mPerLat;
       var rpLng = (rDyM / rLen) / mPerLng;
-      // Place ripples at the bank edge (measured width - 0.3m inset)
-      var edgeOffset = (halfWidth - 0.3) * rSide;
+      // Place ripples at measured bank edge (- 0.3m inset)
+      var bankW = fallbackHalf;
+      if (smoothWidths && k < smoothWidths.length) {
+        bankW = rSide > 0 ? smoothWidths[k][0] : smoothWidths[k][1];
+      }
+      var edgeOffset = (bankW - 0.3) * rSide;
       var eLat = rLat + rpLat * edgeOffset;
       var eLng = rLng + rpLng * edgeOffset;
       var ripDelay = ((k * 0.6 + rSide * 1.2) % 4).toFixed(1);
@@ -3991,78 +4063,30 @@ function _autoCheckInToPin(pinIdx) {
     return Math.sqrt(dLat * dLat + dLng * dLng);
   };
 
-  // ── Build dense candidate list — TERRITORY-AWARE scanning ──
-  // Only scan within this pin's territory (halfway to adjacent pins)
+  // ── EVEN DISTRIBUTION — spread fish across ENTIRE zone segment ──
+  // No territory clustering. Fish are placed at evenly-spaced intervals
+  // from segment start to end so they fully cover the zone.
   var candidates = [];
-  var tStart = typeof spot.territoryStart === 'number' ? spot.territoryStart : Math.max(0, cIdx - 4);
-  var tEnd = typeof spot.territoryEnd === 'number' ? spot.territoryEnd : Math.min(seg.length - 1, cIdx + 4);
-  // Ensure at least ±2 segment nodes so we always find candidates
-  tStart = Math.min(tStart, Math.max(0, cIdx - 2));
-  tEnd = Math.max(tEnd, Math.min(seg.length - 1, cIdx + 2));
-
-  for (var sIdx = tStart; sIdx <= tEnd; sIdx++) {
-    if (sIdx === cIdx) continue;
-    if (sIdx < 0 || sIdx >= seg.length) continue;
-    var offset = sIdx - cIdx; // for downstream bias scoring
-    var cLat = seg[sIdx][0];
-    var cLng = seg[sIdx][1];
-
-    // Also generate interpolated midpoints between this and previous segment node
-    var interpPoints = [[cLat, cLng, sIdx]];
-    if (sIdx > 0 && sIdx < seg.length) {
-      var pLat = seg[sIdx - 1][0], pLng = seg[sIdx - 1][1];
-      interpPoints.push([(cLat + pLat) / 2, (cLng + pLng) / 2, sIdx]);
-      // Quarter points for extra density
-      interpPoints.push([(cLat * 0.75 + pLat * 0.25), (cLng * 0.75 + pLng * 0.25), sIdx]);
-      interpPoints.push([(cLat * 0.25 + pLat * 0.75), (cLng * 0.25 + pLng * 0.75), sIdx]);
-    }
-
-    for (var ip = 0; ip < interpPoints.length; ip++) {
-      var ipLat = interpPoints[ip][0];
-      var ipLng = interpPoints[ip][1];
-      var ipSegIdx = interpPoints[ip][2];
-
-      // Must be at least 4m from main pin to avoid overlap
-      var distFromMain = _dist(spot.lat, spot.lng, ipLat, ipLng);
-      if (distFromMain < 4) continue;
-
-      // Must be at least 3m from any already-accepted candidate
-      var tooClose = false;
-      for (var c = 0; c < candidates.length; c++) {
-        if (_dist(candidates[c].lat, candidates[c].lng, ipLat, ipLng) < 3) {
-          tooClose = true;
-          break;
-        }
-      }
-      if (tooClose) continue;
-
-      // STRICT: Only accept candidates INSIDE the zone polygon
-      if (_zoneCorridor && !_pointInPolygon(ipLat, ipLng, _zoneCorridor)) continue;
-
-      // Score: prefer moderate distance, downstream bias, varied spread
-      var microScore = 60;
-      microScore += Math.max(0, 25 - distFromMain * 0.5);
-      if (offset > 0) microScore += 4; // downstream preference
-      if (offset < 0) microScore += 2; // upstream still good
-      microScore -= Math.abs(offset) * 0.8; // mild far-penalty
-      // Bonus for interpolated points (often land at structure transitions)
-      if (ip > 0) microScore += 3;
-      // Small hash-based variation so results aren't identical each load
-      microScore += ((ipLat * 100000 + ipLng * 100000) % 7);
-
+  var segLen = seg.length;
+  if (segLen >= 2) {
+    var step = (segLen - 1) / (maxMicros + 1);
+    for (var eIdx = 1; eIdx <= maxMicros; eIdx++) {
+      var targetIdx = Math.round(eIdx * step);
+      targetIdx = Math.max(0, Math.min(segLen - 1, targetIdx));
+      var eLat = seg[targetIdx][0];
+      var eLng = seg[targetIdx][1];
+      // Skip if outside zone polygon
+      if (_zoneCorridor && !_pointInPolygon(eLat, eLng, _zoneCorridor)) continue;
       candidates.push({
-        lat: ipLat,
-        lng: ipLng,
-        segIdx: ipSegIdx,
-        score: microScore,
-        distFromMain: distFromMain
+        lat: eLat,
+        lng: eLng,
+        segIdx: targetIdx,
+        score: 100,
+        distFromMain: _dist(spot.lat, spot.lng, eLat, eLng)
       });
     }
   }
-
-  // Sort by micro score, take top N up to maxMicros
-  candidates.sort(function(a, b) { return b.score - a.score; });
-  var accepted = candidates.slice(0, maxMicros);
+  var accepted = candidates;
 
   // Deploy accepted micro-spots as animated trout in environment
   var microCoords = [];
@@ -4152,11 +4176,11 @@ function _autoCheckInToPin(pinIdx) {
     var mIcon = L.divIcon({
       className: 'ht-micro-trout-pin ' + envClass,
       html: '<div class="ht-trout-swim-wrap" style="animation-delay:' + swimDelay + 's">' +
-        '<img src="' + troutSvg + '" width="42" height="21" alt="" class="ht-trout-alive">' +
+        '<img src="' + troutSvg + '" width="48" height="24" alt="" class="ht-trout-alive">' +
         '</div>' +
         '<span class="ht-micro-trout-label">' + mLabel + '</span>',
-      iconSize: [42, 21],
-      iconAnchor: [21, 10]
+      iconSize: [48, 24],
+      iconAnchor: [24, 12]
     });
 
     var mMarker = L.marker([placeLat, placeLng], { icon: mIcon, zIndexOffset: 500 }).addTo(map);
@@ -4252,31 +4276,32 @@ function _autoCheckInToPin(pinIdx) {
       }
     }
 
-    // Stand-here pin — wading fly fisherman silhouette with rod + line
+    // Stand-here pin — BOLD hi-vis orange fisherman, unmissable on stream
     var shIcon = L.divIcon({
       className: 'ht-stand-here-pin',
       html: '<div class="ht-stand-here-dot">' +
-        '<svg viewBox="0 0 36 44" width="28" height="34" class="ht-stand-here-svg">' +
-        '<ellipse cx="18" cy="42" rx="8" ry="2" fill="rgba(0,0,0,0.2)"/>' +
-        '<path d="M14 30 L13 40 L17 40 L16 30 Z" fill="#4a5a3a" stroke="#3a4a2a" stroke-width="0.5"/>' +
-        '<path d="M20 30 L19 40 L23 40 L22 30 Z" fill="#4a5a3a" stroke="#3a4a2a" stroke-width="0.5"/>' +
-        '<path d="M10 38 Q18 36 26 38" stroke="rgba(93,216,255,0.5)" stroke-width="1" fill="none"/>' +
-        '<path d="M14 18 Q13 24 14 30 L22 30 Q23 24 22 18 Z" fill="#5a7a4a" stroke="#4a6a3a" stroke-width="0.5"/>' +
-        '<rect x="15" y="22" width="3" height="2.5" rx="0.5" fill="rgba(0,0,0,0.1)"/>' +
-        '<rect x="19" y="23" width="2.5" height="2" rx="0.5" fill="rgba(0,0,0,0.08)"/>' +
-        '<path d="M14 20 L10 16" stroke="#5a7a4a" stroke-width="2" stroke-linecap="round" fill="none"/>' +
-        '<path d="M22 20 L25 23" stroke="#5a7a4a" stroke-width="2" stroke-linecap="round" fill="none"/>' +
-        '<path d="M10 16 L4 4 L2 1" stroke="#8B7355" stroke-width="1.2" stroke-linecap="round" fill="none"/>' +
-        '<path class="ht-stand-flyline" d="M2 1 Q10 -2 18 0 Q26 2 32 8" stroke="rgba(255,224,130,0.6)" stroke-width="0.8" fill="none"/>' +
-        '<circle cx="32" cy="8" r="1" fill="#ffe082" opacity="0.7"/>' +
-        '<ellipse cx="18" cy="14" rx="6" ry="2" fill="#5a7a4a"/>' +
-        '<path d="M14 14 Q14 9 18 8 Q22 9 22 14" fill="#6a8a5a" stroke="#4a6a3a" stroke-width="0.4"/>' +
-        '<circle cx="18" cy="12" r="3.5" fill="#e8c99b"/>' +
-        '<path d="M16 11.5 L20 11.5" stroke="#222" stroke-width="1.2" stroke-linecap="round"/>' +
+        '<svg viewBox="0 0 40 52" width="36" height="46" class="ht-stand-here-svg">' +
+        '<ellipse cx="20" cy="50" rx="9" ry="2.5" fill="rgba(0,0,0,0.25)"/>' +
+        '<path d="M15 35 L14 47 L18 47 L17 35 Z" fill="#2a3a2a" stroke="#1a2a1a" stroke-width="0.5"/>' +
+        '<path d="M23 35 L22 47 L26 47 L25 35 Z" fill="#2a3a2a" stroke="#1a2a1a" stroke-width="0.5"/>' +
+        '<path d="M12 44 Q20 42 28 44" stroke="rgba(93,216,255,0.6)" stroke-width="1.2" fill="none"/>' +
+        '<path d="M15 22 Q14 28 15 35 L25 35 Q26 28 25 22 Z" fill="#FF6B00" stroke="#CC5500" stroke-width="0.5"/>' +
+        '<rect x="16" y="26" width="3.5" height="3" rx="0.5" fill="rgba(0,0,0,0.15)"/>' +
+        '<rect x="20.5" y="27" width="3" height="2.5" rx="0.5" fill="rgba(0,0,0,0.12)"/>' +
+        '<path d="M15.5 30 L24.5 30" stroke="#ffdd44" stroke-width="0.8" opacity="0.6"/>' +
+        '<path d="M15 24 L11 19" stroke="#FF6B00" stroke-width="2.2" stroke-linecap="round" fill="none"/>' +
+        '<path d="M25 24 L28 28" stroke="#FF6B00" stroke-width="2.2" stroke-linecap="round" fill="none"/>' +
+        '<path d="M11 19 L5 5 L3 1" stroke="#8B7355" stroke-width="1.4" stroke-linecap="round" fill="none"/>' +
+        '<path class="ht-stand-flyline" d="M3 1 Q12 -3 20 0 Q28 3 35 10" stroke="rgba(255,224,130,0.7)" stroke-width="0.9" fill="none"/>' +
+        '<circle cx="35" cy="10" r="1.2" fill="#ffe082" opacity="0.8"/>' +
+        '<ellipse cx="20" cy="17" rx="7" ry="2.5" fill="#2a5a2a"/>' +
+        '<path d="M15 17 Q15 12 20 11 Q25 12 25 17" fill="#3a6a3a" stroke="#2a5a2a" stroke-width="0.4"/>' +
+        '<circle cx="20" cy="15" r="4" fill="#e8c99b"/>' +
+        '<path d="M17.5 14.5 L22.5 14.5" stroke="#222" stroke-width="1.5" stroke-linecap="round"/>' +
         '</svg>' +
         '</div>',
-      iconSize: [28, 34],
-      iconAnchor: [14, 34]
+      iconSize: [36, 46],
+      iconAnchor: [18, 46]
     });
     var shMarker = L.marker([anglerLat, anglerLng], {
       icon: shIcon,
@@ -4492,6 +4517,18 @@ function _autoCheckInToPin(pinIdx) {
       interactive: false
     }).addTo(map);
     _activeApproachLines.push(arrowMk);
+
+    // ── Drift connecting line — thin dotted line from cast landing to fish ──
+    // Creates clear visual chain: Stand Here → Cast Arc → CAST HERE → drift → Fish
+    var driftLine = L.polyline([[castLandLat, castLandLng], [md.fishLat, md.fishLng]], {
+      color: '#5dd8ff',
+      weight: 1.5,
+      opacity: 0.4,
+      dashArray: '4 4',
+      className: 'ht-drift-connect',
+      interactive: false
+    }).addTo(map);
+    _activeApproachLines.push(driftLine);
   });
 
   // Zoom to fit the main pin + micro spots

@@ -238,6 +238,20 @@ window.TROUT_WATERS = [
       [37.7329,-92.8595],[37.7341,-92.8614],
       [37.7347,-92.8619],[37.7353,-92.8623]
     ],
+    // bankWidths: [leftMeters, rightMeters] at each streamPath point
+    // Measured from satellite/LiDAR: left=west/south bank, right=east/north bank
+    // Bennett Spring is narrow (6-9m) — prior avgStreamWidth:12 was too wide
+    bankWidths: [
+      [4.0,4.5],[3.8,4.0],[3.5,3.8],[3.5,4.0],
+      [3.5,4.0],[3.8,3.8],[4.0,3.5],[4.2,3.5],
+      [4.0,3.5],[3.8,3.5],[3.5,3.5],[3.2,3.5],
+      [3.0,3.5],[3.0,3.8],[3.2,4.0],[3.5,4.0],
+      [3.5,3.8],[3.5,3.5],[3.5,3.5],[3.8,3.5],
+      [3.8,3.2],[3.8,3.2],[4.0,3.0],[4.0,3.0],
+      [3.8,3.2],[3.5,3.5],[3.5,3.5],[3.5,3.8],
+      [4.0,4.0],[4.2,4.2],
+      [4.5,4.5],[5.0,5.0]
+    ],
     solitude: 'low', difficulty: 'easy', wadingRequired: false, familyFriendly: true,
     bestSeasons: ['spring', 'fall'],
     hatches: { spring: ['BWO #16-20', 'Midges #18-24', 'Scuds #14-16'], summer: ['Caddis #14-16', 'Sulphurs #16-18', 'Terrestrials'], fall: ['BWO #16-20', 'Midges #18-22', 'October Caddis #10-12'], winter: ['Midges #20-24', 'BWO #18-22'] },
@@ -276,6 +290,14 @@ window.TROUT_WATERS = [
       [37.4543,-91.6831],[37.4540,-91.6839],[37.4536,-91.6848],[37.4533,-91.6855],
       [37.4526,-91.6862],[37.4522,-91.6863],[37.4518,-91.6864],[37.4515,-91.6864]
     ],
+    // bankWidths: [leftMeters, rightMeters] — Montauk/Current River wider channel
+    bankWidths: [
+      [6.0,6.5],[5.5,6.0],[5.5,5.5],[5.5,5.5],
+      [5.5,5.5],[5.0,5.5],[5.0,5.0],[5.5,5.0],
+      [6.0,5.5],[5.5,5.5],[5.5,5.5],[5.5,6.0],
+      [6.0,6.0],[6.5,6.0],[6.5,6.5],[6.5,6.5],
+      [6.0,6.5],[5.5,6.0],[5.5,5.5],[5.5,5.5]
+    ],
     solitude: 'low', difficulty: 'easy', wadingRequired: false, familyFriendly: true,
     bestSeasons: ['spring', 'fall'],
     hatches: { spring: ['BWO #16-20', 'Midges #18-24', 'Early Caddis #16'], summer: ['Caddis #14-16', 'Sulphurs #16-18', 'Terrestrials'], fall: ['BWO #16-20', 'Midges #18-22', 'Crane flies #10'], winter: ['Midges #20-24', 'BWO #18-22'] },
@@ -310,6 +332,13 @@ window.TROUT_WATERS = [
       [36.5888,-93.8357],[36.5878,-93.8356],[36.5868,-93.8362],[36.5865,-93.8363],
       [36.5858,-93.8361],[36.5853,-93.8356],[36.5847,-93.8351],[36.5834,-93.8346],
       [36.5827,-93.8345],[36.5821,-93.8344],[36.5814,-93.8340],[36.5807,-93.8337]
+    ],
+    // bankWidths: [leftMeters, rightMeters] — Roaring River is narrow valley stream
+    bankWidths: [
+      [4.0,4.0],[3.8,3.5],[3.5,3.5],[3.5,3.5],
+      [3.5,3.5],[3.5,3.2],[3.2,3.2],[3.2,3.5],
+      [3.5,3.5],[3.5,3.5],[3.5,3.5],[3.5,3.5],
+      [3.5,3.5],[3.5,3.5],[3.5,3.5],[3.5,3.8]
     ],
     solitude: 'low', difficulty: 'easy', wadingRequired: false, familyFriendly: true,
     bestSeasons: ['spring', 'fall'],
@@ -358,6 +387,17 @@ window.TROUT_WATERS = [
       [37.9585,-91.5368],[37.9591,-91.5368],[37.9598,-91.5368],[37.9600,-91.5367],
       [37.9603,-91.5365],[37.9606,-91.5363],[37.9610,-91.5356],[37.9615,-91.5349],
       [37.9619,-91.5343]
+    ],
+    // bankWidths: [leftMeters, rightMeters] — Maramec Spring is medium width
+    bankWidths: [
+      [5.0,5.0],[4.5,4.5],[4.5,4.5],[4.5,4.0],
+      [4.5,4.0],[4.5,4.0],[4.5,4.0],[4.5,4.0],
+      [4.5,4.5],[5.0,5.0],[5.0,5.0],[5.0,5.0],
+      [5.0,5.0],[5.0,5.0],[5.0,5.0],[5.0,5.5],
+      [5.0,5.5],[5.0,5.0],[5.0,5.0],[4.5,5.0],
+      [4.5,5.0],[4.5,5.0],[4.5,5.0],[4.5,5.0],
+      [4.5,4.5],[4.5,4.5],[4.5,4.5],[5.0,5.0],
+      [5.5,5.5]
     ],
     solitude: 'low', difficulty: 'easy', wadingRequired: false, familyFriendly: true,
     bestSeasons: ['spring', 'fall'],

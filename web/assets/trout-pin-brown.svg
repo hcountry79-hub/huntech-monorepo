@@ -1,14 +1,13 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="48" height="24" viewBox="0 0 48 24">
+﻿<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 56 28">
   <defs>
     <linearGradient id="brownBody" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0%" stop-color="#2a3a12"/>
-      <stop offset="15%" stop-color="#4a5a28"/>
-      <stop offset="30%" stop-color="#8a7a3a"/>
-      <stop offset="48%" stop-color="#c4a44a"/>
-      <stop offset="62%" stop-color="#d4a840"/>
-      <stop offset="78%" stop-color="#e8c870"/>
-      <stop offset="90%" stop-color="#f0e0a8"/>
-      <stop offset="100%" stop-color="#f8f0d8"/>
+      <stop offset="18%" stop-color="#4a5a28"/>
+      <stop offset="35%" stop-color="#8a7a38"/>
+      <stop offset="50%" stop-color="#c4a448"/>
+      <stop offset="65%" stop-color="#d4a840"/>
+      <stop offset="82%" stop-color="#e8c870"/>
+      <stop offset="100%" stop-color="#f0e0a8"/>
     </linearGradient>
     <linearGradient id="brownTail" x1="0" y1="0" x2="1" y2="0">
       <stop offset="0%" stop-color="#8a6a2a"/>
@@ -21,94 +20,82 @@
   </defs>
   <g>
     <animateTransform attributeName="transform" type="translate"
-      values="0,0; 0.25,-0.1; 0.1,0; -0.2,0.1; 0,0" dur="2.8s" repeatCount="indefinite"/>
-
-    <!-- TAIL — multi-joint articulated swimming (brown trout slightly lazier stroke) -->
+      values="0,0; 0.25,-0.1; 0,0; -0.2,0.1; 0,0" dur="2.8s" repeatCount="indefinite"/>
+    <!-- TAIL  peduncle + deeply forked caudal fin -->
     <g>
       <animateTransform attributeName="transform" type="rotate"
-        values="0 34 12; 4.5 34 12; 0 34 12; -4.5 34 12; 0 34 12" dur="1s" repeatCount="indefinite"/>
-      <path d="M33 9.5 Q35 8 37 8.5 L37 15.5 Q35 16 33 14.5 Z"
-        fill="url(#brownBody)" stroke="#1a1a0a" stroke-width="0.5" opacity="0.85"/>
+        values="0 40 14; 4.5 40 14; 0 40 14; -4.5 40 14; 0 40 14" dur="1s" repeatCount="indefinite"/>
+      <path d="M39,10.5 Q42,12 44,13 L44,15 Q42,16 39,17.5"
+        fill="url(#brownBody)" stroke="#161608" stroke-width="0.4"/>
       <g>
         <animateTransform attributeName="transform" type="rotate"
-          values="0 37 12; 7 37 12; 1.5 37 12; -7 37 12; -1.5 37 12; 0 37 12" dur="0.75s" repeatCount="indefinite"/>
-        <!-- Upper tail lobe -->
-        <path d="M37 9 Q39 5.5 44 4.5 Q43 7 41 9.5 Q39 11 37 12Z"
-          fill="url(#brownTail)" stroke="#1a1a0a" stroke-width="0.6" opacity="0.92"/>
-        <!-- Lower tail lobe -->
-        <path d="M37 12 Q39 13 41 14.5 Q43 17 44 19.5 Q39 18.5 37 15Z"
-          fill="url(#brownTail)" stroke="#1a1a0a" stroke-width="0.6" opacity="0.92"/>
-        <!-- Fork notch -->
-        <path d="M38 10.5 Q40 12 38 13.5" stroke="#3a3a1a" stroke-width="0.4" fill="none" opacity="0.3"/>
+          values="0 44 14; 5.5 44 14; 0 44 14; -5.5 44 14; 0 44 14" dur="0.7s" repeatCount="indefinite"/>
+        <!-- Upper lobe -->
+        <path d="M44,13 C44.5,10 46,6.5 48,4.5 C49.5,3 51.5,2 53.5,2 C54.5,2.5 55,3.5 54.5,5 C53,7.5 50.5,10.5 48,12.5 L44,14 Z"
+          fill="url(#brownTail)" stroke="#161608" stroke-width="0.5" opacity="0.92"/>
+        <!-- Lower lobe -->
+        <path d="M44,14 L48,15.5 C50.5,17.5 53,20.5 54.5,23 C55,24.5 54.5,25.5 53.5,26 C51.5,26 49.5,25 48,23.5 C46,21.5 44.5,18 44,15 Z"
+          fill="url(#brownTail)" stroke="#161608" stroke-width="0.5" opacity="0.92"/>
         <!-- Fin rays -->
-        <path d="M37.5 9.5 Q40 6.5 43 5.5" stroke="#3a3a1a" stroke-width="0.25" fill="none" opacity="0.3"/>
-        <path d="M37.5 10.5 Q40 8 42 7" stroke="#3a3a1a" stroke-width="0.2" fill="none" opacity="0.25"/>
-        <path d="M37.5 13.5 Q40 16 42 17" stroke="#3a3a1a" stroke-width="0.2" fill="none" opacity="0.25"/>
-        <path d="M37.5 14.5 Q40 17.5 43 18.5" stroke="#3a3a1a" stroke-width="0.25" fill="none" opacity="0.3"/>
+        <path d="M44.5,13 Q48,7 53,3" stroke="#3a3a14" stroke-width="0.2" fill="none" opacity="0.2"/>
+        <path d="M45,14.5 Q49,19 52,22.5" stroke="#3a3a14" stroke-width="0.18" fill="none" opacity="0.15"/>
       </g>
     </g>
-    <!-- Main body with flex -->
-    <path d="M3 12C3 12 5 4.5 14 3.5c4.5-.5 9 1 14 2.5l4-1c1.5-.5 3-.2 4.5.6l2.5 1.8c.5.4.5 1 0 1.4l-2.5 1.8c-1.5.8-3 1.1-4.5.6L27 11c-3.5 1.5-9 3-14 2.8C8 13.5 3 12 3 12z"
-      fill="url(#brownBody)" stroke="#0a0a00" stroke-width="1.5" stroke-linejoin="round">
-      <animate attributeName="d" dur="2s" repeatCount="indefinite"
-        values="M3 12C3 12 5 4.5 14 3.5c4.5-.5 9 1 14 2.5l4-1c1.5-.5 3-.2 4.5.6l2.5 1.8c.5.4.5 1 0 1.4l-2.5 1.8c-1.5.8-3 1.1-4.5.6L27 11c-3.5 1.5-9 3-14 2.8C8 13.5 3 12 3 12z;
-               M3 12C3 12 5 4.7 14 3.7c4.5-.5 9 0.9 14 2.3l4-0.9c1.5-.5 3-.2 4.5.6l2.5 1.7c.5.4.5 1 0 1.4l-2.5 1.7c-1.5.8-3 1.1-4.5.6L27 10.9c-3.5 1.4-9 2.9-14 2.6C8 13.2 3 12 3 12z;
-               M3 12C3 12 5 4.5 14 3.5c4.5-.5 9 1 14 2.5l4-1c1.5-.5 3-.2 4.5.6l2.5 1.8c.5.4.5 1 0 1.4l-2.5 1.8c-1.5.8-3 1.1-4.5.6L27 11c-3.5 1.5-9 3-14 2.8C8 13.5 3 12 3 12z;
-               M3 12C3 12 5 4.3 14 3.3c4.5-.5 9 1.1 14 2.7l4-1.1c1.5-.5 3-.2 4.5.6l2.5 1.9c.5.4.5 1 0 1.4l-2.5 1.9c-1.5.8-3 1.1-4.5.6L27 11.1c-3.5 1.6-9 3.1-14 2.9C8 13.8 3 12 3 12z;
-               M3 12C3 12 5 4.5 14 3.5c4.5-.5 9 1 14 2.5l4-1c1.5-.5 3-.2 4.5.6l2.5 1.8c.5.4.5 1 0 1.4l-2.5 1.8c-1.5.8-3 1.1-4.5.6L27 11c-3.5 1.5-9 3-14 2.8C8 13.5 3 12 3 12z"/>
+    <!-- BODY  streamlined torpedo -->
+    <path d="M4,14 C4,7.5 8,4 16,3 C23,2 29,3 36,5.5 Q40,7.5 42,10.5 L42,17.5 Q40,20.5 36,22.5 C29,25 23,26 16,25 C8,24 4,20.5 4,14 Z"
+      fill="url(#brownBody)" stroke="#080804" stroke-width="1.3" stroke-linejoin="round">
+      <animate attributeName="d" dur="2.2s" repeatCount="indefinite"
+        values="M4,14 C4,7.5 8,4 16,3 C23,2 29,3 36,5.5 Q40,7.5 42,10.5 L42,17.5 Q40,20.5 36,22.5 C29,25 23,26 16,25 C8,24 4,20.5 4,14 Z;
+               M4,14 C4,8 8,4.5 16,3.5 C23,2.5 29,3.3 36,5.8 Q40,7.8 42,11 L42,17 Q40,20 36,22 C29,24.5 23,25.5 16,24.5 C8,23.5 4,20 4,14 Z;
+               M4,14 C4,7.5 8,4 16,3 C23,2 29,3 36,5.5 Q40,7.5 42,10.5 L42,17.5 Q40,20.5 36,22.5 C29,25 23,26 16,25 C8,24 4,20.5 4,14 Z"/>
     </path>
-    <!-- Golden lateral band -->
-    <path d="M7 11.3 Q15 10.5 25 11 Q30 11.3 34 11" stroke="#c4881a" stroke-width="1.5" fill="none" opacity="0.3"/>
-    <path d="M8 11h25" stroke="#4a3a1a" stroke-width="0.35" opacity="0.4"/>
-    <!-- Dark spots -->
-    <circle cx="11" cy="7" r="1.1" fill="#1a0a00" opacity="0.5"/>
-    <circle cx="16" cy="6.5" r="0.95" fill="#1a0a00" opacity="0.45"/>
-    <circle cx="21" cy="6" r="1.0" fill="#1a0a00" opacity="0.5"/>
-    <circle cx="26" cy="7" r="0.85" fill="#1a0a00" opacity="0.4"/>
-    <circle cx="30" cy="7.5" r="0.8" fill="#1a0a00" opacity="0.35"/>
-    <circle cx="14" cy="9" r="0.7" fill="#1a0a00" opacity="0.35"/>
-    <circle cx="23" cy="8.5" r="0.75" fill="#1a0a00" opacity="0.4"/>
-    <circle cx="18" cy="8" r="0.65" fill="#1a0a00" opacity="0.35"/>
+    <!-- GOLDEN LATERAL BAND -->
+    <path d="M9,13.5 Q20,12.5 32,13.5 Q38,14 42,14" stroke="#c48818" stroke-width="1.8" fill="none" opacity="0.3"/>
+    <path d="M9,14 L41,14.2" stroke="#4a3a18" stroke-width="0.3" opacity="0.4"/>
+    <!-- Large dark spots -->
+    <circle cx="14" cy="7.5" r="1.0" fill="#1a0800" opacity="0.5"/>
+    <circle cx="20" cy="6.5" r="0.9" fill="#1a0800" opacity="0.45"/>
+    <circle cx="26" cy="7" r="0.95" fill="#1a0800" opacity="0.45"/>
+    <circle cx="32" cy="8" r="0.85" fill="#1a0800" opacity="0.4"/>
+    <circle cx="37" cy="9" r="0.75" fill="#1a0800" opacity="0.35"/>
+    <circle cx="17" cy="10.5" r="0.65" fill="#1a0800" opacity="0.35"/>
+    <circle cx="28" cy="10" r="0.7" fill="#1a0800" opacity="0.35"/>
     <!-- Red/orange spots with cream halos -->
-    <circle cx="13" cy="10.5" r="0.8" fill="#f0e0c0" opacity="0.5"/>
-    <circle cx="13" cy="10.5" r="0.5" fill="#e04020" opacity="0.55"/>
-    <circle cx="18" cy="10" r="0.75" fill="#f0e0c0" opacity="0.45"/>
-    <circle cx="18" cy="10" r="0.45" fill="#e04020" opacity="0.5"/>
-    <circle cx="23" cy="10.3" r="0.7" fill="#f0e0c0" opacity="0.45"/>
-    <circle cx="23" cy="10.3" r="0.4" fill="#d03818" opacity="0.5"/>
-    <circle cx="28" cy="10" r="0.65" fill="#f0e0c0" opacity="0.4"/>
-    <circle cx="28" cy="10" r="0.35" fill="#e04020" opacity="0.45"/>
-    <circle cx="10" cy="9.5" r="0.6" fill="#f0e0c0" opacity="0.4"/>
-    <circle cx="10" cy="9.5" r="0.35" fill="#d83818" opacity="0.45"/>
+    <circle cx="14" cy="12" r="0.7" fill="#f0e0c0" opacity="0.45"/>
+    <circle cx="14" cy="12" r="0.45" fill="#e04020" opacity="0.5"/>
+    <circle cx="20" cy="11.5" r="0.65" fill="#f0e0c0" opacity="0.4"/>
+    <circle cx="20" cy="11.5" r="0.4" fill="#e04020" opacity="0.45"/>
+    <circle cx="26" cy="12" r="0.6" fill="#f0e0c0" opacity="0.4"/>
+    <circle cx="26" cy="12" r="0.35" fill="#d83818" opacity="0.45"/>
+    <circle cx="32" cy="11.5" r="0.55" fill="#f0e0c0" opacity="0.35"/>
+    <circle cx="32" cy="11.5" r="0.3" fill="#e04020" opacity="0.4"/>
     <!-- Dorsal fin -->
     <g>
       <animateTransform attributeName="transform" type="rotate"
-        values="0 18 4; -2 18 4; 0 18 4; 2 18 4; 0 18 4" dur="2.6s" repeatCount="indefinite"/>
-      <path d="M16 4.5 Q18 1 22 2.5 Q20 3.5 18.5 4.5" fill="url(#brownDorsal)" stroke="#0a0a00" stroke-width="0.6" opacity="0.85"/>
-      <path d="M17 4 Q18 2 19 2.5" stroke="#3a3a14" stroke-width="0.25" fill="none" opacity="0.35"/>
-      <path d="M18.5 3.8 Q19 2.2 20 2.8" stroke="#3a3a14" stroke-width="0.25" fill="none" opacity="0.35"/>
+        values="0 23 5; -2 23 5; 0 23 5; 2 23 5; 0 23 5" dur="2.6s" repeatCount="indefinite"/>
+      <path d="M20,5 Q23,1 27,3.5 Q25,4.5 22,5.5" fill="url(#brownDorsal)" stroke="#080804" stroke-width="0.5" opacity="0.85"/>
     </g>
     <!-- Adipose fin -->
-    <ellipse cx="30" cy="5.5" rx="1.5" ry="1" fill="#8a6a2a" stroke="#0a0a00" stroke-width="0.4" opacity="0.55"/>
+    <ellipse cx="38" cy="6.5" rx="1.4" ry="0.8" fill="#8a6a28" stroke="#080804" stroke-width="0.3" opacity="0.5"/>
     <!-- Pectoral fin -->
     <g>
       <animateTransform attributeName="transform" type="rotate"
-        values="0 13 14; 5 13 14; 0 13 14; -3 13 14; 0 13 14" dur="1.4s" repeatCount="indefinite"/>
-      <path d="M12 13.5 Q10 16.5 14 15.5 Q13 14 12 13.5z" fill="#c4a050" stroke="#0a0a00" stroke-width="0.4" opacity="0.65"/>
+        values="0 15 18; 4 15 18; 0 15 18; -3 15 18; 0 15 18" dur="1.4s" repeatCount="indefinite"/>
+      <path d="M14,17 Q12,20.5 16,19.5 Q15,18 14,17 Z" fill="#c4a050" stroke="#080804" stroke-width="0.3" opacity="0.6"/>
     </g>
-    <!-- Pelvic fin -->
-    <path d="M20 14 Q19 16 22 15 Q21 14.2 20 14z" fill="#c4a050" stroke="#0a0a00" stroke-width="0.3" opacity="0.55"/>
-    <!-- Anal fin -->
-    <path d="M26 14 Q25 16.5 28 15 Q27 14 26 14z" fill="#b89848" stroke="#0a0a00" stroke-width="0.3" opacity="0.55"/>
+    <!-- Pelvic + Anal fins -->
+    <path d="M24,18.5 Q23,21 26,20 Q25,19 24,18.5 Z" fill="#c4a050" stroke="#080804" stroke-width="0.25" opacity="0.5"/>
+    <path d="M30,19 Q29,21.5 33,20 Q31,19 30,19 Z" fill="#b89848" stroke="#080804" stroke-width="0.25" opacity="0.5"/>
     <!-- Gill plate -->
-    <path d="M10 6.5 Q9 10 10 14.5" stroke="#0a0a00" stroke-width="0.6" fill="none" opacity="0.3"/>
-    <path d="M10.5 7 Q9.5 10 10.5 14" stroke="#c48830" stroke-width="0.4" fill="none" opacity="0.15"/>
-    <!-- Eye — amber iris -->
-    <circle cx="7" cy="9.5" r="1.6" fill="#111" stroke="#c4a050" stroke-width="0.5"/>
-    <circle cx="7.2" cy="9.2" r="0.8" fill="#2a1a0a"/>
-    <circle cx="6.7" cy="9" r="0.4" fill="#fff" opacity="0.75"/>
-    <!-- Mouth — hooked jaw -->
-    <path d="M3 12 Q2.5 11.3 3.5 10.8" stroke="#0a0a00" stroke-width="0.5" fill="none" opacity="0.5"/>
-    <path d="M8 7 Q18 5.5 28 7" stroke="#fff" stroke-width="0.3" fill="none" opacity="0.1"/>
+    <path d="M13,6 Q12,11 13,19.5" stroke="#080804" stroke-width="0.5" fill="none" opacity="0.3"/>
+    <path d="M13.5,7 Q12.5,11 13.5,19" stroke="#c48830" stroke-width="0.3" fill="none" opacity="0.15"/>
+    <!-- Eye  amber iris -->
+    <circle cx="8.5" cy="11.5" r="1.9" fill="#111" stroke="#c4a050" stroke-width="0.5"/>
+    <circle cx="8.7" cy="11.2" r="0.9" fill="#2a1a0a"/>
+    <circle cx="8.2" cy="10.9" r="0.45" fill="#fff" opacity="0.75"/>
+    <!-- Mouth  hooked jaw -->
+    <path d="M4,14 Q3.3,12.8 4.5,12" stroke="#080804" stroke-width="0.5" fill="none" opacity="0.45"/>
+    <!-- Specular highlight -->
+    <path d="M10,5 Q22,3 34,5.5" stroke="#fff" stroke-width="0.4" fill="none" opacity="0.1"/>
   </g>
 </svg>
