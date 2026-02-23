@@ -3049,6 +3049,8 @@ window.deployAiFishingPins = function(water, zone, fishFlow) {
   _aiFishingPins.forEach(function(m) { try { map.removeLayer(m); } catch {} });
   _aiFishingPins = [];
   _aiFishingSpots = [];
+  _checkedInPinIdx = -1;
+  _checkedInMicroIdx = -1;
   clearMicroPins();
 
   var segment = getZoneStreamSegment(water, zone);
@@ -3091,6 +3093,15 @@ window.deployAiFishingPins = function(water, zone, fishFlow) {
   // Sort by score descending (best first)
   spots.sort(function(a, b) { return b.score - a.score; });
   spots.forEach(function(s, idx) { s.rank = idx + 1; });
+
+  // Calculate territory boundaries — each pin owns half the distance to adjacent pins
+  var posSorted = spots.slice().sort(function(a, b) { return a.segmentIdx - b.segmentIdx; });
+  for (var ti = 0; ti < posSorted.length; ti++) {
+    var prevSegIdx = ti > 0 ? posSorted[ti - 1].segmentIdx : 0;
+    var nextSegIdx = ti < posSorted.length - 1 ? posSorted[ti + 1].segmentIdx : segment.length - 1;
+    posSorted[ti].territoryStart = Math.round((prevSegIdx + posSorted[ti].segmentIdx) / 2);
+    posSorted[ti].territoryEnd = Math.round((posSorted[ti].segmentIdx + nextSegIdx) / 2);
+  }
 
   _aiFishingSpots = spots;
 
@@ -3874,11 +3885,20 @@ function _autoCheckInToPin(pinIdx) {
 
   // status suppressed
 
-  // Clear previous micro pins & polygons
+  // Close existing spot info tray
+  if (typeof window._closeSpotInfoTray === 'function') window._closeSpotInfoTray();
+
+  // Clear ALL previous layers — micro pins, polygons, angler pins, approach lines, flow, boulders
   _activeMicroPins.forEach(function(m) { try { map.removeLayer(m); } catch {} });
   _activeMicroPins = [];
   _activeMicroPolygons.forEach(function(p) { try { map.removeLayer(p); } catch {} });
   _activeMicroPolygons = [];
+  _activeAnglerPins.forEach(function(m) { try { map.removeLayer(m); } catch {} });
+  _activeAnglerPins = [];
+  _activeApproachLines.forEach(function(l) { try { map.removeLayer(l); } catch {} });
+  _activeApproachLines = [];
+  if (typeof clearFlowOverlay === 'function') try { clearFlowOverlay(); } catch {}
+  if (typeof clearBoulders === 'function') try { clearBoulders(); } catch {}
 
   // Build micro-area polygon around this spot (small radius)
   var segment = getZoneStreamSegment(water, zone);
@@ -3927,14 +3947,19 @@ function _autoCheckInToPin(pinIdx) {
     return Math.sqrt(dLat * dLat + dLng * dLng);
   };
 
-  // ── Build dense candidate list by scanning wider + interpolating ──
-  // Scan ±12 segment indices AND interpolate midpoints for 3× density
+  // ── Build dense candidate list — TERRITORY-AWARE scanning ──
+  // Only scan within this pin's territory (halfway to adjacent pins)
   var candidates = [];
-  var scanRadius = 12;
-  for (var offset = -scanRadius; offset <= scanRadius; offset++) {
-    if (offset === 0) continue;
-    var sIdx = cIdx + offset;
+  var tStart = typeof spot.territoryStart === 'number' ? spot.territoryStart : Math.max(0, cIdx - 4);
+  var tEnd = typeof spot.territoryEnd === 'number' ? spot.territoryEnd : Math.min(seg.length - 1, cIdx + 4);
+  // Ensure at least ±2 segment nodes so we always find candidates
+  tStart = Math.min(tStart, Math.max(0, cIdx - 2));
+  tEnd = Math.max(tEnd, Math.min(seg.length - 1, cIdx + 2));
+
+  for (var sIdx = tStart; sIdx <= tEnd; sIdx++) {
+    if (sIdx === cIdx) continue;
     if (sIdx < 0 || sIdx >= seg.length) continue;
+    var offset = sIdx - cIdx; // for downstream bias scoring
     var cLat = seg[sIdx][0];
     var cLng = seg[sIdx][1];
 
@@ -4086,10 +4111,7 @@ function _autoCheckInToPin(pinIdx) {
   });
 
   // ── Deploy stand-here angler pins + approach direction lines ──
-  _activeAnglerPins.forEach(function(m) { try { map.removeLayer(m); } catch {} });
-  _activeAnglerPins = [];
-  _activeApproachLines.forEach(function(l) { try { map.removeLayer(l); } catch {} });
-  _activeApproachLines = [];
+  // (Previous layers already cleared at top of function)
 
   // Wade-aware distance configs per micro-type
   // Waders = angler stands IN the stream (low perp offset)
