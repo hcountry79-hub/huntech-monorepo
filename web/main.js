@@ -2002,7 +2002,7 @@ function initializeMap() {
   }
   mapInitialized = true;
   map = L.map('map', {
-    center: [37.9534, -91.5328],  // Maramec Spring Park — field test 2026-02-21
+    center: [37.4605, -91.6834],  // Montauk State Park — dev focus 2026-02-24
     zoom: 15,
     maxZoom: 20,
     zoomControl: false,
@@ -6875,8 +6875,10 @@ function showEducationTile(hotspot, reason) {
   const checkinKey = hotspot ? getHotspotKey(hotspot) : '';
   const isActive = Boolean(checkinKey && activeSearchArea?.pinKey === checkinKey);
   const isComplete = Boolean(checkinKey && completedSearchAreas.has(checkinKey));
-  const checkinLabel = isComplete ? 'Complete' : (isActive ? 'Check Out' : 'Check In');
-  const checkinDisabled = isComplete;
+  // Active overrides complete — user must always be able to check out
+  const checkinLabel = isActive ? (isComplete ? 'Complete — Check Out' : 'Check Out')
+    : (isComplete ? 'Complete ✓' : 'Check In');
+  const checkinDisabled = isComplete && !isActive;
   const tier = hotspot?.tier ?? hotspot?.priority ?? hotspot?.education?.priority ?? 3;
   const rank = hotspot?.rank ?? hotspot?.priority ?? tier;
   const accent = getPriorityColor(tier);
@@ -6986,20 +6988,41 @@ window.checkInHotspot = function() {
   const checkinKey = getHotspotKey(activeEducationHotspot);
   const isActive = Boolean(checkinKey && activeSearchArea?.pinKey === checkinKey);
   const isComplete = Boolean(checkinKey && completedSearchAreas.has(checkinKey));
-  if (isComplete) {
-    showNotice('This pin is already complete.', 'info', 3200);
-    updateEducationCheckinButton();
-    return;
-  }
+
+  // Always allow check-out when actively checked in — even if marked complete
   if (isActive) {
+    // Save tracking data + journal BEFORE clearing state
+    const stats = getTrackingStatsSnapshot();
     trackingActive = false;
     saveTrackingCoverage();
+    // Persist a journal entry so coverage history is kept
+    huntJournalEntries.unshift({
+      id: `checkin_${Date.now()}`,
+      type: 'checkin',
+      areaKey: trackingAreaKey,
+      pinKey: checkinKey,
+      miles: Number(stats.miles.toFixed(2)),
+      steps: stats.steps,
+      coverage: stats.coverage,
+      path: trackingPath.map(function(p) { return [p.lat, p.lng]; }).slice(-2400),
+      notes: `Check-out: ${stats.coverage}% coverage • ${stats.miles.toFixed(1)} mi • ${stats.steps} steps`,
+      timestamp: new Date().toISOString()
+    });
+    saveHuntJournal();
+    // Keep the coverage layer visible on the map (don't clear trackingCoverageLayer)
     clearActiveSearchArea();
     if (!routeLine) stopLocationWatch();
     updateAdvancedToolsTrayState();
     updateEducationCheckinButton();
-    showNotice('Checked out. Move to the next pin.', 'info', 4200);
+    showNotice('Checked out. Coverage saved. Move to the next pin.', 'success', 4200);
     closeEducationTile();
+    return;
+  }
+
+  // Prevent re-check-in to a fully completed pin (not active)
+  if (isComplete) {
+    showNotice('This pin is already complete.', 'info', 3200);
+    updateEducationCheckinButton();
     return;
   }
 
@@ -7058,8 +7081,17 @@ function updateEducationCheckinButton() {
   const checkinKey = getHotspotKey(activeEducationHotspot);
   const isActive = Boolean(checkinKey && activeSearchArea?.pinKey === checkinKey);
   const isComplete = Boolean(checkinKey && completedSearchAreas.has(checkinKey));
-  btn.textContent = isComplete ? 'Complete' : (isActive ? 'Check Out' : 'Check In');
-  btn.disabled = isComplete;
+  // When actively checked in, ALWAYS show Check Out and keep button enabled
+  if (isActive) {
+    btn.textContent = isComplete ? 'Complete — Check Out' : 'Check Out';
+    btn.disabled = false;
+  } else if (isComplete) {
+    btn.textContent = 'Complete ✓';
+    btn.disabled = true;
+  } else {
+    btn.textContent = 'Check In';
+    btn.disabled = false;
+  }
   btn.setAttribute('aria-pressed', isActive ? 'true' : 'false');
   btn.classList.toggle('is-active', isActive);
 }
@@ -9184,25 +9216,55 @@ function loadTrackingCoverage(areaKey) {
   return true;
 }
 
+/** Convert real-world meters to Leaflet pixel weight at current zoom */
+function metersToPixelWeight(meters) {
+  if (!map) return 30;
+  const zoom = map.getZoom();
+  const lat = map.getCenter().lat;
+  const metersPerPixel = 40075016.686 * Math.cos(lat * Math.PI / 180) / (256 * Math.pow(2, zoom));
+  return Math.max(6, Math.round(meters / metersPerPixel));
+}
+
+/** Recalculate the coverage tracer width on zoom change (20 ft = 6.1 m) */
+function updateCoverageTracerWidth() {
+  const shadeWeight = metersToPixelWeight(6.1); // 20 ft total (10 ft each side)
+  if (trackingCoverageShade) {
+    trackingCoverageShade.setStyle({ weight: shadeWeight });
+  }
+  if (trackingCoverageLine) {
+    trackingCoverageLine.setStyle({ weight: Math.max(2, Math.round(shadeWeight * 0.18)) });
+  }
+}
+
+let _coverageZoomBound = false;
+function bindCoverageZoomHandler() {
+  if (_coverageZoomBound || !map) return;
+  map.on('zoomend', updateCoverageTracerWidth);
+  _coverageZoomBound = true;
+}
+
 function renderTrackingCoverage() {
   if (!map) return;
   ensureTrackingCoverageLayer();
+  bindCoverageZoomHandler();
   if (trackingCoverageShade) trackingCoverageLayer.removeLayer(trackingCoverageShade);
   if (trackingCoverageLine) trackingCoverageLayer.removeLayer(trackingCoverageLine);
 
   if (!trackingPath.length) return;
 
+  const shadeWeight = metersToPixelWeight(6.1); // 20 ft total coverage width
+
   trackingCoverageShade = L.polyline(trackingPath, {
     color: '#00ff88',
-    weight: 18,
-    opacity: 0.1,
+    weight: shadeWeight,
+    opacity: 0.18,
     lineCap: 'round',
     lineJoin: 'round'
   }).addTo(trackingCoverageLayer);
 
   trackingCoverageLine = L.polyline(trackingPath, {
     color: '#7cffc7',
-    weight: 3,
+    weight: Math.max(2, Math.round(shadeWeight * 0.18)),
     opacity: 0.9,
     lineCap: 'round',
     lineJoin: 'round'
@@ -9717,6 +9779,9 @@ function saveLastKnownLocation(latlng) {
 
 function restoreLastKnownLocation() {
   if (!map || selectedAreaLayer || defaultLocationAreaSet) return false;
+  // DEV OVERRIDE — force Montauk for dev focus (remove when done)
+  map.setView([37.4605, -91.6834], 15, { animate: false });
+  return true;
   try {
     const raw = localStorage.getItem(LAST_KNOWN_LOCATION_STORAGE_KEY);
     if (!raw) return false;
@@ -10736,6 +10801,12 @@ window.toggleToolbar = function() {
     if (!document.body.classList.contains('ht-hero-dismissed')) {
       document.body.classList.add('ht-hero-dismissed');
     }
+
+    // When checked in (tracking active), open Field Tools tray instead of generic panel
+    if (trackingActive && typeof showAdvancedToolsTray === 'function') {
+      showAdvancedToolsTray();
+    }
+
     // Auto-activate map when toolbar opens on hero-pending modules
     console.log('toggleToolbar: Opening toolbar, checking map activation');
     console.log('Map active:', document.body.classList.contains('ht-map-active'));
@@ -10779,14 +10850,6 @@ window.toggleToolbar = function() {
           map.invalidateSize();
         }
       }, 100);
-    }
-
-    // Fly module: auto-launch Fish Now workflow when tray opens
-    if (isFlyModule() && typeof window.showStreamPanel === 'function') {
-      // Slight delay so the tray animation settles first
-      setTimeout(function() {
-        window.showStreamPanel('fishNowPanel');
-      }, 120);
     }
   } else {
     toolbar.classList.add('collapsed');
@@ -11639,12 +11702,14 @@ window.toggleTracking = function() {
       miles: Number(stats.miles.toFixed(2)),
       steps: stats.steps,
       coverage: stats.coverage,
+      path: trackingPath.map(function(p) { return [p.lat, p.lng]; }).slice(-2400),
       notes: `Coverage ${stats.coverage}% • ${stats.miles.toFixed(1)} miles • ${stats.steps} steps`,
       timestamp: new Date().toISOString()
     });
     saveHuntJournal();
+    // Keep coverage lines visible on the map — do NOT remove trackingCoverageLayer
     if (!routeLine) stopLocationWatch();
-    showNotice(`Live Tracker off. Coverage ${stats.coverage}% • ${stats.miles.toFixed(1)} miles`, 'info', 5200);
+    showNotice(`Tracker off. Coverage saved (${stats.coverage}% • ${stats.miles.toFixed(1)} mi).`, 'success', 5200);
   }
   updateAdvancedToolsTrayState();
 };
@@ -16264,7 +16329,7 @@ window.clearAllDrawings = function() {
 };
 
 
-/* ═══ FISH NOW — showStreamPanel (TOP-LEVEL, always available) ═══ */
+/* ═══ Stream Panel switching (TOP-LEVEL, always available) ═══ */
 window.showStreamPanel = function showStreamPanel(panelId) {
   console.log('HUNTECH: showStreamPanel called with', panelId);
   try {
@@ -16307,7 +16372,6 @@ window.showStreamPanel = function showStreamPanel(panelId) {
           window._fishNowInitFn();
         } else {
           console.warn('HUNTECH: fishNowInit not ready yet');
-          // showNotice('Loading Fish Now… try again in a moment.', 'info', 2000);
         }
       }
     } else if (panelId !== 'fishNowPanel') {
@@ -16365,6 +16429,8 @@ document.addEventListener('DOMContentLoaded', () => {
     document.body.classList.add('ht-map-active');
     document.body.classList.add('ht-hero-dismissed');
     initializeMap();
+    // Suppress MDC land labels — fly module has its own area pins
+    setMdcLandLabelsSuppressed(true);
     updateFilterChips();
     updateWorkflowUI();
     updateLocateMeOffset();
@@ -16372,15 +16438,13 @@ document.addEventListener('DOMContentLoaded', () => {
     requestAnimationFrame(() => {
       if (map && typeof map.invalidateSize === 'function') map.invalidateSize();
     });
-    // Default to Bennett Spring on launch
+    // Default fly-fishing map center on launch
+    // DEV OVERRIDE — force Montauk for dev focus (remove when done)
     requestAnimationFrame(() => {
       setTimeout(() => {
-        var bennettSpring = window.TROUT_WATERS && window.TROUT_WATERS.find(function(w) { return w.id === 'bennett-spring'; });
-        if (bennettSpring && map) {
-          map.setView([bennettSpring.lat, bennettSpring.lng], 14, { animate: false });
-          console.log('HUNTECH: Defaulted map to Bennett Spring');
-        } else {
-          centerOnMyLocationInternal();
+        if (map) {
+          map.setView([37.4605, -91.6834], 15, { animate: false });
+          console.log('HUNTECH: DEV OVERRIDE — Defaulted map to Montauk');
         }
       }, 50);
     });
@@ -16510,7 +16574,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // Ignore storage failures
   }
 
-  // Fly module: start with tray CLOSED — user taps Fish Now to open
   // Fly module: start with tray CLOSED by default
   if (isFly) {
     try {
@@ -16553,8 +16616,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Update weather every 2 minutes
   setInterval(updateWeather, 120000);
-
-  // NOTE: showStreamPanel is defined later in the Fish Now workflow engine section
 
   window.fishNowCheckIn = function fishNowCheckIn() {
     const waterSelect = document.getElementById('flyWaterSelect');
@@ -16604,6 +16665,8 @@ document.addEventListener('DOMContentLoaded', () => {
     routeStartMarker: null,
     routeEndMarker: null,
     routePolyline: null,
+    selectedZoneIdx: 0,
+    selectedZone: null,
   };
 
   /* ── Step visibility helper ── */
@@ -16669,33 +16732,8 @@ document.addEventListener('DOMContentLoaded', () => {
   /* ═══ FISH NOW — fishNowInit registered on window for top-level showStreamPanel ═══ */
   function fishNowInit() {
     console.log('HUNTECH: fishNowInit running');
-    fishShowStep(0); // show GPS scanning state
-    // DEV: Lock to Bennett Spring for testing (skip real GPS)
-    var water = window.TROUT_WATERS && window.TROUT_WATERS.find(function(w) { return w.id === 'bennett-spring'; });
-    if (!water) {
-      showNotice('Bennett Spring data not loaded.', 'error', 3500);
-      return;
-    }
-    fishFlow.area = water;
-    placeAreaPin(water);
-    if (typeof map !== 'undefined' && map) {
-      map.setView([water.lat, water.lng], 14, { animate: true, duration: 1.0 });
-    }
-    // Show the unified action tray (bottom bar)
-    if (typeof showFlyWaterActionBar === 'function') {
-      setTimeout(function() { showFlyWaterActionBar(water); }, 400);
-    }
-    // Populate step 1 welcome elements
-    var ribbonEl = document.getElementById('fishAreaRibbon');
-    var titleEl = document.getElementById('fishAreaTitle');
-    var descEl = document.getElementById('fishAreaDesc');
-    if (ribbonEl) ribbonEl.textContent = '\uD83C\uDFA3 ' + (water.ribbon || water.category || 'Trout Water');
-    if (titleEl) titleEl.textContent = 'Welcome to ' + water.name;
-    if (descEl) {
-      var parts = [(water.streamMiles ? water.streamMiles + ' mi' : ''), (water.species || []).join(', '), (water.waterType || '')].filter(Boolean);
-      descEl.textContent = parts.join(' \u00B7 ');
-    }
-    setTimeout(function() { fishShowStep(1); }, 500);
+    // Just show the welcome step — user picks a favorite to begin
+    fishShowStep(1);
   }
 
   // Called when user taps a water in the browse list or a pin on the map
@@ -16726,58 +16764,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Expose on window so top-level showStreamPanel can call it
   window._fishNowInitFn = fishNowInit;
 
-  // Allow quick-jump favorites (e.g., Montauk) to enter the Fish Now flow directly
-  window.loadFavoriteWater = function(waterId) {
-    try {
-      if (!waterId || !window.TROUT_WATERS || !Array.isArray(window.TROUT_WATERS)) {
-        showNotice('Trout waters data not loaded yet.', 'error', 3500);
-        return;
-      }
-
-      const water = window.TROUT_WATERS.find(function(w) { return w.id === waterId; });
-      if (!water) {
-        showNotice('That trout water is not available yet.', 'error', 3500);
-        return;
-      }
-
-      // Ensure map is active and hero is faded
-      if (!document.body.classList.contains('ht-map-active') && typeof activateFlyMap === 'function') {
-        activateFlyMap();
-      }
-
-      // Show the Fish Now panel but skip GPS-based init once
-      window._fishNowSkipInitOnce = true;
-      if (typeof window.showStreamPanel === 'function') {
-        window.showStreamPanel('fishNowPanel');
-      }
-
-      // Center map on this water
-      if (typeof map !== 'undefined' && map && water.lat && water.lng) {
-        map.setView([water.lat, water.lng], 16, { animate: true, duration: 1.2 });
-      }
-
-      // Wire into Fish Now state and UI
-      fishFlow.area = water;
-      placeAreaPin(water);
-      const ribbonEl = document.getElementById('fishAreaRibbon');
-      const titleEl = document.getElementById('fishAreaTitle');
-      const descEl = document.getElementById('fishAreaDesc');
-      if (ribbonEl) ribbonEl.textContent = '🎣 ' + (water.ribbon || water.category || 'Trout Water');
-      if (titleEl) titleEl.textContent = 'Welcome to ' + water.name;
-      if (descEl) {
-        const parts = [(water.streamMiles ? water.streamMiles + ' mi' : ''), (water.species || []).join(', '), (water.waterType || '')].filter(Boolean);
-        descEl.textContent = parts.join(' · ');
-      }
-
-      fishShowStep(1);
-      showNotice('📍 Jumped to ' + water.name, 'success', 2500);
-    } catch (e) {
-      console.error('HUNTECH: loadFavoriteWater error', e);
-      showNotice('Error loading water: ' + e.message, 'error', 4000);
-    }
-  };
-
-  /* ═══ Step 1 actions — fishStepCheckIn override (replaces inline failsafe) ═══ */
+  /* ═══ fishStepCheckIn — CHECK IN TO AREA from action bar ═══ */
   window.fishStepCheckIn = function(waterId) {
     try {
       console.log('HUNTECH: fishStepCheckIn called, waterId=', waterId, 'fishFlow.area=', fishFlow.area);
@@ -16800,29 +16787,24 @@ document.addEventListener('DOMContentLoaded', () => {
       fishFlow.selectedZoneIdx = 0;
       fishFlow.selectedZone = null;
 
-      console.log('HUNTECH: ✅ Checked in at ' + water.name);
+      showNotice('✅ Checked in at ' + water.name, 'success', 2500);
 
-      // Hide the main area pill marker so it doesn't clutter the map
-      if (typeof window._hideMainAreaPill === 'function') {
-        try { window._hideMainAreaPill(); } catch(ex) {}
-      }
-
-      // Zoom to area level on check-in so user sees zone/amenity pins
+      // Zoom to area level so user sees zone/amenity pins
       if (typeof map !== 'undefined' && map && water.lat && water.lng) {
         map.setView([water.lat, water.lng], 16, { animate: true, duration: 1.0 });
       }
 
-      // Deploy zone access points on the map
+      // Deploy zone access points on the map (parking, restrooms, etc.)
       if (typeof window.addAccessPointsForWater === 'function') {
         window.addAccessPointsForWater(water);
       }
 
-      // Close the initial action bar, then show the Stream Command Tray
+      // Close the initial action bar, then show Stream Command user input tray
       if (typeof closeFlyWaterActionBar === 'function') {
         try { closeFlyWaterActionBar(); } catch(ex) {}
       }
 
-      // Show the Stream Command Tray with zone pills + user inputs
+      // Show the Stream Command Tray with zone pills + user inputs + LET'S GO
       setTimeout(function() {
         if (typeof window.showFlyCheckInForm === 'function') {
           window.showFlyCheckInForm(water);
@@ -16835,64 +16817,10 @@ document.addEventListener('DOMContentLoaded', () => {
       showNotice('Check-in error: ' + e.message, 'error', 4000);
     }
   };
-  // Expose fishFlow on window so the inline failsafe can access it
+  // Expose fishFlow on window so ht-fly-fishing.js can access it
   window._fishFlow = fishFlow;
 
-  /* ═══ Step 2 → Deploy Pins & Advance to Route Tray ═══ */
-  window.fishStepDeploy = function() {
-    if (!fishFlow.area) return;
-    // Deploy method-filtered zone pins (only zones matching user's selection)
-    if (typeof window.deployMethodFilteredZones === 'function') {
-      window.deployMethodFilteredZones(fishFlow.area, fishFlow.method);
-    } else if (typeof showFlyWaterMarkers === 'function') {
-      showFlyWaterMarkers();
-    }
-    // Zoom to the water
-    if (typeof map !== 'undefined' && map && fishFlow.area.lat && fishFlow.area.lng) {
-      map.setView([fishFlow.area.lat, fishFlow.area.lng], 15, { animate: true, duration: 0.8 });
-    }
-    showNotice('📍 Fishing zones deployed at ' + fishFlow.area.name, 'success', 2500);
-    // Advance to routing tray (step 3)
-    fishShowStep(3);
-  };
-
-  window.fishStepSaveSpot = function(waterId) {
-    var water = fishFlow.area;
-    if (waterId && (!water || water.id !== waterId)) {
-      water = window.TROUT_WATERS && window.TROUT_WATERS.find(function(w) { return w.id === waterId; });
-      if (water) fishFlow.area = water;
-    }
-    if (!water) return;
-    // Save to localStorage
-    try {
-      const key = 'huntech_saved_fishing_spots_v1';
-      const saved = JSON.parse(localStorage.getItem(key) || '[]');
-      if (!saved.find(s => s.id === fishFlow.area.id)) {
-        saved.push({ id: fishFlow.area.id, name: fishFlow.area.name, lat: fishFlow.area.lat, lng: fishFlow.area.lng, savedAt: Date.now() });
-        localStorage.setItem(key, JSON.stringify(saved));
-      }
-      showNotice('📌 ' + fishFlow.area.name + ' saved to your spots!', 'success', 2500);
-    } catch (e) { /* ignore */ }
-  };
-
-  window.fishStepStartOver = function() {
-    if (fishFlow.areaMarker && typeof map !== 'undefined' && map) {
-      map.removeLayer(fishFlow.areaMarker);
-      fishFlow.areaMarker = null;
-    }
-    fishFlow.area = null;
-    fishFlow.step = 0;
-    fishFlow.method = 'fly';
-    fishFlow.wade = 'waders';
-    fishFlow.experience = 'learning';
-    fishFlow.mode = 'standard';
-    fishFlow.startFrom = 'current';
-    fishFlow.routeMode = 'build';
-    fishShowStep(0);
-    fishNowInit(); // re-start
-  };
-
-  /* ═══ Step 2: Strategy pill handlers ═══ */
+  /* ═══ Strategy pill handlers (used by Stream Command Tray) ═══ */
   window.pickFishMethod = function(btn, val) {
     fishFlow.method = val;
     btn.closest('.ht-method-row').querySelectorAll('.ht-method-btn').forEach(b => b.classList.remove('ht-method-btn--active'));
@@ -16930,7 +16858,6 @@ document.addEventListener('DOMContentLoaded', () => {
   window.fishStepLetsGo = function() {
     if (!fishFlow.area) return;
     showNotice('🎯 Locking in your plan…', 'success', 2000);
-    // Zoom to water area
     if (typeof map !== 'undefined' && map && fishFlow.area.lat) {
       map.setView([fishFlow.area.lat, fishFlow.area.lng], 16, { animate: true });
     }
@@ -16940,6 +16867,97 @@ document.addEventListener('DOMContentLoaded', () => {
     }, 600);
   };
 
+  /* ═══ Step 2 → Deploy Pins & Advance to Route Tray ═══ */
+  window.fishStepDeploy = function() {
+    if (!fishFlow.area) return;
+    if (typeof window.deployMethodFilteredZones === 'function') {
+      window.deployMethodFilteredZones(fishFlow.area, fishFlow.method);
+    } else if (typeof showFlyWaterMarkers === 'function') {
+      showFlyWaterMarkers();
+    }
+    if (typeof map !== 'undefined' && map && fishFlow.area.lat && fishFlow.area.lng) {
+      map.setView([fishFlow.area.lat, fishFlow.area.lng], 15, { animate: true, duration: 0.8 });
+    }
+    showNotice('📍 Fishing zones deployed at ' + fishFlow.area.name, 'success', 2500);
+    fishShowStep(3);
+  };
+
+  window.fishStepSaveSpot = function(waterId) {
+    var water = fishFlow.area;
+    if (waterId && (!water || water.id !== waterId)) {
+      water = window.TROUT_WATERS && window.TROUT_WATERS.find(function(w) { return w.id === waterId; });
+      if (water) fishFlow.area = water;
+    }
+    if (!water) return;
+    try {
+      const key = 'huntech_saved_fishing_spots_v1';
+      const saved = JSON.parse(localStorage.getItem(key) || '[]');
+      if (!saved.find(s => s.id === fishFlow.area.id)) {
+        saved.push({ id: fishFlow.area.id, name: fishFlow.area.name, lat: fishFlow.area.lat, lng: fishFlow.area.lng, savedAt: Date.now() });
+        localStorage.setItem(key, JSON.stringify(saved));
+      }
+      showNotice('📌 ' + fishFlow.area.name + ' saved to your spots!', 'success', 2500);
+    } catch (e) { /* ignore */ }
+  };
+
+  window.fishStepStartOver = function() {
+    if (fishFlow.areaMarker && typeof map !== 'undefined' && map) {
+      map.removeLayer(fishFlow.areaMarker);
+      fishFlow.areaMarker = null;
+    }
+    fishFlow.area = null;
+    fishFlow.step = 0;
+    fishFlow.method = 'fly';
+    fishFlow.wade = 'waders';
+    fishFlow.experience = 'learning';
+    fishFlow.mode = 'standard';
+    fishFlow.startFrom = 'current';
+    fishFlow.routeMode = 'build';
+    fishShowStep(0);
+    fishNowInit();
+  };
+
+  // Allow quick-jump favorites to enter the Fish Now flow directly
+  window.loadFavoriteWater = function(waterId) {
+    try {
+      if (!waterId || !window.TROUT_WATERS || !Array.isArray(window.TROUT_WATERS)) {
+        showNotice('Trout waters data not loaded yet.', 'error', 3500);
+        return;
+      }
+      const water = window.TROUT_WATERS.find(function(w) { return w.id === waterId; });
+      if (!water) {
+        showNotice('That trout water is not available yet.', 'error', 3500);
+        return;
+      }
+      if (!document.body.classList.contains('ht-map-active') && typeof activateFlyMap === 'function') {
+        activateFlyMap();
+      }
+      window._fishNowSkipInitOnce = true;
+      if (typeof window.showStreamPanel === 'function') {
+        window.showStreamPanel('fishNowPanel');
+      }
+      if (typeof map !== 'undefined' && map && water.lat && water.lng) {
+        map.setView([water.lat, water.lng], 16, { animate: true, duration: 1.2 });
+      }
+      fishFlow.area = water;
+      placeAreaPin(water);
+      const ribbonEl = document.getElementById('fishAreaRibbon');
+      const titleEl = document.getElementById('fishAreaTitle');
+      const descEl = document.getElementById('fishAreaDesc');
+      if (ribbonEl) ribbonEl.textContent = '🎣 ' + (water.ribbon || water.category || 'Trout Water');
+      if (titleEl) titleEl.textContent = 'Welcome to ' + water.name;
+      if (descEl) {
+        const parts = [(water.streamMiles ? water.streamMiles + ' mi' : ''), (water.species || []).join(', '), (water.waterType || '')].filter(Boolean);
+        descEl.textContent = parts.join(' · ');
+      }
+      fishShowStep(1);
+      showNotice('📍 Jumped to ' + water.name, 'success', 2500);
+    } catch (e) {
+      console.error('HUNTECH: loadFavoriteWater error', e);
+      showNotice('Error loading water: ' + e.message, 'error', 4000);
+    }
+  };
+
   /* ═══ Routing tray actions ═══ */
   window.fishRouteFromMyLocation = function() {
     fishFlow.startFrom = 'current';
@@ -16947,7 +16965,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(function(pos) {
         const startLatLng = L.latLng(pos.coords.latitude, pos.coords.longitude);
-        // Place start marker
         if (fishFlow.routeStartMarker && map) map.removeLayer(fishFlow.routeStartMarker);
         fishFlow.routeStartMarker = L.marker(startLatLng, {
           icon: L.divIcon({ className: 'ht-route-pin ht-route-pin-start', html: '📍', iconSize: [28, 28], iconAnchor: [14, 14] })
@@ -17002,7 +17019,6 @@ document.addEventListener('DOMContentLoaded', () => {
   window.fishRouteNone = function() {
     fishFlow.routeMode = 'none';
     showNotice('🎯 No route — generating briefing…', 'success', 2000);
-    // Clear any existing route markers
     if (fishFlow.routeStartMarker && map) map.removeLayer(fishFlow.routeStartMarker);
     if (fishFlow.routeEndMarker && map) map.removeLayer(fishFlow.routeEndMarker);
     if (fishFlow.routePolyline && map) map.removeLayer(fishFlow.routePolyline);
@@ -17021,19 +17037,16 @@ document.addEventListener('DOMContentLoaded', () => {
     showNotice('📍 Tap the map to set your parking spot', 'info', 4000);
     if (typeof map !== 'undefined' && map) {
       map.once('click', function(e) {
-        // Place parking marker
         if (fishFlow.routeStartMarker) map.removeLayer(fishFlow.routeStartMarker);
         fishFlow.routeStartMarker = L.marker(e.latlng, {
           icon: L.divIcon({ className: 'ht-route-pin ht-route-pin-start', html: '🅿️', iconSize: [28, 28], iconAnchor: [14, 14] })
         }).addTo(map);
         showNotice('🅿️ Parking set! Now tap your turnaround point', 'success', 3500);
-        // Wait for turnaround
         map.once('click', function(e2) {
           if (fishFlow.routeEndMarker) map.removeLayer(fishFlow.routeEndMarker);
           fishFlow.routeEndMarker = L.marker(e2.latlng, {
             icon: L.divIcon({ className: 'ht-route-pin ht-route-pin-end', html: '🏁', iconSize: [28, 28], iconAnchor: [14, 14] })
           }).addTo(map);
-          // Draw route line
           if (fishFlow.routePolyline) map.removeLayer(fishFlow.routePolyline);
           fishFlow.routePolyline = L.polyline([fishFlow.routeStartMarker.getLatLng(), e2.latlng], {
             color: '#00FF88', weight: 3, dashArray: '8,8', opacity: 0.8
@@ -17075,13 +17088,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const bodyEl = document.getElementById('fishBriefingBody');
     if (!introEl || !bodyEl) return;
 
-    // Coach introduction
     const coachNames = ['River', 'Brooks', 'Hatch', 'Drift'];
     const coach = coachNames[Math.floor(Math.random() * coachNames.length)];
     introEl.innerHTML = '<strong>Hey — I\'m Coach ' + coach + '</strong>, your Huntech AI stream guide. ' +
       'I\'ve analyzed <em>' + w.name + '</em> and here\'s what you need to know for today\'s session.';
 
-    // Build detailed briefing
     const method = fishFlow.method === 'fly' ? 'fly fishing' : fishFlow.method === 'spin' ? 'spin fishing' : 'bait fishing';
     const season = getCurrentSeason();
     const hatches = w.hatches ? w.hatches[season] : null;
@@ -17133,7 +17144,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (w.familyFriendly) html += ' • Family friendly ✅';
     html += '</div>';
 
-    // Habitat education: show two high-priority habitat types from TROUT_EDUCATION
     const edu = window.TROUT_EDUCATION || {};
     const habitatKeys = Object.keys(edu);
     if (habitatKeys.length) {
@@ -17173,7 +17183,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const nameEl = document.getElementById('liveWaterName2');
     if (nameEl && fishFlow.area) nameEl.textContent = fishFlow.area.name;
 
-    // Start timer
     fishFlow.sessionSeconds = 0;
     if (fishFlow.sessionTimer) clearInterval(fishFlow.sessionTimer);
     fishFlow.sessionTimer = setInterval(() => {
@@ -17188,7 +17197,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   /* ═══ Streamside Command Actions ═══ */
   window.fishLogCatch = function() {
-    // Open file picker for photo
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = 'image/*';
@@ -17196,7 +17204,6 @@ document.addEventListener('DOMContentLoaded', () => {
     input.onchange = function(e) {
       const file = e.target.files[0];
       if (!file) return;
-      // Save catch to log
       try {
         const key = 'huntech_catch_log_v1';
         const log = JSON.parse(localStorage.getItem(key) || '[]');
@@ -17247,7 +17254,6 @@ document.addEventListener('DOMContentLoaded', () => {
       const file = e.target.files[0];
       if (!file) return;
       showNotice('🪺 Scanning your fly box with AI… This may take a moment.', 'info', 4000);
-      // Simulate AI scan
       setTimeout(() => {
         const commonFlies = ['Adams #14', 'Elk Hair Caddis #16', 'Pheasant Tail #18', 'Woolly Bugger #10', 'Zebra Midge #20', 'Hare\'s Ear #14', 'Copper John #16', 'Blue Wing Olive #18'];
         const detected = commonFlies.sort(() => Math.random() - 0.5).slice(0, 4 + Math.floor(Math.random() * 3));
@@ -17273,7 +17279,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const hatches = w.hatches ? w.hatches[season] : 'general insect activity';
     const topFlies = w.topFlies ? w.topFlies.slice(0, 3) : ['Adams', 'Pheasant Tail', 'Elk Hair Caddis'];
 
-    // Check user's fly box
     let userBox = [];
     try { userBox = JSON.parse(localStorage.getItem('huntech_fly_box_v1') || '[]'); } catch(ex) { /* */ }
 
@@ -17292,8 +17297,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (w.coachTips && w.coachTips[0]) {
       msg += '<br><strong>Pro tip:</strong> ' + w.coachTips[0];
     }
-
-    // Show as a persistent notice
     showNotice(msg, 'success', 8000);
   };
 
@@ -17301,7 +17304,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (fishFlow.sessionTimer) { clearInterval(fishFlow.sessionTimer); fishFlow.sessionTimer = null; }
     const mins = Math.floor(fishFlow.sessionSeconds / 60);
     showNotice('⏹ Session ended — ' + mins + ' minutes on the water. Nice work!', 'success', 4000);
-    // Save session log
     try {
       const key = 'huntech_session_log_v1';
       const log = JSON.parse(localStorage.getItem(key) || '[]');
@@ -17313,7 +17315,6 @@ document.addEventListener('DOMContentLoaded', () => {
       });
       localStorage.setItem(key, JSON.stringify(log));
     } catch(ex) { /* */ }
-    // Reset
     fishShowStep(0);
     fishFlow.step = 0;
     fishFlow.sessionSeconds = 0;

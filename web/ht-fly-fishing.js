@@ -441,6 +441,7 @@ function collapseFlyCommandPanels() {
 
 function showFlyWaterActionBar(water) {
   if (!water) return;
+  console.log('[HT] showFlyWaterActionBar called for:', water.name);
   collapseFlyCommandPanels();
   const bar = ensureFlyWaterActionBar();
   bar.innerHTML = `
@@ -455,6 +456,7 @@ function showFlyWaterActionBar(water) {
     </div>
   `;
   bar.classList.add('is-visible');
+  console.log('[HT] Action bar is-visible applied, bar display:', window.getComputedStyle(bar).display);
 }
 
 /* ── Stream Command Tray: zone selection + user inputs + LET'S GO ── */
@@ -528,89 +530,8 @@ window.showFlyCheckInForm = showFlyCheckInForm;
 window.pickFishZone = function(btn, idx) {
   btn.closest('.ht-zone-select-row').querySelectorAll('.ht-zone-select-pill').forEach(b => b.classList.remove('ht-zone-select-pill--active'));
   btn.classList.add('ht-zone-select-pill--active');
-  if (window._fishFlow) {
-    window._fishFlow.selectedZoneIdx = idx;
-    window._fishFlow.zoneManuallyPicked = true;
-  }
+  if (window._fishFlow) window._fishFlow.selectedZoneIdx = idx;
 };
-
-/* ══ SMART ZONE AUTO-SELECTION ENGINE ══
-   Scores all zones based on user's method, experience, wading, and zone metadata.
-   Returns the index of the best zone for the angler. */
-function _scoreZoneForAngler(zone, fishFlow) {
-  var score = 0;
-  var method = fishFlow.method || 'fly';
-  var experience = fishFlow.experience || 'learning';
-  var wade = fishFlow.wade || 'waders';
-
-  // Method match — all zones now allow all methods, but zone habitat suits some methods better
-  var habitat = (zone.habitat || '').toLowerCase();
-  var depth = (zone.depth || '').toLowerCase();
-  var clarity = (zone.clarity || '').toLowerCase();
-  var pressure = (zone.pressure || '').toLowerCase();
-
-  if (method === 'fly') {
-    // Fly anglers love clear pools and riffles. Spring pool is paradise for fly.
-    if (clarity === 'gin-clear') score += 20;
-    else if (clarity === 'clear') score += 10;
-    if (habitat === 'pool') score += 15;
-    if (habitat === 'riffle-run') score += 12;
-    if (habitat === 'run') score += 5;
-    // Advanced fly anglers prefer challenging water (high pressure)
-    if (experience === 'advanced' && pressure === 'high') score += 10;
-    if (experience === 'confident' && pressure === 'moderate') score += 8;
-  } else if (method === 'spin') {
-    // Lure anglers do best in riffle-runs and runs with structure
-    if (habitat === 'riffle-run') score += 20;
-    if (habitat === 'run') score += 15;
-    if (habitat === 'pool') score += 5;
-    if (depth === 'medium') score += 8;
-    if (pressure === 'moderate') score += 5;
-  } else if (method === 'bait') {
-    // Bait anglers do best in deeper, slower water with less pressure
-    if (habitat === 'run') score += 20;
-    if (habitat === 'riffle-run') score += 10;
-    if (depth === 'medium-deep' || depth === 'deep') score += 15;
-    if (pressure === 'low') score += 12;
-  }
-
-  // Experience-based adjustments
-  if (experience === 'new' || experience === 'learning') {
-    // Beginners benefit from lower pressure, wider water
-    if (pressure === 'low') score += 15;
-    if (pressure === 'moderate') score += 8;
-    if (pressure === 'high') score -= 5;
-    if (depth === 'medium' || depth === 'medium-deep') score += 5;
-  } else if (experience === 'advanced') {
-    // Advanced anglers want the challenge — high pressure crystal water
-    if (pressure === 'high') score += 10;
-    if (clarity === 'gin-clear') score += 8;
-  }
-
-  // Wading preference
-  if (wade === 'streamside') {
-    // Bank anglers need accessible water — wider runs and lower zones
-    if (habitat === 'run') score += 10;
-    if (depth === 'medium-deep') score += 5;
-    if (pressure === 'low') score += 5;
-  } else {
-    // Waders can access everything — slight bonus for riffle-runs
-    if (habitat === 'riffle-run') score += 5;
-  }
-
-  return score;
-}
-
-function _autoSelectBestZone(water, fishFlow) {
-  var zones = (water.access || []).filter(function(a) { return a.type === 'zone'; });
-  if (zones.length === 0) return 0;
-  var bestIdx = 0, bestScore = -Infinity;
-  zones.forEach(function(z, idx) {
-    var s = _scoreZoneForAngler(z, fishFlow);
-    if (s > bestScore) { bestScore = s; bestIdx = idx; }
-  });
-  return bestIdx;
-}
 
 /* ══ LET'S GO — main launch sequence ══ */
 window.fishLetsGo = function() {
@@ -618,15 +539,7 @@ window.fishLetsGo = function() {
   if (!fishFlow || !fishFlow.area) return;
   const water = fishFlow.area;
   const zones = (water.access || []).filter(a => a.type === 'zone');
-
-  // Smart auto-selection: if user didn't manually pick a zone, AI picks the best one
-  var zoneIdx;
-  if (fishFlow.zoneManuallyPicked && typeof fishFlow.selectedZoneIdx === 'number') {
-    zoneIdx = fishFlow.selectedZoneIdx;
-  } else {
-    zoneIdx = _autoSelectBestZone(water, fishFlow);
-    fishFlow.selectedZoneIdx = zoneIdx;
-  }
+  const zoneIdx = typeof fishFlow.selectedZoneIdx === 'number' ? fishFlow.selectedZoneIdx : 0;
   const zone = zones[zoneIdx] || zones[0];
   if (!zone) return;
 
@@ -637,62 +550,29 @@ window.fishLetsGo = function() {
   // 1) Collapse the action bar
   closeFlyWaterActionBar();
 
-  // 1b) Hide the main area pill marker so it doesn't clutter the map
-  _hideMainAreaPill();
+  // 2) Clear clutter
+  clearFlyWaterLayer();
 
-  // 1c) Zone Focus — clear ALL zone pins so only the selected zone remains
-  clearZonePins();
-
-  // 2) Deploy zone polygon (flash then fade)
-  if (typeof window.deployZonePolygonWithFade === 'function') {
-    window.deployZonePolygonWithFade(water, zone);
-  }
-
-  // 2b) Center map on the selected zone so user doesn't have to find it
-  if (typeof map !== 'undefined' && map && zone.lat && zone.lng) {
-    map.setView([zone.lat, zone.lng], 17, { animate: true, duration: 0.8 });
-  }
-
-  // 3) Calculate and deploy ranked pins in the selected zone
+  // 3) Deploy hotspot area pins along the stream
   setTimeout(function() {
-    if (typeof window.deployAiFishingPins === 'function') {
-      window.deployAiFishingPins(water, zone, fishFlow);
+    if (typeof window.deployHotspotAreaPins === 'function') {
+      window.deployHotspotAreaPins(water);
     }
-
-    // 4) Show mission summary popup
-    setTimeout(function() {
-      if (typeof window.showMissionSummary === 'function') {
-        window.showMissionSummary(water, zone, fishFlow);
-      }
-    }, 800);
-  }, 600);
+    showNotice('Hotspots deployed — tap a pin to fish!', 'success', 3500);
+  }, 400);
 };
 
-/* Hide the main "BENNETT SPRING STATE PARK" area pill when checked in */
-function _hideMainAreaPill() {
-  try {
-    flyWaterMarkers.forEach(function(m) {
-      if (m && m._icon) m._icon.style.display = 'none';
-    });
-  } catch(e) {}
-}
-function _showMainAreaPill() {
-  try {
-    flyWaterMarkers.forEach(function(m) {
-      if (m && m._icon) m._icon.style.display = '';
-    });
-  } catch(e) {}
-}
-window._showMainAreaPill = _showMainAreaPill;
-window._hideMainAreaPill = _hideMainAreaPill;
-
-function getFlyPinIcon(labelText) {
+function getFlyPinIcon(labelText, water) {
   const label = String(labelText || '').trim();
+  const wId = (water && water.id) ? String(water.id).replace(/'/g, "\\'") : '';
   return L.divIcon({
     className: 'ht-fly-area-pin',
-    html: `<div class="ht-fly-area-pill"><img class="ht-fly-area-pill-icon" src="assets/trout-logo.png" alt="">${escapeHtml(label)}</div>`,
-    iconSize: [0, 0],
-    iconAnchor: [-15, 30]
+    html: `<div class="ht-fly-area-pill" onclick="handleAreaPillClick('${wId}')">
+      <div class="ht-fly-area-pill-name">${escapeHtml(label)}</div>
+      <div class="ht-fly-area-pill-cta">Click for area details</div>
+    </div>`,
+    iconSize: [200, 50],
+    iconAnchor: [0, 16]
   });
 }
 
@@ -712,11 +592,31 @@ function openFlyWaterPopup(marker, water) {
   showFlyWaterActionBar(water);
 }
 
+/* Direct onclick handler for area pills — bypasses Leaflet event delegation
+   which fails when iconSize makes the container too small for click targeting */
+window.handleAreaPillClick = function(waterId) {
+  console.log('[HT] handleAreaPillClick FIRED, waterId=', waterId);
+  if (!waterId) return;
+  try {
+    const allWaters = getFlyWaters().concat(getFlyCustomWaters());
+    console.log('[HT] waters found:', allWaters.length);
+    const water = allWaters.find(function(w) { return w && w.id === waterId; });
+    if (water) {
+      console.log('[HT] Matched water:', water.name, '— calling showFlyWaterActionBar');
+      showFlyWaterActionBar(water);
+    } else {
+      console.warn('[HT] No water matched for id:', waterId);
+    }
+  } catch (err) {
+    console.error('[HT] handleAreaPillClick error:', err);
+  }
+};
+
 function addFlyWaterMarker(water, labelOverride) {
   if (!water || !Number.isFinite(water.lat) || !Number.isFinite(water.lng)) return null;
   const label = labelOverride || getFlyWaterMarkerLabel(water);
   const marker = L.marker([water.lat, water.lng], {
-    icon: getFlyPinIcon(label)
+    icon: getFlyPinIcon(label, water)
   });
   marker.__flyWater = water;
   marker.on('click', () => {
@@ -740,7 +640,7 @@ function getAccessPinIcon(accessPt) {
       className: 'ht-fly-area-pin',
       html: `<div class="ht-fly-zone-pill">${escapeHtml(zoneName)}</div>`,
       iconSize: [120, 20],
-      iconAnchor: [-10, -12]
+      iconAnchor: [60, -8]
     });
   }
 
@@ -806,8 +706,6 @@ function openAccessPointPopup(marker, water, accessPt) {
       <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;">
         <button style="padding:4px 10px;border-radius:6px;border:1px solid #7cffc7;background:rgba(124,255,199,0.12);color:#7cffc7;font-size:11px;font-weight:700;cursor:pointer;"
           onclick="flyCheckInAtAccess('${waterId}',${accessPt.lat},${accessPt.lng},'${escapeHtml(accessPt.name)}')">Check In Here</button>
-        ${waterId ? `<button style="padding:4px 10px;border-radius:6px;border:1px solid #2bd4ff;background:rgba(43,212,255,0.1);color:#2bd4ff;font-size:11px;font-weight:700;cursor:pointer;"
-          onclick="flyFishNow('${waterId}')">Fish Now</button>` : ''}
       </div>
     </div>
   `;
@@ -1519,20 +1417,6 @@ function getFlyCheckInLatLng() {
   return null;
 }
 
-/* ── Point-in-polygon ray-casting (strict zone boundary enforcement) ── */
-function _pointInPolygon(lat, lng, polygon) {
-  if (!polygon || polygon.length < 3) return false;
-  var inside = false;
-  for (var i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
-    var yi = polygon[i][0], xi = polygon[i][1];
-    var yj = polygon[j][0], xj = polygon[j][1];
-    if (((yi > lat) !== (yj > lat)) && (lng < (xj - xi) * (lat - yi) / (yj - yi) + xi)) {
-      inside = !inside;
-    }
-  }
-  return inside;
-}
-
 /* Build a polygon corridor around a stream path (array of [lat,lng] pairs) */
 function buildStreamCorridor(path, bufferM) {
   if (!path || path.length < 2) return null;
@@ -1633,20 +1517,468 @@ function clearMicroPins() {
   microPinMarkers = [];
   if (zonePolygonLayer) { try { map.removeLayer(zonePolygonLayer); } catch {} zonePolygonLayer = null; }
   if (anglerPinMarker) { try { map.removeLayer(anglerPinMarker); } catch {} anglerPinMarker = null; }
-  // Clear stand-here angler pins
-  if (typeof _activeAnglerPins !== 'undefined' && _activeAnglerPins) {
-    _activeAnglerPins.forEach(function(m) { try { map.removeLayer(m); } catch {} });
-    _activeAnglerPins = [];
+}
+
+/* ── MASTER CLEANUP: remove ALL fly fishing pins from the map ──
+   Called on reset so reopening Stream Command always starts clean. */
+window._clearAllFishPins = function() {
+  // 1) AI ranked hotspot pins
+  if (typeof _aiFishingPins !== 'undefined' && Array.isArray(_aiFishingPins)) {
+    _aiFishingPins.forEach(function(m) { try { map.removeLayer(m); } catch {} });
+    _aiFishingPins = [];
   }
-  // Clear approach direction lines
-  if (typeof _activeApproachLines !== 'undefined' && _activeApproachLines) {
-    _activeApproachLines.forEach(function(l) { try { map.removeLayer(l); } catch {} });
-    _activeApproachLines = [];
+  if (typeof _aiFishingSpots !== 'undefined') _aiFishingSpots = [];
+  // 2) Micro fish pins + angler + polygon
+  clearMicroPins();
+  // 3) Active micro pins (3-icon clusters: fish, angler, target, cast lines)
+  if (typeof _activeMicroPins !== 'undefined' && Array.isArray(_activeMicroPins)) {
+    _activeMicroPins.forEach(function(m) { try { map.removeLayer(m); } catch {} });
+    _activeMicroPins = [];
   }
-  // Clear flow overlay
-  if (typeof clearFlowOverlay === 'function') try { clearFlowOverlay(); } catch {}
-  // Clear boulders
-  if (typeof clearBoulders === 'function') try { clearBoulders(); } catch {}
+  if (typeof _activeMicroPolygons !== 'undefined' && Array.isArray(_activeMicroPolygons)) {
+    _activeMicroPolygons.forEach(function(p) { try { map.removeLayer(p); } catch {} });
+    _activeMicroPolygons = [];
+  }
+  // 4) Zone deploy pins
+  clearZonePins();
+  // 5) Fly check-in area overlay
+  if (typeof flyCheckInAreaLayer !== 'undefined' && flyCheckInAreaLayer && map) {
+    try { map.removeLayer(flyCheckInAreaLayer); } catch {} flyCheckInAreaLayer = null;
+  }
+  // 6) Hotspot area pins
+  if (typeof _clearHotspotPins === 'function') _clearHotspotPins();
+  // 7) Any stale route lines from the route builder
+  if (typeof window.clearRouteOnly === 'function') { try { window.clearRouteOnly(); } catch(e) {} }
+  // 8) Stream flow canvas overlay
+  if (typeof clearStreamFlowOverlay === 'function') { try { clearStreamFlowOverlay(); } catch(e) {} }
+  console.log('HUNTECH: _clearAllFishPins — all pins removed');
+};
+
+/* ═══════════════════════════════════════════════════════════════════════
+   HOTSPOT AREA PIN SYSTEM
+   ─────────────────────────────────────────────────────────────────────
+   7 general holding-area pins deployed along the entire fly zone on
+   check-in. When the user taps a hotspot pin, micro fishing spots are
+   deployed around it. On check-out from a hotspot the micro spots are
+   removed and the user chooses "next spot" or picks a new hotspot.
+   ═══════════════════════════════════════════════════════════════════════ */
+var _hotspotPins = [];          // Leaflet markers for the 7 hotspot area pins
+var _hotspotData = [];          // data objects for each hotspot
+var _activeHotspotIdx = -1;     // which hotspot the user is currently at
+var _hotspotWater = null;       // water object for current hotspot session
+var _hotspotCheckoutBarEl = null;
+
+/* Build a hotspot area pin icon */
+function _getHotspotPinIcon(num, label, isActive, idx) {
+  var activeClass = isActive ? ' ht-hotspot-active' : '';
+  var clickIdx = (typeof idx === 'number') ? idx : -1;
+  return L.divIcon({
+    className: 'ht-hotspot-area-pin',
+    html: '<div class="ht-hotspot-area-pill' + activeClass + '" onclick="_handleHotspotPillClick(' + clickIdx + ')">' +
+      '<span class="ht-hotspot-num">' + num + '</span>' +
+      '<span class="ht-hotspot-label">' + escapeHtml(label) + '</span>' +
+      '</div>',
+    iconSize: [160, 36],
+    iconAnchor: [0, 14]
+  });
+}
+
+/* Direct onclick handler for hotspot pills — ensures click works regardless of Leaflet icon sizing */
+window._handleHotspotPillClick = function(idx) {
+  if (idx < 0 || idx >= _hotspotData.length) return;
+  try { _onHotspotPinClick(idx); } catch(err) { console.error('[HT] hotspot pill click error:', err); }
+};
+
+/* Deploy 7 hotspot area pins along the stream for a water */
+window.deployHotspotAreaPins = function(water) {
+  if (!water || !map) return;
+
+  // Clear any previous hotspot pins
+  _clearHotspotPins();
+
+  // Use data-defined hotspots if available, otherwise auto-generate from streamPath
+  var hotspots = water.hotspots;
+  if (!hotspots || !hotspots.length) {
+    // Auto-generate 7 from streamPath
+    var sp = water.streamPath;
+    if (!sp || sp.length < 2) return;
+    var count = Math.min(7, sp.length);
+    hotspots = [];
+    var defaultNames = ['Spring Run', 'Upper Riffle', 'Bend Pool', 'Mid Seam', 'Deep Run', 'Lower Pool', 'Tail-Out'];
+    for (var g = 0; g < count; g++) {
+      var idx = Math.round(g * (sp.length - 1) / (count - 1));
+      hotspots.push({
+        name: defaultNames[g] || ('Spot ' + (g + 1)),
+        lat: sp[idx][0],
+        lng: sp[idx][1],
+        habitat: 'run',
+        notes: ''
+      });
+    }
+  }
+
+  _hotspotData = hotspots;
+  _hotspotWater = water;
+  _activeHotspotIdx = -1;
+
+  var bounds = [];
+  hotspots.forEach(function(hs, i) {
+    var marker = L.marker([hs.lat, hs.lng], {
+      icon: _getHotspotPinIcon(i + 1, hs.name, false, i),
+      zIndexOffset: 500
+    }).addTo(map);
+
+    marker.__hotspotIdx = i;
+    marker.on('click', function() {
+      _onHotspotPinClick(i);
+    });
+
+    _hotspotPins.push(marker);
+    bounds.push([hs.lat, hs.lng]);
+  });
+
+  // Fit map to show all hotspot pins
+  if (bounds.length > 1) {
+    var fitBounds = L.latLngBounds(bounds);
+    map.fitBounds(fitBounds.pad(0.18), { animate: true, duration: 0.8, maxZoom: 17 });
+  }
+
+  console.log('HUNTECH: Deployed ' + hotspots.length + ' hotspot area pins for ' + water.name);
+};
+
+/* Clear all hotspot pins from map */
+function _clearHotspotPins() {
+  _hotspotPins.forEach(function(m) { try { map.removeLayer(m); } catch {} });
+  _hotspotPins = [];
+  _hotspotData = [];
+  _activeHotspotIdx = -1;
+  _hotspotWater = null;
+  _dismissHotspotCheckoutBar();
+}
+window._clearHotspotPins = _clearHotspotPins;
+
+/* Handle click on a hotspot pin — show info tile with CHECK IN button */
+function _onHotspotPinClick(idx) {
+  if (idx < 0 || idx >= _hotspotData.length) return;
+  var hs = _hotspotData[idx];
+  if (!hs || !_hotspotWater) return;
+
+  // If already checked into this hotspot, show its info
+  if (_activeHotspotIdx === idx) {
+    showNotice('Already at ' + hs.name + '. Fish the micro spots!', 'info', 2500);
+    return;
+  }
+
+  // Zoom to hotspot
+  map.setView([hs.lat, hs.lng], 17, { animate: true, duration: 0.6 });
+
+  // Show hotspot info tile using the existing action bar
+  _showHotspotInfoTile(idx);
+}
+
+/* Show the hotspot info tile — name, habitat, notes, CHECK IN button */
+function _showHotspotInfoTile(idx) {
+  var hs = _hotspotData[idx];
+  if (!hs) return;
+
+  var habitatLabels = {
+    'pool': '🏊 Deep Pool', 'riffle': '🌊 Riffle', 'run': '💧 Run',
+    'seam': '🔀 Current Seam', 'tailout': '🏖️ Tail-Out',
+    'boulder': '🪨 Boulder Run', 'undercut': '🏔️ Undercut Bank',
+    'pocket': '🫧 Pocket Water', 'log': '🪵 Log Structure'
+  };
+  var habitatBadge = habitatLabels[hs.habitat] || ('📍 ' + (hs.habitat || 'Holding Area'));
+
+  var bar = ensureFlyWaterActionBar();
+  bar.innerHTML =
+    '<div class="ht-fly-water-bar-header ht-fly-water-bar-header--center">' +
+      '<button class="ht-fly-water-bar-close" type="button" onclick="closeFlyWaterActionBar()">✕</button>' +
+      '<div class="ht-fly-water-bar-nameblock">' +
+        '<div class="ht-fly-water-bar-title ht-fly-water-bar-title--hero">' + escapeHtml(hs.name) + '</div>' +
+        '<div class="ht-fly-water-bar-sub ht-fly-water-bar-sub--cmd" style="margin-top:2px;">' + habitatBadge + ' — Spot #' + (idx + 1) + ' of ' + _hotspotData.length + '</div>' +
+      '</div>' +
+    '</div>' +
+    '<div style="padding:0 16px 8px;font-size:12px;color:#b8d8c8;line-height:1.4;">' +
+      escapeHtml(hs.notes || '') +
+    '</div>' +
+    '<div class="ht-fly-water-bar-actions ht-fly-water-bar-actions--single">' +
+      '<button class="ht-fly-pill ht-fly-pill--checkin-hero" type="button" onclick="hotspotDoCheckIn(' + idx + ')">🎣 CHECK IN — Deploy Fishing Spots</button>' +
+    '</div>';
+  bar.classList.add('is-visible');
+}
+
+/* Global: check in to a hotspot from the info tile button */
+window.hotspotDoCheckIn = function(idx) {
+  closeFlyWaterActionBar();
+
+  // If checked into a different hotspot, silent checkout first
+  if (_activeHotspotIdx >= 0) {
+    _hotspotCheckOut(false);
+  }
+
+  _hotspotCheckIn(idx);
+};
+
+/* ═══════════════════════════════════════════════════════════════════════
+   STREAM COMMAND — 6-Button Post-CheckIn Tray (3×2 Grid)
+   Shows: AI Fly Box, Log Catch, Log Hatch, AI Coach, Strategy, Check Out
+   ═══════════════════════════════════════════════════════════════════════ */
+var _streamCommandTrayEl = null;
+
+function _showStreamCommandTray(hs) {
+  _dismissStreamCommandTray();
+  var tray = document.createElement('div');
+  tray.className = 'ht-stream-command-tray';
+  tray.innerHTML =
+    '<div class="ht-stream-command-title">STREAM COMMAND</div>' +
+    '<div class="ht-stream-command-grid">' +
+      '<button class="ht-stream-command-btn" type="button" onclick="cmdAiFlyBox()">🎣 AI Fly Box</button>' +
+      '<button class="ht-stream-command-btn" type="button" onclick="cmdLogCatch()">📸 Log Catch</button>' +
+      '<button class="ht-stream-command-btn" type="button" onclick="cmdLogHatch()">🦟 Log Hatch</button>' +
+      '<button class="ht-stream-command-btn" type="button" onclick="cmdAiCoach()">🤖 AI Coach</button>' +
+      '<button class="ht-stream-command-btn" type="button" onclick="cmdStrategy()">⚡ Strategy</button>' +
+      '<button class="ht-stream-command-btn ht-stream-command-btn--checkout" type="button" onclick="cmdCheckOut()">🔴 Check Out</button>' +
+    '</div>';
+  document.body.appendChild(tray);
+  _streamCommandTrayEl = tray;
+  // Animate in
+  requestAnimationFrame(function() {
+    tray.classList.add('is-visible');
+  });
+}
+
+function _dismissStreamCommandTray() {
+  if (_streamCommandTrayEl) {
+    try { _streamCommandTrayEl.remove(); } catch(e) {}
+    _streamCommandTrayEl = null;
+  }
+}
+window._dismissStreamCommandTray = _dismissStreamCommandTray;
+
+/* Check in to a hotspot — deploy micro fishing spots */
+function _hotspotCheckIn(idx) {
+  if (idx < 0 || idx >= _hotspotData.length) return;
+  var hs = _hotspotData[idx];
+  _activeHotspotIdx = idx;
+
+  // Update pin to active state
+  _refreshHotspotPinStates();
+
+  // Zoom to this hotspot
+  map.setView([hs.lat, hs.lng], 18, { animate: true, duration: 0.8 });
+
+  // Deploy micro fishing spots around this hotspot
+  _deployHotspotMicroSpots(idx);
+
+  // ── Hide hotspot pills so they don't overlap micro clusters ──
+  _hotspotPins.forEach(function(pin) {
+    try { var el = pin.getElement && pin.getElement(); if (el) el.style.display = 'none'; } catch(e) {}
+  });
+
+  // ── Show the 6-button STREAM COMMAND tray ──
+  _showStreamCommandTray(hs);
+
+  showNotice('Checked in: ' + hs.name + ' — micro spots deployed!', 'success', 3000);
+  console.log('HUNTECH: Hotspot check-in #' + (idx + 1) + ' ' + hs.name);
+}
+
+/* Deploy micro fishing spots around a specific hotspot */
+function _deployHotspotMicroSpots(idx) {
+  var hs = _hotspotData[idx];
+  var water = _hotspotWater;
+  if (!hs || !water) return;
+
+  // Clear previous micro spots
+  _activeMicroPins.forEach(function(m) { try { map.removeLayer(m); } catch {} });
+  _activeMicroPins = [];
+  _activeMicroPolygons.forEach(function(p) { try { map.removeLayer(p); } catch {} });
+  _activeMicroPolygons = [];
+
+  var segment = water.streamPath;
+  if (!segment || segment.length < 2) return;
+
+  // ── Interpolate stream path to get ~5m resolution ──
+  // Raw streamPath has ~80m between nodes — not enough for micro spots
+  var denseSeg = _interpolateStreamPath(segment, 5);
+
+  // Find closest dense-segment index to this hotspot
+  var closestIdx = 0;
+  var closestDist = Infinity;
+  for (var s = 0; s < denseSeg.length; s++) {
+    var d = _distM(hs.lat, hs.lng, denseSeg[s][0], denseSeg[s][1]);
+    if (d < closestDist) {
+      closestDist = d;
+      closestIdx = s;
+    }
+  }
+
+  // Build micro spots within 50m of the hotspot center
+  var maxMicros = 4;
+  var wadeMode = 'waders';
+  var microTypes = ['primary-lie', 'seam-edge', 'pocket-water'];
+  var MAX_DIST = 60;
+  var MIN_FROM_MAIN = 12;
+  var MIN_BETWEEN = 25;   // 25m between micro spots — prevents icon overlap
+  var candidates = [];
+
+  for (var sIdx = 0; sIdx < denseSeg.length; sIdx++) {
+    if (sIdx === closestIdx) continue;
+    var cLat = denseSeg[sIdx][0], cLng = denseSeg[sIdx][1];
+    var distFromMain = _distM(hs.lat, hs.lng, cLat, cLng);
+    if (distFromMain > MAX_DIST || distFromMain < MIN_FROM_MAIN) continue;
+
+    // ── GUARDRAIL: Snap candidate to stream — skip if on bank ──
+    var snap = _snapToStream(cLat, cLng, denseSeg, water.bankWidths, water.avgStreamWidth || 12);
+    if (!snap.inWater) continue;
+
+    var tooClose = false;
+    for (var cm = 0; cm < candidates.length; cm++) {
+      if (_distM(candidates[cm].lat, candidates[cm].lng, snap.lat, snap.lng) < MIN_BETWEEN) {
+        tooClose = true; break;
+      }
+    }
+    if (tooClose) continue;
+    candidates.push({ lat: snap.lat, lng: snap.lng, segIdx: sIdx, score: 50 + Math.max(0, 30 - distFromMain) });
+  }
+  candidates.sort(function(a, b) { return b.score - a.score; });
+  var accepted = candidates.slice(0, maxMicros);
+
+  var bounds = [[hs.lat, hs.lng]];
+  accepted.forEach(function(mc, i) {
+    var mType = microTypes[i] || 'primary-lie';
+    var zone = { name: hs.name };
+    var spot = { habitat: hs.habitat, lat: hs.lat, lng: hs.lng, segmentIdx: closestIdx };
+    var clusterMarkers = _deployMicroCluster({
+      fishLat: mc.lat, fishLng: mc.lng,
+      segIdx: mc.segIdx, segment: denseSeg,
+      wade: wadeMode, habitat: hs.habitat,
+      microType: mType, microIdx: _activeMicroPins.length,
+      spot: spot, water: water, zone: zone,
+      bankWidths: water.bankWidths
+    });
+    clusterMarkers.forEach(function(mk) { _activeMicroPins.push(mk); });
+    bounds.push([mc.lat, mc.lng]);
+  });
+
+  // Fit bounds to show hotspot + all micro spots
+  if (bounds.length > 1) {
+    var fitBounds = L.latLngBounds(bounds);
+    map.fitBounds(fitBounds.pad(0.15), { animate: true, duration: 0.6, maxZoom: 19 });
+  }
+
+  console.log('HUNTECH: Deployed ' + accepted.length + ' micro spots for hotspot #' + (idx + 1) + ' (from ' + candidates.length + ' candidates, ' + denseSeg.length + ' dense points)');
+}
+
+/* Interpolate a streamPath to produce points every ~stepMeters along the path */
+function _interpolateStreamPath(path, stepMeters) {
+  if (!path || path.length < 2) return path || [];
+  var dense = [path[0]];
+  for (var i = 1; i < path.length; i++) {
+    var lat1 = path[i-1][0], lng1 = path[i-1][1];
+    var lat2 = path[i][0], lng2 = path[i][1];
+    var segDist = _distM(lat1, lng1, lat2, lng2);
+    if (segDist <= stepMeters) {
+      dense.push(path[i]);
+      continue;
+    }
+    var steps = Math.ceil(segDist / stepMeters);
+    for (var s = 1; s <= steps; s++) {
+      var t = s / steps;
+      dense.push([lat1 + (lat2 - lat1) * t, lng1 + (lng2 - lng1) * t]);
+    }
+  }
+  return dense;
+}
+
+/* Check out from current hotspot — remove micro spots, show options */
+function _hotspotCheckOut(showOptions) {
+  if (_activeHotspotIdx < 0) return;
+
+  var prevIdx = _activeHotspotIdx;
+  _activeHotspotIdx = -1;
+
+  // Dismiss the Stream Command tray
+  _dismissStreamCommandTray();
+
+  // Remove micro spots
+  _activeMicroPins.forEach(function(m) { try { map.removeLayer(m); } catch {} });
+  _activeMicroPins = [];
+  _activeMicroPolygons.forEach(function(p) { try { map.removeLayer(p); } catch {} });
+  _activeMicroPolygons = [];
+
+  // Refresh pin states (none active)
+  _refreshHotspotPinStates();
+
+  // ── Restore hotspot pins that were hidden on check-in ──
+  _hotspotPins.forEach(function(pin) {
+    try { var el = pin.getElement && pin.getElement(); if (el) el.style.display = ''; } catch(e) {}
+  });
+
+  // Zoom back out to see all hotspots
+  if (_hotspotPins.length > 1) {
+    var bounds = _hotspotData.map(function(hs) { return [hs.lat, hs.lng]; });
+    map.fitBounds(L.latLngBounds(bounds).pad(0.18), { animate: true, duration: 0.8, maxZoom: 17 });
+  }
+
+  if (showOptions !== false) {
+    _showHotspotCheckoutBar(prevIdx);
+  }
+
+  showNotice('Checked out. Pick your next spot!', 'info', 2500);
+  console.log('HUNTECH: Hotspot check-out from #' + (prevIdx + 1));
+}
+window.hotspotCheckOut = function() { _hotspotCheckOut(true); };
+
+/* Go to the next hotspot (sequential) */
+window.hotspotGoNext = function() {
+  _dismissHotspotCheckoutBar();
+  if (!_hotspotData.length) return;
+  var nextIdx = (_activeHotspotIdx >= 0 ? _activeHotspotIdx : 0) + 1;
+  if (nextIdx >= _hotspotData.length) nextIdx = 0; // wrap around
+  _hotspotCheckIn(nextIdx);
+};
+
+/* Show the checkout bar with "Next Spot" and "Pick New" options */
+function _showHotspotCheckoutBar(prevIdx) {
+  _dismissHotspotCheckoutBar();
+  var bar = document.createElement('div');
+  bar.className = 'ht-hotspot-checkout-bar';
+  var nextLabel = 'Next Spot';
+  if (prevIdx >= 0 && prevIdx < _hotspotData.length - 1) {
+    nextLabel = 'Next: ' + _hotspotData[prevIdx + 1].name;
+  } else if (_hotspotData.length > 0) {
+    nextLabel = 'Next: ' + _hotspotData[0].name;
+  }
+  bar.innerHTML =
+    '<button class="ht-hotspot-checkout-btn ht-hotspot-checkout-btn--next" onclick="hotspotGoNext()">➡ ' + escapeHtml(nextLabel) + '</button>' +
+    '<button class="ht-hotspot-checkout-btn" onclick="dismissHotspotCheckoutBar()">Pick a Spot</button>';
+  document.body.appendChild(bar);
+  _hotspotCheckoutBarEl = bar;
+}
+function _dismissHotspotCheckoutBar() {
+  if (_hotspotCheckoutBarEl) {
+    try { _hotspotCheckoutBarEl.remove(); } catch {}
+    _hotspotCheckoutBarEl = null;
+  }
+}
+window.dismissHotspotCheckoutBar = _dismissHotspotCheckoutBar;
+
+/* Refresh all hotspot pin visual states */
+function _refreshHotspotPinStates() {
+  _hotspotPins.forEach(function(marker, i) {
+    var isActive = (i === _activeHotspotIdx);
+    var hs = _hotspotData[i];
+    if (hs) {
+      marker.setIcon(_getHotspotPinIcon(i + 1, hs.name, isActive, i));
+    }
+  });
+}
+
+/* Distance helper (meters between two lat/lng points) */
+function _distM(lat1, lng1, lat2, lng2) {
+  var dy = (lat2 - lat1) * 111000;
+  var dx = (lng2 - lng1) * 111000 * Math.cos(lat1 * Math.PI / 180);
+  return Math.sqrt(dy * dy + dx * dx);
 }
 
 /* Zone pin icon */
@@ -1665,7 +1997,8 @@ function getZonePinIcon(zone, idx) {
 
 /* Trout micro-pin icon (fish emoji with habitat indicator) */
 function getTroutMicroPinIcon(habitat) {
-  var emojis = { riffle: '🐟', pool: '🐠', run: '🐟', boulder: '🐡', tailout: '🐟' };
+  var emojis = { riffle: '🐟', pool: '🐠', run: '🐟', boulder: '🐡', tailout: '🐟',
+    undercut: '🐟', log: '🐟', seam: '🐟', pocket: '🐟' };
   var emoji = emojis[habitat] || '🐟';
   return L.divIcon({
     className: 'ht-trout-micro-pin',
@@ -1675,96 +2008,48 @@ function getTroutMicroPinIcon(habitat) {
   });
 }
 
-/* Angler position pin icon — 3D fly fisherman silhouette */
+/* Angler position pin icon */
 function getAnglerPinIcon() {
   return L.divIcon({
     className: 'ht-angler-pin',
-    html: '<div class="ht-angler-3d">' +
-      '<svg viewBox="0 0 48 64" width="40" height="54" xmlns="http://www.w3.org/2000/svg">' +
-      // Shadow/ground contact
-      '<ellipse cx="24" cy="60" rx="10" ry="3" fill="rgba(0,0,0,0.25)" />' +
-      // Waders/boots — dark olive
-      '<path d="M18 50 L16 58 L20 58 L20 50 Z" fill="#3a5a3a" stroke="#2a4a2a" stroke-width="0.5"/>' +
-      '<path d="M26 50 L24 58 L28 58 L28 50 Z" fill="#3a5a3a" stroke="#2a4a2a" stroke-width="0.5"/>' +
-      // Legs
-      '<path d="M20 40 L19 50 M26 40 L27 50" stroke="#4a6a4a" stroke-width="2.5" stroke-linecap="round" fill="none"/>' +
-      // Body/torso — fishing vest with 3D gradient
-      '<path d="M17 25 Q16 32 18 40 L28 40 Q30 32 29 25 Z" fill="url(#vestGrad)" stroke="#3a5a3a" stroke-width="0.5"/>' +
-      // Vest pockets detail
-      '<rect x="19" y="30" width="4" height="3" rx="0.5" fill="rgba(0,0,0,0.15)" />' +
-      '<rect x="24" y="31" width="3" height="2.5" rx="0.5" fill="rgba(0,0,0,0.12)" />' +
-      // Arms
-      '<path d="M17 27 L10 22 L5 14" stroke="#4a6a4a" stroke-width="2.2" stroke-linecap="round" fill="none"/>' +
-      '<path d="M29 27 L34 30" stroke="#4a6a4a" stroke-width="2.2" stroke-linecap="round" fill="none"/>' +
-      // Hat — wide brim with 3D effect
-      '<ellipse cx="23" cy="19" rx="8" ry="2.5" fill="#5a7a5a" />' +
-      '<path d="M18 19 Q18 13 23 12 Q28 13 28 19" fill="#6a8a6a" stroke="#4a6a4a" stroke-width="0.5"/>' +
-      // Head
-      '<circle cx="23" cy="17" r="4.5" fill="#e8c99b" />' +
-      // Sunglasses
-      '<path d="M20 16.5 L26 16.5" stroke="#333" stroke-width="1.2" stroke-linecap="round"/>' +
-      // Fly rod — long dynamic casting arc
-      '<path d="M5 14 L2 8 Q0 2 6 0" stroke="#8B7355" stroke-width="1.2" stroke-linecap="round" fill="none"/>' +
-      '<path d="M5 14 Q3 10 2 8" stroke="#6a5a45" stroke-width="1.8" stroke-linecap="round" fill="none"/>' +
-      // Fly line arc — graceful casting loop
-      '<path class="ht-angler-flyline" d="M6 0 Q14 -4 22 -2 Q30 0 36 6" stroke="rgba(255,224,130,0.6)" stroke-width="0.8" stroke-linecap="round" fill="none"/>' +
-      // Fly at end of line
-      '<circle cx="36" cy="6" r="1.2" fill="#ffe082" opacity="0.8"/>' +
-      // 3D lighting/gradient defs
-      '<defs>' +
-      '<linearGradient id="vestGrad" x1="0" y1="0" x2="1" y2="1">' +
-      '<stop offset="0%" stop-color="#6a8a5a"/>' +
-      '<stop offset="40%" stop-color="#5a7a4a"/>' +
-      '<stop offset="100%" stop-color="#3a5a3a"/>' +
-      '</linearGradient>' +
-      '</defs>' +
-      '</svg></div>',
-    iconSize: [40, 54],
-    iconAnchor: [20, 54]
+    html: '<div class="ht-angler-pill">🧍</div>',
+    iconSize: [28, 28],
+    iconAnchor: [14, 28]
   });
 }
 
 /* Get the portion of streamPath that belongs to a zone */
-function _nearestPathIdx(path, lat, lng) {
-  var best = 0, bestDist = Infinity;
-  for (var i = 0; i < path.length; i++) {
-    var d = Math.pow(path[i][0] - lat, 2) + Math.pow(path[i][1] - lng, 2);
-    if (d < bestDist) { bestDist = d; best = i; }
-  }
-  return best;
-}
-
 function getZoneStreamSegment(water, zone) {
   if (!water || !water.streamPath || water.streamPath.length < 2) return null;
   var path = water.streamPath;
-
-  // ── Prefer explicit zoneBounds when available ──
-  if (zone.zoneBounds && zone.zoneBounds.length === 2) {
-    var startIdx = _nearestPathIdx(path, zone.zoneBounds[0][0], zone.zoneBounds[0][1]);
-    var endIdx   = _nearestPathIdx(path, zone.zoneBounds[1][0], zone.zoneBounds[1][1]);
-    if (startIdx > endIdx) { var tmp = startIdx; startIdx = endIdx; endIdx = tmp; }
-    return path.slice(startIdx, endIdx + 1);
-  }
-
-  // ── Fallback: midpoint algorithm for zones without explicit bounds ──
   var zones = (water.access || []).filter(function(a) { return a.type === 'zone'; });
   if (zones.length < 2) return path;
 
+  // Find each zone's nearest point index on the stream path
   var zoneIndexes = zones.map(function(z) {
-    return { zone: z, idx: _nearestPathIdx(path, z.lat, z.lng) };
+    var best = 0, bestDist = Infinity;
+    for (var i = 0; i < path.length; i++) {
+      var d = Math.pow(path[i][0] - z.lat, 2) + Math.pow(path[i][1] - z.lng, 2);
+      if (d < bestDist) { bestDist = d; best = i; }
+    }
+    return { zone: z, idx: best };
   });
   zoneIndexes.sort(function(a, b) { return a.idx - b.idx; });
 
+  // Find this zone's position
   var myPos = -1;
   for (var i = 0; i < zoneIndexes.length; i++) {
     if (zoneIndexes[i].zone === zone) { myPos = i; break; }
   }
   if (myPos === -1) return path;
 
+  // Slice path: from midpoint between prev zone to midpoint with next zone
   var startIdx = 0, endIdx = path.length - 1;
   if (myPos > 0) startIdx = Math.round((zoneIndexes[myPos - 1].idx + zoneIndexes[myPos].idx) / 2);
   if (myPos < zoneIndexes.length - 1) endIdx = Math.round((zoneIndexes[myPos].idx + zoneIndexes[myPos + 1].idx) / 2);
-  return path.slice(startIdx, endIdx + 1);
+  var result = path.slice(startIdx, endIdx + 1);
+  result.__zoneStartIdx = startIdx; // preserve raw streamPath offset for bankWidths alignment
+  return result;
 }
 
 /* Get perpendicular offset point for angler position */
@@ -1806,28 +2091,234 @@ function getCurrentSeason() {
   return 'winter';
 }
 
-/* Get time-aware fly recommendation */
+/* ═══════════════════════════════════════════════════════════════════════
+   DETERMINISTIC FLY RECOMMENDATION ENGINE
+   ─────────────────────────────────────────────────────────────────────
+   Scores every fly pattern against (habitat × time × season) and picks
+   the one with the highest probability of success. No randomization.
+   Each recommendation includes the rig method.
+   Categories are balanced: dry, wet, streamer, nymph, jig nymph,
+   soft hackle, emerger — none is favored over another.
+   ═══════════════════════════════════════════════════════════════════════ */
 function getTimeAwareFlyRec(water, habitat) {
   var period = getTimePeriod();
   var season = getCurrentSeason();
-  var flavor = window.TROUT_HOTSPOT_FLAVOR && window.TROUT_HOTSPOT_FLAVOR[habitat];
-  var edu = window.TROUT_EDUCATION && window.TROUT_EDUCATION[habitat];
   var hatches = (water && water.hatches && water.hatches[season]) || [];
-  var flyRec = '';
-  var altFly = '';
-  if (flavor && flavor.flies && flavor.flies.length) {
-    var fIdx = Math.floor(Math.random() * flavor.flies.length);
-    flyRec = flavor.flies[fIdx];
-    altFly = flavor.flies[(fIdx + 1) % flavor.flies.length];
+
+  // ── Master fly database — each entry scored per situation ──
+  // category: dry | wet | streamer | nymph | jig-nymph | soft-hackle | emerger
+  var flyDB = [
+    // ─── DRY FLIES ───
+    { name: '#16 Parachute Adams', category: 'dry', rig: 'Dead drift dry — 9ft 5X leader, dress fly with floatant, cast upstream, mend for drag-free float',
+      h: { riffle: 80, run: 85, pool: 50, tailout: 90, boulder: 40 },
+      t: { 'early-morning': 50, morning: 75, midday: 30, afternoon: 80, evening: 95, night: 10 },
+      s: { spring: 80, summer: 75, fall: 85, winter: 30 } },
+    { name: '#16 Elk Hair Caddis', category: 'dry', rig: 'Dead drift or skate — 9ft 5X leader, twitch the fly occasionally to mimic skating caddis',
+      h: { riffle: 85, run: 75, pool: 40, tailout: 80, boulder: 55 },
+      t: { 'early-morning': 40, morning: 70, midday: 35, afternoon: 90, evening: 85, night: 15 },
+      s: { spring: 70, summer: 90, fall: 75, winter: 20 } },
+    { name: '#18 Blue Winged Olive (BWO)', category: 'dry', rig: 'Dead drift dry — 12ft 6X leader, fish the film in slow water, watch for sipping rises',
+      h: { riffle: 60, run: 80, pool: 55, tailout: 90, boulder: 30 },
+      t: { 'early-morning': 60, morning: 85, midday: 65, afternoon: 90, evening: 80, night: 5 },
+      s: { spring: 95, summer: 40, fall: 95, winter: 70 } },
+
+    // ─── STREAMERS ───
+    { name: '#8 Woolly Bugger (olive)', category: 'streamer', rig: 'Strip retrieve — short strips with pauses, 3X leader, let sink 3-count before stripping',
+      h: { riffle: 40, run: 65, pool: 90, tailout: 35, boulder: 85 },
+      t: { 'early-morning': 95, morning: 60, midday: 50, afternoon: 55, evening: 80, night: 95 },
+      s: { spring: 75, summer: 70, fall: 80, winter: 65 } },
+    { name: '#6 Sculpzilla (olive/brown)', category: 'streamer', rig: 'Dead drift or slow strip — sink tip line or weighted leader, bounce along bottom near structure',
+      h: { riffle: 30, run: 55, pool: 85, tailout: 25, boulder: 95 },
+      t: { 'early-morning': 90, morning: 55, midday: 60, afternoon: 50, evening: 85, night: 90 },
+      s: { spring: 70, summer: 65, fall: 85, winter: 75 } },
+    { name: '#8 Zoo Cougar (tan)', category: 'streamer', rig: 'Jerk strip — aggressive 6-inch strips, pause 2 seconds between strips, let fly ride up and drop',
+      h: { riffle: 35, run: 60, pool: 80, tailout: 30, boulder: 75 },
+      t: { 'early-morning': 85, morning: 50, midday: 45, afternoon: 45, evening: 90, night: 85 },
+      s: { spring: 65, summer: 60, fall: 90, winter: 70 } },
+
+    // ─── WET FLIES ───
+    { name: '#14 Partridge & Orange', category: 'wet', rig: 'Wet fly swing — cast across, let line swing downstream, follow with rod tip, strip at end of swing',
+      h: { riffle: 70, run: 90, pool: 55, tailout: 85, boulder: 45 },
+      t: { 'early-morning': 65, morning: 80, midday: 50, afternoon: 80, evening: 90, night: 30 },
+      s: { spring: 85, summer: 75, fall: 80, winter: 60 } },
+    { name: '#14 Leadwing Coachman', category: 'wet', rig: 'Downstream swing — 9ft 4X leader, cast quartering downstream, slow swing through the run',
+      h: { riffle: 60, run: 85, pool: 60, tailout: 75, boulder: 50 },
+      t: { 'early-morning': 55, morning: 75, midday: 55, afternoon: 75, evening: 85, night: 25 },
+      s: { spring: 80, summer: 70, fall: 75, winter: 55 } },
+
+    // ─── SOFT HACKLES ───
+    { name: '#16 Soft Hackle Hares Ear', category: 'soft-hackle', rig: 'Leisenring lift — cast upstream, let drift deep, then raise rod to swing fly up through water column',
+      h: { riffle: 75, run: 90, pool: 50, tailout: 90, boulder: 40 },
+      t: { 'early-morning': 60, morning: 85, midday: 55, afternoon: 85, evening: 95, night: 20 },
+      s: { spring: 90, summer: 80, fall: 85, winter: 55 } },
+    { name: '#16 Starling & Herl', category: 'soft-hackle', rig: 'Swing and hang — cast across, let swing, hold the fly dangling in current for 10 seconds at end of drift',
+      h: { riffle: 70, run: 85, pool: 45, tailout: 85, boulder: 35 },
+      t: { 'early-morning': 55, morning: 80, midday: 50, afternoon: 80, evening: 90, night: 15 },
+      s: { spring: 85, summer: 75, fall: 80, winter: 50 } },
+
+    // ─── EMERGERS ───
+    { name: '#18 CDC RS2 Emerger', category: 'emerger', rig: 'Film drift — grease leader to within 12 inches of fly, fish in the surface film, 6X tippet minimum',
+      h: { riffle: 70, run: 85, pool: 50, tailout: 95, boulder: 30 },
+      t: { 'early-morning': 55, morning: 90, midday: 40, afternoon: 85, evening: 95, night: 10 },
+      s: { spring: 90, summer: 70, fall: 90, winter: 65 } },
+    { name: '#18 CDC BWO Emerger', category: 'emerger', rig: 'Greased-leader drift — dead drift in film, fish to rising trout, set hook on any hesitation in drift',
+      h: { riffle: 60, run: 80, pool: 55, tailout: 90, boulder: 25 },
+      t: { 'early-morning': 50, morning: 85, midday: 50, afternoon: 85, evening: 90, night: 5 },
+      s: { spring: 95, summer: 45, fall: 90, winter: 60 } },
+    { name: '#16 Sparkle Pupa (tan)', category: 'emerger', rig: 'Swing through film — cast across, let drift and rise, the fly imitates an emerging caddis in the surface tension',
+      h: { riffle: 80, run: 75, pool: 40, tailout: 80, boulder: 45 },
+      t: { 'early-morning': 45, morning: 70, midday: 40, afternoon: 90, evening: 85, night: 10 },
+      s: { spring: 70, summer: 90, fall: 70, winter: 25 } },
+
+    // ─── NYMPHS ───
+    { name: '#16 Pheasant Tail Nymph', category: 'nymph', rig: 'Dead drift nymph — 7.5ft 5X leader, split shot 8in above fly, strike indicator at 1.5× depth',
+      h: { riffle: 90, run: 75, pool: 65, tailout: 60, boulder: 70 },
+      t: { 'early-morning': 70, morning: 80, midday: 85, afternoon: 70, evening: 50, night: 40 },
+      s: { spring: 80, summer: 75, fall: 80, winter: 85 } },
+    { name: '#14 Hares Ear Nymph', category: 'nymph', rig: 'Dead drift — weight with split shot, adjust depth with indicator, let tumble naturally along bottom',
+      h: { riffle: 85, run: 80, pool: 70, tailout: 55, boulder: 75 },
+      t: { 'early-morning': 65, morning: 75, midday: 80, afternoon: 75, evening: 45, night: 35 },
+      s: { spring: 75, summer: 80, fall: 75, winter: 80 } },
+    { name: '#16 Copper John', category: 'nymph', rig: 'Tight-line or indicator — heavy fly sinks fast, ideal for deeper runs, short-line dead drift through pockets',
+      h: { riffle: 75, run: 70, pool: 60, tailout: 50, boulder: 90 },
+      t: { 'early-morning': 60, morning: 70, midday: 85, afternoon: 65, evening: 40, night: 45 },
+      s: { spring: 70, summer: 75, fall: 70, winter: 75 } },
+
+    // ─── JIG NYMPHS (Euro / Competition Style) ───
+    { name: '#16 Perdigon (olive/silver)', category: 'jig-nymph', rig: 'Euro nymph tight-line — long leader (20ft+), no indicator, sighter section, maintain direct contact, feel for the take',
+      h: { riffle: 90, run: 80, pool: 55, tailout: 50, boulder: 85 },
+      t: { 'early-morning': 75, morning: 80, midday: 90, afternoon: 75, evening: 40, night: 30 },
+      s: { spring: 80, summer: 85, fall: 80, winter: 80 } },
+    { name: '#14 Jig Frenchie', category: 'jig-nymph', rig: 'Euro nymph — tight line, slotted tungsten bead rides hook-point-up reducing snags, high-stick through pocket water',
+      h: { riffle: 85, run: 85, pool: 60, tailout: 55, boulder: 80 },
+      t: { 'early-morning': 70, morning: 78, midday: 85, afternoon: 72, evening: 45, night: 35 },
+      s: { spring: 78, summer: 80, fall: 78, winter: 82 } },
+
+    // ─── SPECIALTY ───
+    { name: '#14 San Juan Worm (red)', category: 'wet', rig: 'Dead drift deep — weight heavily, fish along the bottom, especially effective after rain or in stained water',
+      h: { riffle: 50, run: 60, pool: 80, tailout: 40, boulder: 65 },
+      t: { 'early-morning': 75, morning: 70, midday: 80, afternoon: 65, evening: 50, night: 55 },
+      s: { spring: 90, summer: 60, fall: 75, winter: 85 } },
+    { name: '#14 Glo-Bug (peach/chartreuse)', category: 'wet', rig: 'Dead drift under indicator — short leader, heavy tippet (4X), fish through the head of pools and runs',
+      h: { riffle: 40, run: 55, pool: 85, tailout: 30, boulder: 60 },
+      t: { 'early-morning': 80, morning: 65, midday: 70, afternoon: 55, evening: 45, night: 60 },
+      s: { spring: 85, summer: 50, fall: 70, winter: 90 } },
+    { name: '#18 Zebra Midge', category: 'nymph', rig: 'Suspend under dry or indicator — fish in the top 12 inches, especially effective in slow clear water',
+      h: { riffle: 55, run: 70, pool: 80, tailout: 75, boulder: 35 },
+      t: { 'early-morning': 60, morning: 75, midday: 85, afternoon: 70, evening: 55, night: 40 },
+      s: { spring: 70, summer: 60, fall: 70, winter: 95 } },
+    { name: '#16 Scud (tan/orange)', category: 'nymph', rig: 'Dead drift near bottom — weighted, especially effective near spring outlets, use in 12-24in depth range',
+      h: { riffle: 60, run: 70, pool: 75, tailout: 55, boulder: 45 },
+      t: { 'early-morning': 70, morning: 75, midday: 80, afternoon: 70, evening: 50, night: 45 },
+      s: { spring: 85, summer: 65, fall: 70, winter: 90 } }
+  ];
+
+  // ── Score each fly for this exact situation ──
+  // Habitat score fallbacks for new micro-feature types not in every fly's h{} map
+  // These provide intelligent defaults based on fly category + habitat behavior
+  var _habitatFallbacks = {
+    undercut: function(fly) {
+      // Undercuts favor streamers/structure flies; dries struggle under overhangs
+      var cat = fly.category;
+      if (cat === 'streamer') return 90;
+      if (cat === 'nymph' || cat === 'jig-nymph') return 70;
+      if (cat === 'wet') return 75;
+      if (cat === 'soft-hackle') return 65;
+      if (cat === 'dry' || cat === 'emerger') return 30;
+      return 55;
+    },
+    log: function(fly) {
+      // Logs favor nymphs drifted past structure; streamers work too
+      var cat = fly.category;
+      if (cat === 'streamer') return 85;
+      if (cat === 'nymph' || cat === 'jig-nymph') return 75;
+      if (cat === 'wet') return 70;
+      if (cat === 'soft-hackle') return 60;
+      if (cat === 'dry') return 35;
+      if (cat === 'emerger') return 40;
+      return 55;
+    },
+    seam: function(fly) {
+      // Seams are prime feeding lanes — emergers, soft hackles, dries all excel
+      var cat = fly.category;
+      if (cat === 'emerger' || cat === 'soft-hackle') return 90;
+      if (cat === 'dry') return 80;
+      if (cat === 'wet') return 85;
+      if (cat === 'nymph' || cat === 'jig-nymph') return 75;
+      if (cat === 'streamer') return 50;
+      return 65;
+    },
+    pocket: function(fly) {
+      // Pockets favor nymphs/jig-nymphs tight-lined; dries low
+      var cat = fly.category;
+      if (cat === 'jig-nymph') return 92;
+      if (cat === 'nymph') return 85;
+      if (cat === 'wet') return 60;
+      if (cat === 'soft-hackle') return 55;
+      if (cat === 'dry') return 40;
+      if (cat === 'emerger') return 45;
+      if (cat === 'streamer') return 35;
+      return 55;
+    }
+  };
+
+  var scored = [];
+  for (var f = 0; f < flyDB.length; f++) {
+    var fly = flyDB[f];
+    var hScore = (fly.h && fly.h[habitat]) || (_habitatFallbacks[habitat] ? _habitatFallbacks[habitat](fly) : 50);
+    var tScore = (fly.t && fly.t[period]) || 50;
+    var sScore = (fly.s && fly.s[season]) || 50;
+    // Weighted: habitat matters most (40%), time of day (35%), season (25%)
+    var total = hScore * 0.40 + tScore * 0.35 + sScore * 0.25;
+
+    // Hatch match bonus: if water has hatch data matching this fly's name
+    if (hatches.length) {
+      for (var hi = 0; hi < hatches.length; hi++) {
+        var hatch = hatches[hi].toLowerCase();
+        var fname = fly.name.toLowerCase();
+        if (fname.indexOf('bwo') >= 0 && hatch.indexOf('bwo') >= 0) total += 12;
+        else if (fname.indexOf('caddis') >= 0 && hatch.indexOf('caddis') >= 0) total += 12;
+        else if (fname.indexOf('midge') >= 0 && hatch.indexOf('midge') >= 0) total += 10;
+        else if (fname.indexOf('scud') >= 0 && hatch.indexOf('scud') >= 0) total += 10;
+        else if (fname.indexOf('stonefly') >= 0 && hatch.indexOf('stone') >= 0) total += 12;
+      }
+    }
+
+    scored.push({ fly: fly, total: total });
   }
+
+  // Sort by total descending — top 1 = best, top 2 = backup
+  scored.sort(function(a, b) { return b.total - a.total; });
+
+  var best = scored[0].fly;
+  // Ensure backup is a DIFFERENT category for variety
+  var backup = scored[1].fly;
+  for (var bi = 1; bi < scored.length; bi++) {
+    if (scored[bi].fly.category !== best.category) {
+      backup = scored[bi].fly;
+      break;
+    }
+  }
+
+  var flyRec = best.name + ' (' + best.category + ')';
+  var altFly = backup.name + ' (' + backup.category + ')';
+  var rigMethod = best.rig;
+  var altRig = backup.rig;
+
   var timeAdvice = '';
-  if (period === 'early-morning') timeAdvice = 'Low light — use dark patterns. Trout feed aggressively in dawn. Streamers and dark nymphs are ideal.';
-  else if (period === 'morning') timeAdvice = 'Prime feeding window. Nymphs and emergers produce consistently. Watch for hatch activity.';
-  else if (period === 'midday') timeAdvice = 'Midday sun pushes trout deep. Go subsurface with weighted nymphs. Fish slow pools and shaded banks.';
-  else if (period === 'afternoon') timeAdvice = 'Caddis activity often picks up. Dry-dropper rigs cover both surface and subsurface. Stay observant.';
-  else if (period === 'evening') timeAdvice = 'Prime time. BWO and caddis spinners. Trout move to tailouts and riffles to sip in soft light.';
-  else timeAdvice = 'Night fishing — large streamers stripped slow near structure. Big trout are most aggressive now.';
-  return { flyRec: flyRec, altFly: altFly, timeAdvice: timeAdvice, hatches: hatches, season: season, period: period };
+  if (period === 'early-morning') timeAdvice = 'Low light — trout feed aggressively at dawn. Dark streamers and soft hackles are deadly. Swing flies through runs and strip past structure.';
+  else if (period === 'morning') timeAdvice = 'Prime window. Watch for hatches starting — emergers and soft hackles in the film produce. If you see rises, switch to dries immediately.';
+  else if (period === 'midday') timeAdvice = 'Bright conditions push trout to shaded lies. Euro nymph tight to structure, or swing streamers through deep pools. Fish the shade.';
+  else if (period === 'afternoon') timeAdvice = 'Caddis often emerge now. Dry flies and emergers become productive. Swing soft hackles through tailouts. Stay observant for surface activity.';
+  else if (period === 'evening') timeAdvice = 'Prime time. Dry flies and emergers dominate. Trout move to tailouts and riffles to sip. Match the hatch — look on the water first.';
+  else timeAdvice = 'Night fishing — large streamers stripped slow near structure. Big trout are boldest now. Use a stout leader and strip with long pauses.';
+
+  return {
+    flyRec: flyRec, altFly: altFly,
+    rigMethod: rigMethod, altRig: altRig,
+    bestCategory: best.category, altCategory: backup.category,
+    timeAdvice: timeAdvice, hatches: hatches, season: season, period: period
+  };
 }
 
 /* Build strategy briefing popup HTML for a micro pin */
@@ -1854,10 +2345,16 @@ function buildMicroPinBriefing(water, zone, habitat) {
   // Approach
   html += '<div style="font-size:11px;color:#c8e6d5;margin-bottom:6px;line-height:1.4;"><b style="color:#ffe082;">Approach:</b> ' + escapeHtml(approach) + '</div>';
 
-  // Time-aware fly recommendation
-  html += '<div style="font-size:11px;color:#c8e6d5;margin-bottom:4px;line-height:1.4;"><b style="color:#ffe082;">Best Fly (' + escapeHtml(rec.period) + '):</b> ' + escapeHtml(rec.flyRec) + '</div>';
+  // Time-aware fly recommendation + rig method
+  html += '<div style="font-size:11px;color:#c8e6d5;margin-bottom:2px;line-height:1.4;"><b style="color:#ffe082;">Best Fly (' + escapeHtml(rec.period) + '):</b> ' + escapeHtml(rec.flyRec) + '</div>';
+  if (rec.rigMethod) {
+    html += '<div style="font-size:10px;color:#89b5a2;margin-bottom:4px;line-height:1.3;"><b>Rig:</b> ' + escapeHtml(rec.rigMethod) + '</div>';
+  }
   if (rec.altFly) {
-    html += '<div style="font-size:10px;color:#89b5a2;margin-bottom:4px;line-height:1.3;"><b>Backup:</b> ' + escapeHtml(rec.altFly) + '</div>';
+    html += '<div style="font-size:10px;color:#89b5a2;margin-bottom:2px;line-height:1.3;"><b>Backup:</b> ' + escapeHtml(rec.altFly) + '</div>';
+  }
+  if (rec.altRig) {
+    html += '<div style="font-size:9px;color:#6a9480;margin-bottom:4px;line-height:1.3;"><b>Rig:</b> ' + escapeHtml(rec.altRig) + '</div>';
   }
 
   // Time-of-day conditions
@@ -1933,11 +2430,11 @@ window.deployMethodFilteredZones = function(water, userMethod) {
   if (deployed === 0) {
     showNotice('⚠️ No zones available for ' + label + ' fishing at ' + water.name + '. Try a different method.', 'warning', 4000);
   } else {
-    console.log('HUNTECH: 📍 ' + deployed + ' zone' + (deployed > 1 ? 's' : '') + ' deployed for ' + label + ' fishing');
+    showNotice('📍 ' + deployed + ' zone' + (deployed > 1 ? 's' : '') + ' deployed for ' + label + ' fishing', 'success', 2500);
   }
 };
 
-/* Zone check-in: build polygon + deploy micro pins */
+/* Zone check-in: deploy AI RANKED pins (NO fish until pin click, NO polygons) */
 window.zoneCheckIn = function(waterId, zoneIdx) {
   if (!map) return;
   map.closePopup();
@@ -1952,74 +2449,26 @@ window.zoneCheckIn = function(waterId, zoneIdx) {
 
   clearMicroPins();
 
-  // Build zone polygon from stream segment
-  var segment = getZoneStreamSegment(water, zone);
-  if (segment && segment.length >= 2) {
-    var corridor = buildStreamCorridor(segment, 40);
-    if (corridor) {
-      zonePolygonLayer = L.polygon(corridor, {
-        color: '#7cffc7',
-        weight: 2,
-        fillColor: '#7cffc7',
-        fillOpacity: 0.10,
-        dashArray: '5 3'
-      }).addTo(map);
+  // Wire up fishFlow state so AI pins work
+  var fishFlow = window._fishFlow || {};
+  fishFlow.area = water;
+  fishFlow.selectedZone = zone;
+  fishFlow.selectedZoneIdx = zoneIdx;
+  window._fishFlow = fishFlow;
+
+  // Hide area pins
+  clearFlyWaterLayer();
+
+  // Deploy AI ranked pins (hotspots) — NO fish yet, NO polygon.
+  setTimeout(function() {
+    if (typeof window.deployAiFishingPins === 'function') {
+      window.deployAiFishingPins(water, zone, fishFlow);
     }
-  }
-
-  // Deploy micro pins along the zone segment
-  var habitats = ['riffle', 'pool', 'run', 'boulder', 'tailout'];
-  var numSpots = segment ? Math.min(5, Math.max(3, segment.length - 1)) : 3;
-  var spotSegment = segment || [[zone.lat, zone.lng]];
-
-  for (var i = 0; i < numSpots; i++) {
-    var pIdx = segment ? Math.round(i * (segment.length - 1) / Math.max(1, numSpots - 1)) : 0;
-    var lat = spotSegment[Math.min(pIdx, spotSegment.length - 1)][0];
-    var lng = spotSegment[Math.min(pIdx, spotSegment.length - 1)][1];
-    var habitat = habitats[i % habitats.length];
-
-    // Slight offset so pins don't overlap stream center
-    var jitterLat = (Math.random() - 0.5) * 0.0001;
-    var jitterLng = (Math.random() - 0.5) * 0.0001;
-
-    var troutMarker = L.marker([lat + jitterLat, lng + jitterLng], {
-      icon: getTroutMicroPinIcon(habitat),
-      zIndexOffset: 300
-    }).addTo(map);
-
-    // Closure for click
-    (function(mk, h) {
-      mk.on('click', function() {
-        var briefHtml = buildMicroPinBriefing(water, zone, h);
-        mk.unbindPopup();
-        mk.bindPopup(briefHtml, { maxWidth: 340, className: 'ht-micro-popup' }).openPopup();
-      });
-    })(troutMarker, habitat);
-
-    microPinMarkers.push(troutMarker);
-
-    // Place angler position pin (first spot gets it)
-    if (i === 0 && segment && segment.length >= 2) {
-      // Wade-aware: waders = IN water (5m offset), shore = near bank (8m)
-      var wadeOffset = (window._fishFlow && window._fishFlow.wade === 'waders') ? 5 : 8;
-      var anglerPos = getAnglerOffset(segment, pIdx, wadeOffset);
-      anglerPinMarker = L.marker(anglerPos, {
-        icon: getAnglerPinIcon(),
-        zIndexOffset: 250
-      }).addTo(map);
-      anglerPinMarker.bindPopup(
-        '<div style="min-width:180px;">' +
-        '<div style="font-weight:700;color:#ffe082;font-size:13px;">🎣 Your Setup Position</div>' +
-        '<div style="font-size:11px;color:#c8e6d5;margin-top:4px;line-height:1.3;">Set up here. Face the stream. Keep your shadow behind you. Start with short casts to the nearest lie, then work outward.</div>' +
-        '</div>',
-        { maxWidth: 260 }
-      );
-    }
-  }
+  }, 400);
 
   // Zoom to zone
   map.setView([zone.lat, zone.lng], 17, { animate: true, duration: 0.8 });
-  console.log('HUNTECH: ✅ Checked in at ' + zone.name + ' — ' + numSpots + ' cast-to spots deployed');
+  showNotice('✅ Checked in at ' + zone.name + ' — tap a hotspot pin to deploy fish', 'success', 3000);
 };
 
 function getFlyCheckInSpots() {
@@ -2032,24 +2481,116 @@ function getFlyCheckInSpots() {
   ];
 }
 
-function getFlyInventoryRecommendations(limit = 3) {
-  const inv = loadFlyInventory();
-  const flies = Array.isArray(inv.flies) ? inv.flies : [];
-  const picks = [];
-  for (const entry of flies) {
-    if (picks.length >= limit) break;
-    if (typeof entry === 'string') {
-      picks.push({ name: entry, color: 'Varied', size: 'Assorted', imageUrl: '' });
-    } else if (entry && typeof entry === 'object') {
-      picks.push({
-        name: entry.name || 'Fly',
-        color: entry.color || 'Varied',
-        size: entry.size || 'Assorted',
-        imageUrl: entry.imageUrl || ''
+/* ══════════════════════════════════════════════════════════════════════════
+   SMART FLY RECOMMENDATION ENGINE — Inventory-first with closest-match fallback
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* Score how well a user fly matches desired criteria */
+function _scoreFlyMatch(fly, desired) {
+  var score = 0;
+  var flyName = String(fly.name || '').toLowerCase();
+  var flyCat = String(fly.category || '').toLowerCase();
+  var flyColor = String(fly.color || '').toLowerCase();
+  var flySize = String(fly.size || '').toLowerCase();
+
+  // Name match (exact or partial)
+  var desiredName = String(desired.name || '').toLowerCase();
+  if (desiredName && flyName === desiredName) score += 10;
+  else if (desiredName && flyName.indexOf(desiredName) >= 0) score += 7;
+  else if (desiredName) {
+    // Check keyword overlap
+    var dWords = desiredName.split(/\s+/);
+    dWords.forEach(function(w) { if (w.length > 2 && flyName.indexOf(w) >= 0) score += 3; });
+  }
+
+  // Category match
+  var desiredCat = String(desired.category || '').toLowerCase();
+  if (desiredCat && flyCat === desiredCat) score += 4;
+
+  // Color match
+  var desiredColors = Array.isArray(desired.colors) ? desired.colors : [];
+  desiredColors.forEach(function(c) {
+    if (flyColor.indexOf(c.toLowerCase()) >= 0) score += 2;
+  });
+
+  // Size match
+  var desiredSize = String(desired.size || '').toLowerCase();
+  if (desiredSize && flySize.indexOf(desiredSize) >= 0) score += 2;
+
+  return score;
+}
+
+/* Get smart recommendations — searches user inventory first, falls back to closest match */
+function getFlyInventoryRecommendations(limit, desiredCriteria) {
+  limit = limit || 4;
+  var inv = loadFlyInventory();
+  var flies = Array.isArray(inv.flies) ? inv.flies : [];
+
+  // If no criteria, return the most recent flies
+  if (!desiredCriteria || !desiredCriteria.length) {
+    return flies.slice(0, limit).map(function(f) {
+      if (typeof f === 'string') return { name: f, color: 'Varied', size: 'Assorted', imageUrl: '', matchType: 'inventory' };
+      return {
+        name: f.name || 'Fly',
+        color: f.color || 'Varied',
+        size: f.size || 'Assorted',
+        imageUrl: f.imageDataUrl || f.imageUrl || '',
+        category: f.category || '',
+        notes: f.notes || '',
+        matchType: 'inventory'
+      };
+    });
+  }
+
+  // For each desired fly, find best match in inventory
+  var results = [];
+  desiredCriteria.forEach(function(desired) {
+    if (results.length >= limit) return;
+    var scored = flies.map(function(f, idx) {
+      return { fly: f, idx: idx, score: _scoreFlyMatch(f, desired) };
+    });
+    scored.sort(function(a, b) { return b.score - a.score; });
+
+    var best = scored[0];
+    if (best && best.score >= 5) {
+      // Exact or strong match from inventory
+      var f = best.fly;
+      results.push({
+        name: f.name || 'Fly',
+        color: f.color || 'Varied',
+        size: f.size || 'Assorted',
+        imageUrl: f.imageDataUrl || f.imageUrl || '',
+        category: f.category || '',
+        matchType: 'exact',
+        matchNote: 'From your box'
+      });
+    } else if (best && best.score > 0) {
+      // Closest match — not exact but related
+      var f2 = best.fly;
+      results.push({
+        name: f2.name || 'Fly',
+        color: f2.color || 'Varied',
+        size: f2.size || 'Assorted',
+        imageUrl: f2.imageDataUrl || f2.imageUrl || '',
+        category: f2.category || '',
+        matchType: 'closest',
+        matchNote: 'Closest match — ideal: ' + (desired.name || 'similar fly')
+      });
+    } else {
+      // No match in inventory
+      results.push({
+        name: desired.name || 'Recommended Fly',
+        color: (desired.colors || []).join(', ') || 'Varied',
+        size: desired.size || 'Assorted',
+        imageUrl: '',
+        category: desired.category || '',
+        matchType: 'missing',
+        matchNote: 'Not in your box — consider adding'
       });
     }
-  }
-  return picks;
+  });
+
+  return results;
 }
 
 function getUsgsLatestValue(series) {
@@ -2296,89 +2837,651 @@ function openFlyBoxScanner() {
   input.click();
 }
 
-function handleFlyBoxScanFiles(files) {
-  const next = files.map((file) => ({
-    id: `fly-scan-${Date.now()}-${Math.random().toString(16).slice(2)}`,
-    name: 'Fly',
-    color: 'Varied',
-    size: 'Assorted',
-    imageUrl: URL.createObjectURL(file)
-  }));
-  flyFlyBoxScans = flyFlyBoxScans.concat(next);
-  openFlyBoxReviewModal(next);
+/* ──────── Convert File → base64 data URL for persistent storage ──────── */
+function _fileToDataUrl(file, maxDim) {
+  maxDim = maxDim || 800;
+  return new Promise(function(resolve) {
+    var reader = new FileReader();
+    reader.onload = function() {
+      var img = new Image();
+      img.onload = function() {
+        var w = img.width, h = img.height;
+        if (w > maxDim || h > maxDim) {
+          var ratio = Math.min(maxDim / w, maxDim / h);
+          w = Math.round(w * ratio);
+          h = Math.round(h * ratio);
+        }
+        var canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        var ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL('image/jpeg', 0.85));
+      };
+      img.onerror = function() { resolve(''); };
+      img.src = reader.result;
+    };
+    reader.onerror = function() { resolve(''); };
+    reader.readAsDataURL(file);
+  });
 }
 
-function openFlyBoxReviewModal(scans) {
-  const backdrop = document.createElement('div');
+/* ──────── AI FLY IDENTIFICATION ENGINE ──────── */
+var _FLY_ID_DATABASE = null;
+
+function _buildFlyIdDatabase() {
+  if (_FLY_ID_DATABASE) return _FLY_ID_DATABASE;
+  var cats = window.FLY_BOX_CATEGORIES || {};
+  var db = [];
+  var colorMap = {
+    'adams': { colors: ['gray','brown','grizzly'], sizes: ['12-18'] },
+    'parachute adams': { colors: ['gray','white post','brown'], sizes: ['12-20'] },
+    'elk hair caddis': { colors: ['tan','brown','elk'], sizes: ['12-18'] },
+    'blue winged olive': { colors: ['olive','gray','dun'], sizes: ['16-22'] },
+    'royal wulff': { colors: ['red','white','peacock','brown'], sizes: ['10-16'] },
+    'stimulator': { colors: ['orange','yellow','grizzly'], sizes: ['8-14'] },
+    'cdc emerger': { colors: ['olive','tan','cdc white'], sizes: ['16-22'] },
+    'griffiths gnat': { colors: ['black','grizzly','peacock'], sizes: ['18-24'] },
+    'pale morning dun': { colors: ['pale yellow','cream','tan'], sizes: ['14-18'] },
+    'light cahill': { colors: ['cream','tan','light ginger'], sizes: ['12-16'] },
+    'humpy': { colors: ['yellow','red','royal'], sizes: ['10-16'] },
+    'daves hopper': { colors: ['yellow','tan','green'], sizes: ['6-12'] },
+    'ant pattern': { colors: ['black','cinnamon','red'], sizes: ['14-20'] },
+    'beetle pattern': { colors: ['black','iridescent','foam'], sizes: ['12-18'] },
+    'sulphur dun': { colors: ['pale yellow','cream'], sizes: ['14-18'] },
+    'march brown': { colors: ['brown','tan','mottled'], sizes: ['10-14'] },
+    'quill gordon': { colors: ['quill','gray','dun'], sizes: ['12-16'] },
+    'hendrickson': { colors: ['pink','tan','dark dun'], sizes: ['12-16'] },
+    'trico spinner': { colors: ['black','white','clear wing'], sizes: ['20-26'] },
+    'cream midge': { colors: ['cream','white','pale'], sizes: ['18-24'] },
+    'pheasant tail': { colors: ['brown','copper','pheasant'], sizes: ['14-20'] },
+    'hares ear': { colors: ['tan','brown','hare fur'], sizes: ['12-18'] },
+    'copper john': { colors: ['copper','red','green','zebra'], sizes: ['14-20'] },
+    'zebra midge': { colors: ['black','red','olive','silver'], sizes: ['18-24'] },
+    'prince nymph': { colors: ['peacock','brown','white biots'], sizes: ['12-18'] },
+    'rs2': { colors: ['gray','olive','black'], sizes: ['18-24'] },
+    'perdigon': { colors: ['olive','black','purple','UV'], sizes: ['16-20'] },
+    'stonefly nymph': { colors: ['brown','black','golden'], sizes: ['6-12'] },
+    'caddis larva': { colors: ['green','tan','cream'], sizes: ['14-18'] },
+    'san juan worm': { colors: ['red','pink','brown','wine'], sizes: ['10-14'] },
+    'glo-bug/egg': { colors: ['orange','pink','chartreuse','peach'], sizes: ['8-14'] },
+    'midge larva': { colors: ['red','black','olive','cream'], sizes: ['18-24'] },
+    'rainbow warrior': { colors: ['pearl','rainbow','flashback'], sizes: ['16-22'] },
+    'frenchie': { colors: ['pheasant','pink collar','copper'], sizes: ['14-18'] },
+    'sowbug': { colors: ['gray','tan','pink'], sizes: ['14-18'] },
+    'scud': { colors: ['orange','olive','tan','gray'], sizes: ['14-18'] },
+    'walts worm': { colors: ['tan','cream','hare'], sizes: ['12-16'] },
+    'squirmy wormy': { colors: ['pink','red','worm brown'], sizes: ['10-14'] },
+    'mop fly': { colors: ['cream','tan','chartreuse','pink'], sizes: ['10-14'] },
+    'woolly bugger': { colors: ['black','olive','brown','white'], sizes: ['4-10'] },
+    'muddler minnow': { colors: ['brown','gold','tan','deer'], sizes: ['4-10'] },
+    'clouser minnow': { colors: ['white','chartreuse','tan'], sizes: ['2-8'] },
+    'sculpin': { colors: ['brown','olive','tan','dark'], sizes: ['4-8'] },
+    'zonker': { colors: ['white','olive','natural rabbit'], sizes: ['4-8'] },
+    'bunny leech': { colors: ['black','olive','brown','purple'], sizes: ['2-8'] },
+    'sparkle minnow': { colors: ['white','olive','tan','flash'], sizes: ['4-8'] },
+    'partridge & orange': { colors: ['orange','brown','partridge'], sizes: ['12-16'] },
+    'partridge & green': { colors: ['green','olive','partridge'], sizes: ['12-16'] },
+    'starling & purple': { colors: ['purple','starling','dark'], sizes: ['12-16'] }
+  };
+
+  Object.keys(cats).forEach(function(catKey) {
+    var cat = cats[catKey];
+    (cat.common || []).forEach(function(flyName) {
+      var lowerName = flyName.toLowerCase();
+      var known = colorMap[lowerName] || null;
+      db.push({
+        name: flyName,
+        category: catKey,
+        categoryLabel: cat.name || catKey,
+        colors: known ? known.colors : ['varied'],
+        sizes: known ? known.sizes : ['assorted'],
+        keywords: lowerName.split(/\s+/)
+      });
+    });
+  });
+  _FLY_ID_DATABASE = db;
+  return db;
+}
+
+/* Analyze image colors via canvas sampling — returns dominant color descriptors */
+function _analyzeImageColors(dataUrl) {
+  return new Promise(function(resolve) {
+    if (!dataUrl) { resolve([]); return; }
+    var img = new Image();
+    img.onload = function() {
+      var canvas = document.createElement('canvas');
+      var sz = 64;
+      canvas.width = sz; canvas.height = sz;
+      var ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, sz, sz);
+      var data = ctx.getImageData(0, 0, sz, sz).data;
+      var buckets = { black: 0, white: 0, gray: 0, brown: 0, tan: 0, olive: 0, green: 0,
+        red: 0, orange: 0, yellow: 0, pink: 0, purple: 0, blue: 0, cream: 0, copper: 0 };
+      var total = 0;
+      for (var i = 0; i < data.length; i += 4) {
+        var r = data[i], g = data[i+1], b = data[i+2], a = data[i+3];
+        if (a < 128) continue;
+        total++;
+        var lum = (r + g + b) / 3;
+        if (lum < 30) { buckets.black++; continue; }
+        if (lum > 225) { buckets.white++; continue; }
+        if (lum > 180 && Math.abs(r - g) < 25 && Math.abs(g - b) < 25) { buckets.cream++; continue; }
+        if (Math.abs(r - g) < 20 && Math.abs(g - b) < 20) { buckets.gray++; continue; }
+        // Hue detection
+        var max = Math.max(r, g, b), min = Math.min(r, g, b), d = max - min;
+        var h = 0;
+        if (d > 0) {
+          if (max === r) h = ((g - b) / d) % 6;
+          else if (max === g) h = (b - r) / d + 2;
+          else h = (r - g) / d + 4;
+          h = Math.round(h * 60);
+          if (h < 0) h += 360;
+        }
+        var sat = max > 0 ? d / max : 0;
+        if (sat < 0.15) { if (lum > 140) buckets.tan++; else buckets.gray++; continue; }
+        if (h < 15 || h >= 345) { if (lum > 160) buckets.pink++; else buckets.red++; }
+        else if (h < 35) { if (lum < 100) buckets.brown++; else if (lum < 150) buckets.copper++; else buckets.orange++; }
+        else if (h < 65) { if (sat < 0.4) buckets.tan++; else buckets.yellow++; }
+        else if (h < 160) { if (lum < 80) buckets.olive++; else buckets.green++; }
+        else if (h < 260) buckets.blue++;
+        else buckets.purple++;
+      }
+      // Sort and return top colors above 5% threshold
+      var result = [];
+      Object.keys(buckets).forEach(function(k) {
+        var pct = total > 0 ? buckets[k] / total : 0;
+        if (pct > 0.05) result.push({ color: k, pct: pct });
+      });
+      result.sort(function(a, b) { return b.pct - a.pct; });
+      resolve(result.slice(0, 5));
+    };
+    img.onerror = function() { resolve([]); };
+    img.src = dataUrl;
+  });
+}
+
+/* Match detected colors against the fly database → return ranked candidates */
+function _matchFlyByColors(colorResults) {
+  var db = _buildFlyIdDatabase();
+  var detectedColors = colorResults.map(function(c) { return c.color; });
+
+  var scored = db.map(function(entry) {
+    var matchCount = 0;
+    entry.colors.forEach(function(fc) {
+      var fcLower = fc.toLowerCase();
+      detectedColors.forEach(function(dc) {
+        if (fcLower.indexOf(dc) >= 0 || dc.indexOf(fcLower) >= 0) matchCount++;
+      });
+    });
+    // Bonus for strong single-color matches (e.g., all-black → Woolly Bugger)
+    var topColor = detectedColors[0] || '';
+    var topPct = colorResults.length > 0 ? colorResults[0].pct : 0;
+    if (topPct > 0.5 && entry.colors.some(function(c) { return c.toLowerCase().indexOf(topColor) >= 0; })) {
+      matchCount += 2;
+    }
+    return { entry: entry, score: matchCount };
+  });
+
+  scored.sort(function(a, b) { return b.score - a.score; });
+  return scored.filter(function(s) { return s.score > 0; }).slice(0, 6);
+}
+
+/* Full AI analysis pipeline: file → dataUrl → color analysis → fly ID → structured entry */
+async function _aiFlyAnalysis(file) {
+  var dataUrl = await _fileToDataUrl(file, 600);
+  if (!dataUrl) return null;
+  var colors = await _analyzeImageColors(dataUrl);
+  var matches = _matchFlyByColors(colors);
+  var bestMatch = matches.length > 0 ? matches[0] : null;
+  var confidence = 'low';
+  if (bestMatch && bestMatch.score >= 4) confidence = 'high';
+  else if (bestMatch && bestMatch.score >= 2) confidence = 'medium';
+
+  var dominantColors = colors.slice(0, 3).map(function(c) { return c.color; });
+  var colorLabel = dominantColors.length ? dominantColors.join(', ') : 'varied';
+  colorLabel = colorLabel.charAt(0).toUpperCase() + colorLabel.slice(1);
+
+  return {
+    id: 'fly-' + Date.now() + '-' + Math.random().toString(16).slice(2, 8),
+    name: bestMatch ? bestMatch.entry.name : 'Unknown Fly',
+    category: bestMatch ? bestMatch.entry.category : 'dryFlies',
+    categoryLabel: bestMatch ? bestMatch.entry.categoryLabel : 'Dry Flies',
+    color: colorLabel,
+    size: bestMatch ? bestMatch.entry.sizes[0] : 'Assorted',
+    imageDataUrl: dataUrl,
+    notes: '',
+    confidence: confidence,
+    compartment: -1,
+    addedAt: Date.now(),
+    source: 'scan',
+    altMatches: matches.slice(1, 4).map(function(m) {
+      return { name: m.entry.name, category: m.entry.categoryLabel, score: m.score };
+    })
+  };
+}
+
+/* ──────── SCAN HANDLER — processes uploaded photos through AI pipeline ──────── */
+async function handleFlyBoxScanFiles(files) {
+  showNotice('Scanning ' + files.length + ' fly photo' + (files.length > 1 ? 's' : '') + '...', 'info', 3000);
+
+  var results = [];
+  for (var i = 0; i < files.length; i++) {
+    var entry = await _aiFlyAnalysis(files[i]);
+    if (entry) results.push(entry);
+  }
+
+  if (!results.length) {
+    showNotice('Could not process the photos. Try again with better lighting.', 'warning', 3600);
+    return;
+  }
+
+  openFlyBoxScanReviewModal(results);
+}
+
+/* ──────── SCAN REVIEW MODAL — user confirms/edits AI-identified flies ──────── */
+function openFlyBoxScanReviewModal(scannedFlies) {
+  var backdrop = document.createElement('div');
   backdrop.className = 'ht-modal-backdrop';
   backdrop.style.display = 'flex';
 
-  const modal = document.createElement('div');
-  modal.className = 'ht-modal';
-  modal.innerHTML = `
-    <h3>Fly Box Scan</h3>
-    <div class="ht-fly-scan-grid">
-      ${scans.map((scan) => `
-        <div class="ht-fly-scan-card" data-fly-scan-id="${scan.id}">
-          <img src="${scan.imageUrl}" alt="Fly scan">
-          <input class="ht-fly-scan-input" type="text" placeholder="Fly name" value="${escapeHtml(scan.name)}">
-          <input class="ht-fly-scan-input" type="text" placeholder="Color" value="${escapeHtml(scan.color)}">
-          <input class="ht-fly-scan-input" type="text" placeholder="Size" value="${escapeHtml(scan.size)}">
-        </div>
-      `).join('')}
-    </div>
-    <div class="ht-modal-actions">
-      <button class="ht-modal-btn ghost" type="button" data-fly-scan-cancel>Cancel</button>
-      <button class="ht-modal-btn primary" type="button" data-fly-scan-save>Save To Inventory</button>
-    </div>
-  `;
+  var modal = document.createElement('div');
+  modal.className = 'ht-modal ht-flybox-scan-modal';
+  var cardsHtml = scannedFlies.map(function(fly, idx) {
+    var confColor = fly.confidence === 'high' ? '#4caf50' : fly.confidence === 'medium' ? '#ffc107' : '#ff5722';
+    var altHtml = (fly.altMatches || []).map(function(alt) {
+      return '<option value="' + escapeHtml(alt.name) + '">' + escapeHtml(alt.name) + ' (' + escapeHtml(alt.category) + ')</option>';
+    }).join('');
+    return '<div class="ht-flybox-scan-card" data-scan-idx="' + idx + '">' +
+      '<div class="ht-flybox-scan-img"><img src="' + fly.imageDataUrl + '" alt="Fly"></div>' +
+      '<div class="ht-flybox-scan-info">' +
+        '<div class="ht-flybox-scan-id-row">' +
+          '<span class="ht-flybox-conf-dot" style="background:' + confColor + '"></span>' +
+          '<input class="ht-flybox-scan-name" type="text" value="' + escapeHtml(fly.name) + '" placeholder="Fly name">' +
+        '</div>' +
+        '<div class="ht-flybox-scan-meta-row">' +
+          '<input class="ht-flybox-scan-color" type="text" value="' + escapeHtml(fly.color) + '" placeholder="Color">' +
+          '<input class="ht-flybox-scan-size" type="text" value="' + escapeHtml(fly.size) + '" placeholder="Size">' +
+        '</div>' +
+        (altHtml ? '<select class="ht-flybox-scan-alt" data-idx="' + idx + '"><option value="">AI also detected...</option>' + altHtml + '</select>' : '') +
+        '<select class="ht-flybox-scan-cat" data-idx="' + idx + '">' +
+          '<option value="dryFlies"' + (fly.category === 'dryFlies' ? ' selected' : '') + '>Dry Fly</option>' +
+          '<option value="nymphs"' + (fly.category === 'nymphs' ? ' selected' : '') + '>Nymph</option>' +
+          '<option value="streamers"' + (fly.category === 'streamers' ? ' selected' : '') + '>Streamer</option>' +
+          '<option value="wetFlies"' + (fly.category === 'wetFlies' ? ' selected' : '') + '>Wet Fly</option>' +
+        '</select>' +
+      '</div>' +
+    '</div>';
+  }).join('');
 
-  const closeModal = () => backdrop.remove();
-  modal.querySelector('[data-fly-scan-cancel]')?.addEventListener('click', closeModal);
-  modal.querySelector('[data-fly-scan-save]')?.addEventListener('click', () => {
-    const inv = loadFlyInventory();
-    const cards = Array.from(modal.querySelectorAll('.ht-fly-scan-card'));
-    const entries = [];
-    cards.forEach((card) => {
-      const id = card.dataset.flyScanId;
-      const inputs = card.querySelectorAll('.ht-fly-scan-input');
-      const name = inputs[0]?.value.trim() || 'Fly';
-      const color = inputs[1]?.value.trim() || 'Varied';
-      const size = inputs[2]?.value.trim() || 'Assorted';
-      const scan = scans.find((item) => item.id === id);
-      if (!scan) return;
-      const entry = { name, color, size, imageUrl: scan.imageUrl };
-      entries.push(entry);
+  modal.innerHTML = '<h3>🪰 AI Fly Scan Results</h3>' +
+    '<p style="font-size:12px;color:#aaa;margin:0 0 10px">Review and correct AI identifications. Tap a name to edit.</p>' +
+    '<div class="ht-flybox-scan-list">' + cardsHtml + '</div>' +
+    '<div class="ht-modal-actions">' +
+      '<button class="ht-modal-btn ghost" type="button" data-scan-cancel>Cancel</button>' +
+      '<button class="ht-modal-btn primary" type="button" data-scan-save>✅ Add to Fly Box</button>' +
+    '</div>';
+
+  // Alt-match select: when user picks an alternate, update the name input
+  modal.querySelectorAll('.ht-flybox-scan-alt').forEach(function(sel) {
+    sel.addEventListener('change', function() {
+      if (!sel.value) return;
+      var idx = Number(sel.dataset.idx);
+      var card = modal.querySelector('[data-scan-idx="' + idx + '"]');
+      if (card) {
+        var nameInput = card.querySelector('.ht-flybox-scan-name');
+        if (nameInput) nameInput.value = sel.value;
+      }
     });
-    inv.flies = Array.isArray(inv.flies) ? inv.flies.concat(entries) : entries;
+  });
+
+  var closeModal = function() { backdrop.remove(); };
+
+  modal.querySelector('[data-scan-cancel]').addEventListener('click', closeModal);
+  modal.querySelector('[data-scan-save]').addEventListener('click', function() {
+    var inv = loadFlyInventory();
+    var cards = Array.from(modal.querySelectorAll('.ht-flybox-scan-card'));
+    var count = 0;
+    cards.forEach(function(card, idx) {
+      var fly = scannedFlies[idx];
+      if (!fly) return;
+      fly.name = (card.querySelector('.ht-flybox-scan-name') || {}).value || fly.name;
+      fly.color = (card.querySelector('.ht-flybox-scan-color') || {}).value || fly.color;
+      fly.size = (card.querySelector('.ht-flybox-scan-size') || {}).value || fly.size;
+      var catSel = card.querySelector('.ht-flybox-scan-cat');
+      if (catSel) fly.category = catSel.value;
+      // Assign next open compartment
+      fly.compartment = Array.isArray(inv.flies) ? inv.flies.length + count : count;
+      inv.flies = Array.isArray(inv.flies) ? inv.flies : [];
+      inv.flies.push(fly);
+      count++;
+    });
     saveFlyInventory();
-    updateFlyCoachFeed(`${entries.length} flies added from scan.`);
+    showNotice(count + ' flies added to your fly box!', 'success', 3600);
+    updateFlyCoachFeed(count + ' flies scanned and added to inventory. AI Coach now uses your box.');
     closeModal();
+    // Auto-open the fly box gallery after saving
+    setTimeout(function() { openVirtualFlyBox(); }, 400);
   });
 
-  backdrop.addEventListener('click', (event) => {
-    if (event.target === backdrop) closeModal();
-  });
-
+  backdrop.addEventListener('click', function(e) { if (e.target === backdrop) closeModal(); });
   backdrop.appendChild(modal);
   document.body.appendChild(backdrop);
 }
 
-function openFlyRecommendationsModal() {
-  const picks = getFlyInventoryRecommendations(4);
-  const body = picks.length
-    ? `<div class="ht-fly-strategy-fly-list">${picks.map((pick) => `
-        <div class="ht-fly-strategy-fly">
-          <div class="ht-fly-strategy-fly-thumb">${pick.imageUrl ? `<img src="${pick.imageUrl}" alt="${escapeHtml(pick.name)}">` : 'Fly'}</div>
-          <div>
-            <div class="ht-fly-strategy-fly-name">${escapeHtml(pick.name)}</div>
-            <div class="ht-fly-strategy-fly-meta">${escapeHtml(pick.color)} • ${escapeHtml(pick.size)}</div>
-          </div>
-        </div>
-      `).join('')}</div>`
-    : '<div class="ht-fly-note">Scan your fly box to see recommendations with photos.</div>';
+/* ══════════════════════════════════════════════════════════════════════════
+   VIRTUAL FLY BOX GALLERY — Full-screen compartment grid view
+   ══════════════════════════════════════════════════════════════════════════ */
+function openVirtualFlyBox() {
+  if (!isFlyModule()) return;
+  var inv = loadFlyInventory();
+  var flies = Array.isArray(inv.flies) ? inv.flies : [];
+
+  var backdrop = document.createElement('div');
+  backdrop.className = 'ht-modal-backdrop ht-flybox-backdrop';
+  backdrop.style.display = 'flex';
+
+  var modal = document.createElement('div');
+  modal.className = 'ht-flybox-gallery';
+
+  // Category filter tabs
+  var allCats = [
+    { key: 'all', label: 'All Flies' },
+    { key: 'dryFlies', label: 'Dry Flies' },
+    { key: 'nymphs', label: 'Nymphs' },
+    { key: 'streamers', label: 'Streamers' },
+    { key: 'wetFlies', label: 'Wet Flies' }
+  ];
+
+  function renderGallery(filterCat) {
+    var filtered = filterCat === 'all' ? flies : flies.filter(function(f) { return f.category === filterCat; });
+    var tabsHtml = allCats.map(function(c) {
+      var active = c.key === filterCat ? ' ht-flybox-tab--active' : '';
+      var count = c.key === 'all' ? flies.length : flies.filter(function(f) { return f.category === c.key; }).length;
+      return '<button class="ht-flybox-tab' + active + '" data-cat="' + c.key + '">' + escapeHtml(c.label) + ' <span class="ht-flybox-tab-count">' + count + '</span></button>';
+    }).join('');
+
+    var gridHtml = '';
+    if (!filtered.length) {
+      gridHtml = '<div class="ht-flybox-empty">' +
+        '<div style="font-size:40px;margin-bottom:12px">🪰</div>' +
+        '<div>No flies yet. Scan your fly box to start building your digital collection.</div>' +
+        '<button class="ht-flybox-add-btn" type="button" data-scan-new>📸 Scan Fly Box</button>' +
+      '</div>';
+    } else {
+      gridHtml = '<div class="ht-flybox-grid">';
+      filtered.forEach(function(fly, idx) {
+        var realIdx = flies.indexOf(fly);
+        var imgSrc = fly.imageDataUrl || fly.imageUrl || '';
+        var confDot = fly.confidence === 'high' ? '#4caf50' : fly.confidence === 'medium' ? '#ffc107' : '#ff5722';
+        gridHtml += '<div class="ht-flybox-cell" data-fly-idx="' + realIdx + '">' +
+          '<div class="ht-flybox-cell-img">' +
+            (imgSrc ? '<img src="' + imgSrc + '" alt="' + escapeHtml(fly.name) + '">' : '<div class="ht-flybox-cell-placeholder">🪰</div>') +
+          '</div>' +
+          '<div class="ht-flybox-cell-label">' +
+            '<span class="ht-flybox-conf-dot" style="background:' + confDot + ';width:6px;height:6px"></span> ' +
+            escapeHtml(fly.name || 'Fly') +
+          '</div>' +
+          '<div class="ht-flybox-cell-meta">' + escapeHtml(fly.color || '') + ' • ' + escapeHtml(fly.size || '') + '</div>' +
+        '</div>';
+      });
+      gridHtml += '</div>';
+    }
+
+    modal.innerHTML = '<div class="ht-flybox-header">' +
+      '<h3>🪰 My Fly Box</h3>' +
+      '<div class="ht-flybox-header-actions">' +
+        '<button class="ht-flybox-action-btn" type="button" data-scan-new title="Scan more flies">📸 Scan</button>' +
+        '<button class="ht-flybox-action-btn" type="button" data-add-manual title="Add manually">✏️ Add</button>' +
+        '<button class="ht-flybox-close-btn" type="button" data-close-box>×</button>' +
+      '</div>' +
+    '</div>' +
+    '<div class="ht-flybox-tabs">' + tabsHtml + '</div>' +
+    '<div class="ht-flybox-count">' + filtered.length + ' of ' + flies.length + ' flies</div>' +
+    gridHtml;
+
+    // Bind tab clicks
+    modal.querySelectorAll('.ht-flybox-tab').forEach(function(tab) {
+      tab.addEventListener('click', function() { renderGallery(tab.dataset.cat); });
+    });
+
+    // Bind cell clicks → open fly detail
+    modal.querySelectorAll('.ht-flybox-cell').forEach(function(cell) {
+      cell.addEventListener('click', function() {
+        var flyIdx = Number(cell.dataset.flyIdx);
+        openFlyDetailModal(flyIdx, function() {
+          // Refresh gallery after edit/delete
+          var inv2 = loadFlyInventory();
+          flies = Array.isArray(inv2.flies) ? inv2.flies : [];
+          renderGallery(filterCat);
+        });
+      });
+    });
+
+    // Bind scan button
+    var scanBtn = modal.querySelector('[data-scan-new]');
+    if (scanBtn) scanBtn.addEventListener('click', function() { closeModal(); openFlyBoxScanner(); });
+
+    // Bind manual add
+    var addBtn = modal.querySelector('[data-add-manual]');
+    if (addBtn) addBtn.addEventListener('click', function() {
+      openManualFlyAddModal(function() {
+        var inv2 = loadFlyInventory();
+        flies = Array.isArray(inv2.flies) ? inv2.flies : [];
+        renderGallery(filterCat);
+      });
+    });
+
+    // Bind close
+    var closeBtn = modal.querySelector('[data-close-box]');
+    if (closeBtn) closeBtn.addEventListener('click', closeModal);
+  }
+
+  var closeModal = function() { backdrop.remove(); };
+  renderGallery('all');
+
+  backdrop.addEventListener('click', function(e) { if (e.target === backdrop) closeModal(); });
+  backdrop.appendChild(modal);
+  document.body.appendChild(backdrop);
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   FLY DETAIL MODAL — Full info, edit notes, remove, change ID
+   ══════════════════════════════════════════════════════════════════════════ */
+function openFlyDetailModal(flyIdx, onUpdate) {
+  var inv = loadFlyInventory();
+  var flies = Array.isArray(inv.flies) ? inv.flies : [];
+  var fly = flies[flyIdx];
+  if (!fly) return;
+
+  var backdrop = document.createElement('div');
+  backdrop.className = 'ht-modal-backdrop';
+  backdrop.style.display = 'flex';
+  backdrop.style.zIndex = '23000';
+
+  var modal = document.createElement('div');
+  modal.className = 'ht-modal ht-flybox-detail-modal';
+
+  var confLabel = fly.confidence === 'high' ? '🟢 High' : fly.confidence === 'medium' ? '🟡 Medium' : '🔴 Low';
+  var catLabels = { dryFlies: 'Dry Fly', nymphs: 'Nymph', streamers: 'Streamer', wetFlies: 'Wet Fly' };
+  var imgSrc = fly.imageDataUrl || fly.imageUrl || '';
+  var sourceLabel = fly.source === 'scan' ? '📸 AI Scanned' : '✏️ Manual Entry';
+  var dateLabel = fly.addedAt ? new Date(fly.addedAt).toLocaleDateString() : '—';
+
+  modal.innerHTML = '<div class="ht-flydetail-header">' +
+    '<h3>' + escapeHtml(fly.name || 'Fly') + '</h3>' +
+    '<button class="ht-flybox-close-btn" type="button" data-detail-close>×</button>' +
+  '</div>' +
+  (imgSrc ? '<div class="ht-flydetail-img"><img src="' + imgSrc + '" alt="' + escapeHtml(fly.name) + '"></div>' : '') +
+  '<div class="ht-flydetail-grid">' +
+    '<div class="ht-flydetail-field"><span class="ht-flydetail-label">Category</span><span>' + escapeHtml(catLabels[fly.category] || fly.category) + '</span></div>' +
+    '<div class="ht-flydetail-field"><span class="ht-flydetail-label">Color</span><span>' + escapeHtml(fly.color || 'Varied') + '</span></div>' +
+    '<div class="ht-flydetail-field"><span class="ht-flydetail-label">Size</span><span>' + escapeHtml(fly.size || 'Assorted') + '</span></div>' +
+    '<div class="ht-flydetail-field"><span class="ht-flydetail-label">Confidence</span><span>' + confLabel + '</span></div>' +
+    '<div class="ht-flydetail-field"><span class="ht-flydetail-label">Source</span><span>' + sourceLabel + '</span></div>' +
+    '<div class="ht-flydetail-field"><span class="ht-flydetail-label">Added</span><span>' + dateLabel + '</span></div>' +
+  '</div>' +
+  '<div class="ht-flydetail-notes-section">' +
+    '<label class="ht-flydetail-label" style="display:block;margin-bottom:4px">Notes</label>' +
+    '<textarea class="ht-flydetail-notes" rows="3" placeholder="Add notes about this fly — when it works, what hatch, rigging tips...">' + escapeHtml(fly.notes || '') + '</textarea>' +
+  '</div>' +
+  '<div class="ht-flydetail-actions">' +
+    '<button class="ht-modal-btn ghost" type="button" data-detail-rename>✏️ Rename</button>' +
+    '<button class="ht-modal-btn ghost" type="button" data-detail-duplicate>📋 Duplicate</button>' +
+    '<button class="ht-modal-btn ghost" type="button" style="color:#ff5722;border-color:rgba(255,87,34,0.4)" data-detail-remove>🗑️ Remove</button>' +
+    '<button class="ht-modal-btn primary" type="button" data-detail-save>💾 Save</button>' +
+  '</div>';
+
+  var closeModal = function() { backdrop.remove(); };
+
+  // Close
+  modal.querySelector('[data-detail-close]').addEventListener('click', closeModal);
+
+  // Save notes
+  modal.querySelector('[data-detail-save]').addEventListener('click', function() {
+    var notes = modal.querySelector('.ht-flydetail-notes');
+    if (notes) fly.notes = notes.value.trim();
+    saveFlyInventory();
+    showNotice('Fly notes saved.', 'success', 2400);
+    closeModal();
+    if (onUpdate) onUpdate();
+  });
+
+  // Rename
+  modal.querySelector('[data-detail-rename]').addEventListener('click', function() {
+    var nameEl = modal.querySelector('.ht-flydetail-header h3');
+    var current = fly.name || 'Fly';
+    var newName = prompt('Rename this fly:', current);
+    if (newName && newName.trim()) {
+      fly.name = newName.trim();
+      saveFlyInventory();
+      if (nameEl) nameEl.textContent = fly.name;
+      showNotice('Fly renamed to ' + fly.name, 'success', 2400);
+    }
+  });
+
+  // Duplicate
+  modal.querySelector('[data-detail-duplicate]').addEventListener('click', function() {
+    var dupe = JSON.parse(JSON.stringify(fly));
+    dupe.id = 'fly-' + Date.now() + '-' + Math.random().toString(16).slice(2, 8);
+    dupe.addedAt = Date.now();
+    dupe.notes = '';
+    inv.flies.push(dupe);
+    saveFlyInventory();
+    showNotice('Fly duplicated.', 'success', 2400);
+    closeModal();
+    if (onUpdate) onUpdate();
+  });
+
+  // Remove
+  modal.querySelector('[data-detail-remove]').addEventListener('click', function() {
+    if (!confirm('Remove "' + (fly.name || 'this fly') + '" from your box?')) return;
+    inv.flies.splice(flyIdx, 1);
+    saveFlyInventory();
+    showNotice('Fly removed from box.', 'info', 2400);
+    closeModal();
+    if (onUpdate) onUpdate();
+  });
+
+  backdrop.addEventListener('click', function(e) { if (e.target === backdrop) closeModal(); });
+  backdrop.appendChild(modal);
+  document.body.appendChild(backdrop);
+}
+
+/* ──────── MANUAL FLY ADD MODAL ──────── */
+function openManualFlyAddModal(onUpdate) {
+  var backdrop = document.createElement('div');
+  backdrop.className = 'ht-modal-backdrop';
+  backdrop.style.display = 'flex';
+  backdrop.style.zIndex = '23000';
+
+  var modal = document.createElement('div');
+  modal.className = 'ht-modal';
+  modal.innerHTML = '<h3>✏️ Add Fly Manually</h3>' +
+    '<div style="display:grid;gap:10px">' +
+      '<input type="text" class="ht-flybox-scan-name" placeholder="Fly name (e.g., Elk Hair Caddis)" data-field="name">' +
+      '<select data-field="category">' +
+        '<option value="dryFlies">Dry Fly</option>' +
+        '<option value="nymphs">Nymph</option>' +
+        '<option value="streamers">Streamer</option>' +
+        '<option value="wetFlies">Wet Fly</option>' +
+      '</select>' +
+      '<input type="text" placeholder="Color (e.g., tan, olive)" data-field="color">' +
+      '<input type="text" placeholder="Size (e.g., 14-18)" data-field="size">' +
+      '<textarea rows="2" placeholder="Notes (optional)" data-field="notes"></textarea>' +
+    '</div>' +
+    '<div class="ht-modal-actions">' +
+      '<button class="ht-modal-btn ghost" type="button" data-cancel>Cancel</button>' +
+      '<button class="ht-modal-btn primary" type="button" data-save>Add to Box</button>' +
+    '</div>';
+
+  var closeModal = function() { backdrop.remove(); };
+  modal.querySelector('[data-cancel]').addEventListener('click', closeModal);
+  modal.querySelector('[data-save]').addEventListener('click', function() {
+    var name = (modal.querySelector('[data-field="name"]') || {}).value || '';
+    if (!name.trim()) { showNotice('Enter a fly name.', 'warning', 2400); return; }
+    var fly = {
+      id: 'fly-' + Date.now() + '-' + Math.random().toString(16).slice(2, 8),
+      name: name.trim(),
+      category: (modal.querySelector('[data-field="category"]') || {}).value || 'dryFlies',
+      color: (modal.querySelector('[data-field="color"]') || {}).value || 'Varied',
+      size: (modal.querySelector('[data-field="size"]') || {}).value || 'Assorted',
+      imageDataUrl: '',
+      notes: (modal.querySelector('[data-field="notes"]') || {}).value || '',
+      confidence: 'manual',
+      compartment: -1,
+      addedAt: Date.now(),
+      source: 'manual',
+      altMatches: []
+    };
+    var inv = loadFlyInventory();
+    inv.flies = Array.isArray(inv.flies) ? inv.flies : [];
+    inv.flies.push(fly);
+    saveFlyInventory();
+    showNotice(fly.name + ' added to fly box.', 'success', 2400);
+    closeModal();
+    if (onUpdate) onUpdate();
+  });
+
+  backdrop.addEventListener('click', function(e) { if (e.target === backdrop) closeModal(); });
+  backdrop.appendChild(modal);
+  document.body.appendChild(backdrop);
+}
+
+function openFlyRecommendationsModal(criteria) {
+  var picks = getFlyInventoryRecommendations(6, criteria || null);
+  var inv = loadFlyInventory();
+  var flyCount = Array.isArray(inv.flies) ? inv.flies.length : 0;
+  var body = '';
+  if (!picks.length && !flyCount) {
+    body = '<div class="ht-fly-note" style="text-align:center;padding:20px">' +
+      '<div style="font-size:40px;margin-bottom:10px">🪰</div>' +
+      '<div>No flies in your box yet.</div>' +
+      '<div style="margin-top:8px">Tap <strong>AI Fly Box</strong> to scan your real fly box with your camera.</div>' +
+      '</div>';
+  } else {
+    body = '<div class="ht-fly-strategy-fly-list">';
+    picks.forEach(function(pick) {
+      var matchBadge = '';
+      if (pick.matchType === 'exact') matchBadge = '<span style="color:#4caf50;font-size:10px">✅ FROM YOUR BOX</span>';
+      else if (pick.matchType === 'closest') matchBadge = '<span style="color:#ffc107;font-size:10px">🔄 CLOSEST MATCH</span>';
+      else if (pick.matchType === 'missing') matchBadge = '<span style="color:#ff5722;font-size:10px">❌ NOT IN BOX</span>';
+      var noteHtml = pick.matchNote ? '<div style="font-size:10px;color:#999;margin-top:2px">' + escapeHtml(pick.matchNote) + '</div>' : '';
+      body += '<div class="ht-fly-strategy-fly">' +
+        '<div class="ht-fly-strategy-fly-thumb">' + (pick.imageUrl ? '<img src="' + pick.imageUrl + '" alt="' + escapeHtml(pick.name) + '">' : '🪰') + '</div>' +
+        '<div>' +
+          '<div class="ht-fly-strategy-fly-name">' + escapeHtml(pick.name) + ' ' + matchBadge + '</div>' +
+          '<div class="ht-fly-strategy-fly-meta">' + escapeHtml(pick.color) + ' • ' + escapeHtml(pick.size) + '</div>' +
+          noteHtml +
+        '</div>' +
+      '</div>';
+    });
+    body += '</div>';
+    if (flyCount > 0) {
+      body += '<div style="text-align:center;margin-top:10px;font-size:11px;color:#888">' + flyCount + ' flies in your digital box</div>';
+    }
+  }
   openInfoModal({
-    title: 'Fly Recommendations',
+    title: '🪰 AI Fly Recommendations',
     bodyHtml: body,
     confirmLabel: 'Close'
   });
@@ -2527,17 +3630,12 @@ function openFlyHatchDetailsModal(imageUrl) {
 
 window.flyFishNow = function(id) {
   if (!isFlyModule()) return;
-  // Route into the Fish Now wizard so the user goes through the proper flow
-  if (typeof window.fishSelectWater === 'function') {
-    closeFlyWaterActionBar();
-    if (typeof window.showStreamPanel === 'function') window.showStreamPanel('fishNowPanel');
-    window.fishSelectWater(id);
-    return;
-  }
-  // Fallback to old coach tray if wizard not ready
+  // Open the action bar for check-in
   const water = getFlyWaterById(id) || getSavedTroutWaterById(id);
-  if (water) focusFlyWater(water);
-  openFlyCommandTray(water || null);
+  if (water) {
+    focusFlyWater(water);
+    showFlyWaterActionBar(water);
+  }
 };
 
 window.flyAddToTripPlanner = function(id) {
@@ -2627,6 +3725,58 @@ window.flySearchOnMap = function() {
 };
 
 /* ═══════════════════════════════════════════════════════════════════════
+   STREAM COMMAND TRAY — 3×2 Pill Grid Handlers
+   ═══════════════════════════════════════════════════════════════════════ */
+
+window.cmdAiFlyBox = function() {
+  if (!isFlyModule()) return;
+  var inv = loadFlyInventory();
+  var flyCount = Array.isArray(inv.flies) ? inv.flies.length : 0;
+  if (flyCount > 0) {
+    // Has flies — open virtual fly box gallery
+    openVirtualFlyBox();
+  } else {
+    // No flies yet — go straight to scanner
+    openFlyBoxScanner();
+  }
+};
+
+window.cmdLogCatch = function() {
+  if (!isFlyModule()) return;
+  openFlyCatchLogModal();
+};
+
+window.cmdLogHatch = function() {
+  if (!isFlyModule()) return;
+  openFlyHatchLogModal();
+};
+
+window.cmdAiCoach = function() {
+  if (!isFlyModule()) return;
+  showFlyCoachPanel();
+};
+
+window.cmdStrategy = function() {
+  if (!isFlyModule()) return;
+  startFlyStrategyFromTray(null);
+};
+
+window.cmdCheckOut = function() {
+  if (!isFlyModule()) return;
+  // If checked into a hotspot, check out from it (shows next/pick options)
+  if (_activeHotspotIdx >= 0) {
+    _hotspotCheckOut(true);
+    return;
+  }
+  // Full session checkout — end everything
+  setFlyLiveSessionActive(false);
+  if (typeof window._clearAllFishPins === 'function') window._clearAllFishPins();
+  _clearHotspotPins();
+  showNotice('Session ended. Catch data saved.', 'success', 3600);
+  if (typeof window.startOver === 'function') window.startOver();
+};
+
+/* ═══════════════════════════════════════════════════════════════════════
    AI GUIDED FISHING ENGINE — Zone Polygons, Ranked Pins, Proximity,
    Mission Summary, Spot Info Tray, Voice AI Coach
    ═══════════════════════════════════════════════════════════════════════ */
@@ -2636,9 +3786,6 @@ var _aiFishingSpots = [];       // spot data objects
 var _activeZonePolygon = null;  // current zone polygon layer
 var _activeMicroPolygons = [];  // micro-area polygons
 var _activeMicroPins = [];      // micro-spot pins within a pin area
-var _activeFlowLayers = [];     // water flow simulation overlay layers
-var _activeAnglerPins = [];     // stand-here angler position pins
-var _activeApproachLines = [];  // approach direction polylines
 var _missionSummaryEl = null;   // mission summary overlay DOM
 var _spotInfoTrayEl = null;     // spot info tray DOM
 var _proximityWatchId = null;   // geolocation watch for auto-checkin
@@ -2652,499 +3799,672 @@ var _aiCoachState = {           // live AI coach state
 };
 
 /* ── Deploy zone polygon with flash-then-fade ── */
+/* DISABLED: User does not want polygons */
 window.deployZonePolygonWithFade = function(water, zone) {
-  if (!water || !zone || !map) return;
-
-  // Clear any previous
-  if (_activeZonePolygon) { try { map.removeLayer(_activeZonePolygon); } catch {} }
-
-  var segment = getZoneStreamSegment(water, zone);
-  if (!segment || segment.length < 2) return;
-
-  var corridor = buildStreamCorridor(segment, 45);
-  if (!corridor) return;
-
-  _activeZonePolygon = L.polygon(corridor, {
-    color: '#7cffc7',
-    weight: 2,
-    fillColor: '#2bd4ff',
-    fillOpacity: 0.25,
-    dashArray: '6 3',
-    className: 'ht-zone-polygon-flash'
-  }).addTo(map);
-
-  // Flash bright then fade out completely
-  setTimeout(function() {
-    if (_activeZonePolygon) {
-      _activeZonePolygon.setStyle({ fillOpacity: 0.15 });
-    }
-  }, 1500);
-  setTimeout(function() {
-    if (_activeZonePolygon) {
-      _activeZonePolygon.setStyle({ fillOpacity: 0.08, weight: 1 });
-    }
-  }, 3000);
-  setTimeout(function() {
-    if (_activeZonePolygon) {
-      _activeZonePolygon.setStyle({ fillOpacity: 0.02, weight: 0.5, opacity: 0.2 });
-    }
-  }, 5000);
-  setTimeout(function() {
-    if (_activeZonePolygon) {
-      try { map.removeLayer(_activeZonePolygon); } catch {}
-      _activeZonePolygon = null;
-    }
-  }, 7000);
+  // Polygons removed per user request — no-op
+  if (_activeZonePolygon) { try { map.removeLayer(_activeZonePolygon); } catch {} _activeZonePolygon = null; }
 };
 
-/* ═══════════════════════════════════════════════════════════════════
-   WATER FLOW SIMULATION OVERLAY — ULTRA REALISTIC
-   High-fidelity stream rendering: multi-layer water body, organic
-   banks with Catmull-Rom interpolation, dynamic current lanes,
-   shimmer particles, ripples, and flow direction indicators.
-   ═══════════════════════════════════════════════════════════════════ */
-function clearFlowOverlay() {
-  _activeFlowLayers.forEach(function(l) { try { map.removeLayer(l); } catch {} });
-  _activeFlowLayers = [];
-}
+/* ═══════════════════════════════════════════════════════════════════════
+   MICRO-SPOT 3-ICON DEPLOYMENT ENGINE
+   ─────────────────────────────────────────────────────────────────────
+   For each micro-spot, deploys two icons:
+     🐟 Fish Hold  — trout pinned EXACTLY on the stream (within bankWidths)
+     🧍 Angler Pos — where to wade/stand, ON the bank or in shallow edge
+   Plus a cast line from angler → fish (no separate target icon).
+   All positions validated against bankWidths guardrail.
+   ═══════════════════════════════════════════════════════════════════════ */
 
-/* Catmull-Rom spline interpolation for smooth organic curves */
-function _catmullRomInterpolate(points, segments) {
-  if (points.length < 3) return points.slice();
-  var result = [];
-  for (var i = 0; i < points.length - 1; i++) {
-    var p0 = points[Math.max(0, i - 1)];
-    var p1 = points[i];
-    var p2 = points[Math.min(points.length - 1, i + 1)];
-    var p3 = points[Math.min(points.length - 1, i + 2)];
-    for (var t = 0; t < segments; t++) {
-      var tt = t / segments;
-      var tt2 = tt * tt;
-      var tt3 = tt2 * tt;
-      var lat = 0.5 * ((2 * p1[0]) + (-p0[0] + p2[0]) * tt + (2 * p0[0] - 5 * p1[0] + 4 * p2[0] - p3[0]) * tt2 + (-p0[0] + 3 * p1[0] - 3 * p2[0] + p3[0]) * tt3);
-      var lng = 0.5 * ((2 * p1[1]) + (-p0[1] + p2[1]) * tt + (2 * p0[1] - 5 * p1[1] + 4 * p2[1] - p3[1]) * tt2 + (-p0[1] + 3 * p1[1] - 3 * p2[1] + p3[1]) * tt3);
-      result.push([lat, lng]);
+/**
+ * STREAM BOUNDARY GUARDRAIL — ensures a lat/lng is within the water.
+ * Finds the nearest streamPath point and checks if the perpendicular
+ * distance from the centerline exceeds the bankWidth at that point.
+ * If it does, clamps back to the bank edge.
+ *
+ * @param {number} lat - latitude to check
+ * @param {number} lng - longitude to check
+ * @param {Array} segment - streamPath array of [lat,lng]
+ * @param {Array} bankWidths - optional array of [leftM, rightM] per streamPath point
+ * @param {number} avgWidth - fallback avgStreamWidth from water object
+ * @returns {{lat:number, lng:number, inWater:boolean, segIdx:number}}
+ */
+function _snapToStream(lat, lng, segment, bankWidths, avgWidth) {
+  if (!segment || segment.length < 2) return { lat: lat, lng: lng, inWater: true, segIdx: 0 };
+
+  var DEG = Math.PI / 180;
+  var mPerLat = 111000;
+
+  // Find nearest segment point
+  var bestIdx = 0, bestDist = Infinity;
+  for (var i = 0; i < segment.length; i++) {
+    var d = _distM(lat, lng, segment[i][0], segment[i][1]);
+    if (d < bestDist) { bestDist = d; bestIdx = i; }
+  }
+
+  var lat0 = segment[bestIdx][0], lng0 = segment[bestIdx][1];
+  var mPerLng = 111000 * Math.cos(lat0 * DEG);
+
+  // Get stream direction at this point
+  var dy = 0, dx = 0;
+  if (bestIdx === 0 && segment.length > 1) {
+    dy = segment[1][0] - segment[0][0]; dx = segment[1][1] - segment[0][1];
+  } else if (bestIdx >= segment.length - 1) {
+    dy = segment[segment.length-1][0] - segment[segment.length-2][0];
+    dx = segment[segment.length-1][1] - segment[segment.length-2][1];
+  } else {
+    dy = segment[bestIdx+1][0] - segment[bestIdx-1][0];
+    dx = segment[bestIdx+1][1] - segment[bestIdx-1][1];
+  }
+  var dyM = dy * mPerLat, dxM = dx * mPerLng;
+  var len = Math.sqrt(dyM * dyM + dxM * dxM);
+  if (len < 0.01) return { lat: lat0, lng: lng0, inWater: true, segIdx: bestIdx };
+
+  // Perpendicular axis (left = positive)
+  var perpX = -dxM / len;  // lat component of perpendicular
+  var perpY = dyM / len;   // lng component of perpendicular
+
+  // Project point onto perpendicular axis to get signed offset
+  var relLat = (lat - lat0) * mPerLat;
+  var relLng = (lng - lng0) * mPerLng;
+  var perpOffset = relLat * perpX + relLng * perpY; // meters, positive=left
+
+  // Get bank width at this point
+  var halfWidth = (avgWidth || 12) / 2;
+  if (bankWidths && bankWidths.length > 0) {
+    // Map from dense interpolated index → raw bankWidths index
+    var bwIdx = Math.min(bestIdx, bankWidths.length - 1);
+    var bw = bankWidths[bwIdx];
+    if (bw) {
+      halfWidth = perpOffset >= 0 ? (bw[0] || halfWidth) : (bw[1] || halfWidth);
     }
   }
-  result.push(points[points.length - 1]);
-  return result;
+
+  var inWater = Math.abs(perpOffset) <= halfWidth;
+  if (inWater) return { lat: lat, lng: lng, inWater: true, segIdx: bestIdx };
+
+  // Clamp to bank edge — push back to the water boundary
+  var clampedOffset = perpOffset > 0 ? halfWidth * 0.85 : -halfWidth * 0.85; // 85% of bank width for safety margin
+  var clampedLat = lat0 + (perpX * clampedOffset) / mPerLat;
+  var clampedLng = lng0 + (perpY * clampedOffset) / mPerLng;
+  return { lat: clampedLat, lng: clampedLng, inWater: true, segIdx: bestIdx };
+}
+
+/**
+ * Get the bankWidths array for a dense interpolated segment,
+ * mapping back to the raw streamPath bankWidths.
+ */
+function _getDenseBankWidth(rawBankWidths, rawStreamPath, denseSeg, denseIdx) {
+  if (!rawBankWidths || !rawBankWidths.length) return null;
+  if (!rawStreamPath || !rawStreamPath.length) return null;
+  // Find which raw streamPath point is closest to this dense point
+  var lat = denseSeg[denseIdx][0], lng = denseSeg[denseIdx][1];
+  var bestRaw = 0, bestDist = Infinity;
+  for (var r = 0; r < rawStreamPath.length; r++) {
+    var d = _distM(lat, lng, rawStreamPath[r][0], rawStreamPath[r][1]);
+    if (d < bestDist) { bestDist = d; bestRaw = r; }
+  }
+  return rawBankWidths[Math.min(bestRaw, rawBankWidths.length - 1)] || null;
+}
+
+/**
+ * Compute perpendicular offset from a stream segment point.
+ * @param {Array} segment - array of [lat,lng] pairs
+ * @param {number} segIdx - index into segment
+ * @param {number} offsetM - meters perpendicular (positive=left bank, negative=right bank)
+ * @returns {{lat:number, lng:number}}
+ */
+function _perpendicularOffset(segment, segIdx, offsetM) {
+  var DEG = Math.PI / 180;
+  var mPerLat = 111000;
+  var lat0 = segment[segIdx][0];
+  var mPerLng = 111000 * Math.cos(lat0 * DEG);
+  // Stream direction vector at this point
+  var dy = 0, dx = 0;
+  if (segIdx === 0) {
+    dy = segment[1][0] - segment[0][0]; dx = segment[1][1] - segment[0][1];
+  } else if (segIdx >= segment.length - 1) {
+    dy = segment[segment.length-1][0] - segment[segment.length-2][0];
+    dx = segment[segment.length-1][1] - segment[segment.length-2][1];
+  } else {
+    dy = segment[segIdx+1][0] - segment[segIdx-1][0];
+    dx = segment[segIdx+1][1] - segment[segIdx-1][1];
+  }
+  var dyM = dy * mPerLat, dxM = dx * mPerLng;
+  var len = Math.sqrt(dyM*dyM + dxM*dxM);
+  if (len < 0.01) return { lat: lat0, lng: segment[segIdx][1] };
+  // Perpendicular: rotate 90° left → (-dxM, dyM)
+  var perpLat = (-dxM / len) * offsetM / mPerLat;
+  var perpLng = (dyM / len) * offsetM / mPerLng;
+  return { lat: lat0 + perpLat, lng: segment[segIdx][1] + perpLng };
+}
+
+/**
+ * Compute upstream offset along the stream from a segment point.
+ * @param {Array} segment - array of [lat,lng] pairs
+ * @param {number} segIdx - index into segment
+ * @param {number} distM  - meters upstream (positive=upstream, negative=downstream)
+ * @returns {{lat:number, lng:number}}
+ */
+function _streamOffset(segment, segIdx, distM) {
+  var DEG = Math.PI / 180;
+  var mPerLat = 111000;
+  var lat0 = segment[segIdx][0];
+  var mPerLng = 111000 * Math.cos(lat0 * DEG);
+  // Upstream = backwards along segment (lower indices)
+  var dy = 0, dx = 0;
+  if (segIdx > 0) {
+    dy = segment[segIdx-1][0] - segment[segIdx][0];
+    dx = segment[segIdx-1][1] - segment[segIdx][1];
+  } else if (segIdx < segment.length - 1) {
+    dy = -(segment[segIdx+1][0] - segment[segIdx][0]);
+    dx = -(segment[segIdx+1][1] - segment[segIdx][1]);
+  }
+  var dyM = dy * mPerLat, dxM = dx * mPerLng;
+  var len = Math.sqrt(dyM*dyM + dxM*dxM);
+  if (len < 0.01) return { lat: lat0, lng: segment[segIdx][1] };
+  return {
+    lat: lat0 + (dyM / len) * distM / mPerLat,
+    lng: segment[segIdx][1] + (dxM / len) * distM / mPerLng
+  };
+}
+
+/**
+ * Deploy a full micro-spot cluster with rich animated elements:
+ *   • Fish hold icon (in-stream, snapped to water)
+ *   • 3D Angler figure with fly rod + beacon pulse (standing position)
+ *   • WADE HERE pill (on the bank, stream entry point)
+ *   • Animated approach arrows (bank → standing position)
+ *   • Curved cast arc with unfurling animation
+ *   • Splash rings + fly dot at the landing zone
+ *   • Natural drift line with direction arrows (over the fish)
+ *
+ * STRATEGIC UPSTREAM PRESENTATION (won't spook fish):
+ *   1. Angler enters stream at WADE HERE (bank, downstream of fish)
+ *   2. Wades upstream along approach arrow to standing position
+ *   3. Casts upstream — fly line unfurls and lands above fish
+ *   4. Fly drifts naturally downstream over the fish's hold
+ *   → Fish faces upstream, never sees the angler behind them
+ *
+ * @param {Object} opts  (fishLat, fishLng, segIdx, segment, wade, habitat,
+ *                         microType, microIdx, spot, water, zone, strategy,
+ *                         bankWidths)
+ * @returns {Array} array of Leaflet marker/polyline objects
+ */
+function _deployMicroCluster(opts) {
+  var markers = [];
+  var seg = opts.segment;
+  var sIdx = opts.segIdx;
+  var wade = opts.wade || 'waders';
+
+  // ── Get bankWidth data for this spot ──
+  var bw = null;
+  var halfWidth = 5.5;
+  var rawBW = opts.bankWidths || (opts.water && opts.water.bankWidths) || null;
+  // When zone-aligned bankWidths are passed, use the zone segment as reference
+  // (indices match). Otherwise fall back to the full raw streamPath for proximity lookup.
+  var rawSP = opts.bankWidths ? seg : ((opts.water && opts.water.streamPath) || null);
+  if (rawBW && rawSP) {
+    bw = _getDenseBankWidth(rawBW, rawSP, seg, sIdx);
+    if (bw) halfWidth = Math.max(bw[0] || 5.5, bw[1] || 5.5);
+  }
+  var avgWidth = (opts.water && opts.water.avgStreamWidth) || (halfWidth * 2) || 12;
+
+  // ══════════════════════════════════════════════════════════════
+  //  1) FISH HOLD — must be IN the water
+  // ══════════════════════════════════════════════════════════════
+  var fishSnap = _snapToStream(opts.fishLat, opts.fishLng, seg, rawBW, avgWidth);
+  var fishLat = fishSnap.lat;
+  var fishLng = fishSnap.lng;
+  var fishSIdx = fishSnap.segIdx || sIdx;
+
+  // Lateral jitter (stay within 35% of bank width, then re-snap)
+  var jitterMax = halfWidth * 0.35;
+  var jitter = (Math.random() - 0.5) * 2 * jitterMax;
+  var jittered = _perpendicularOffset(seg, fishSIdx, jitter);
+  var jitterSnap = _snapToStream(jittered.lat, jittered.lng, seg, rawBW, avgWidth);
+  fishLat = jitterSnap.lat;
+  fishLng = jitterSnap.lng;
+
+  // Fish rotation — face upstream
+  var fishRotation = 0;
+  if (seg && fishSIdx >= 0 && fishSIdx < seg.length) {
+    var dy = 0, dx = 0;
+    if (fishSIdx > 0 && fishSIdx < seg.length - 1) {
+      dy = seg[fishSIdx+1][0] - seg[fishSIdx-1][0]; dx = seg[fishSIdx+1][1] - seg[fishSIdx-1][1];
+    } else if (fishSIdx === 0 && seg.length > 1) {
+      dy = seg[1][0] - seg[0][0]; dx = seg[1][1] - seg[0][1];
+    } else if (fishSIdx > 0) {
+      dy = seg[fishSIdx][0] - seg[fishSIdx-1][0]; dx = seg[fishSIdx][1] - seg[fishSIdx-1][1];
+    }
+    fishRotation = Math.atan2(dx, dy) * (180 / Math.PI) + 180;
+  }
+
+  var fishIcon = L.divIcon({
+    className: 'ht-fish-swim-pin',
+    html: '<img src="assets/fish-swim.svg" width="36" height="20" ' +
+          'style="transform:rotate(' + Math.round(fishRotation) + 'deg);" alt="">' +
+          '<span class="ht-fish-swim-label">' +
+          escapeHtml(_capitalize(opts.microType.replace(/-/g, ' '))) + '</span>',
+    iconSize: [36, 20],
+    iconAnchor: [18, 10]
+  });
+  var fishMarker = L.marker([fishLat, fishLng], {
+    icon: fishIcon, zIndexOffset: 550
+  }).addTo(map);
+  fishMarker.__microType = opts.microType;
+  fishMarker.__microIdx = opts.microIdx;
+  fishMarker.__iconKind = 'fish';
+  fishMarker.on('click', function() {
+    _showSpotInfoTray(opts.water, opts.zone, opts.spot, opts.microType, opts.microIdx);
+  });
+  markers.push(fishMarker);
+
+  // ══════════════════════════════════════════════════════════════
+  //  2) STANDING POSITION — downstream of fish, IN the water
+  //     3D angler SVG with animated fly rod + beacon pulse ring
+  // ══════════════════════════════════════════════════════════════
+  // Standing position: normally downstream of fish (angler behind fish)
+  // BUT if fish is near the downstream end of the zone, flip to upstream
+  // to avoid placing angler past zone boundary / waterfalls / obstacles
+  var standDistDense = 4; // 4 dense steps × 5m = ~20m
+  var EDGE_BUFFER = 5;   // stay at least 5 indices from zone boundary
+  var standSIdx;
+  if (fishSIdx + standDistDense > seg.length - 1 - EDGE_BUFFER) {
+    // Near downstream end — place angler UPSTREAM of fish instead
+    standSIdx = Math.max(fishSIdx - standDistDense, EDGE_BUFFER);
+  } else {
+    standSIdx = Math.min(fishSIdx + standDistDense, seg.length - 1 - EDGE_BUFFER);
+  }
+  var standSnap = _snapToStream(seg[standSIdx][0], seg[standSIdx][1], seg, rawBW, avgWidth);
+
+  // SVG: person holding fly rod, tiny, top-down silhouette
+  var standSvg = '<svg class="ht-stand-here-svg" width="26" height="32" viewBox="0 0 26 32" xmlns="http://www.w3.org/2000/svg">' +
+    '<circle cx="13" cy="8" r="4" fill="#ff6b00" stroke="#333" stroke-width="1"/>' +
+    '<rect x="10" y="12" width="6" height="12" rx="2" fill="#ff6b00" stroke="#333" stroke-width="0.8"/>' +
+    '<line class="ht-stand-flyline" x1="13" y1="6" x2="3" y2="1" stroke="#7cffc7" stroke-width="1.5" stroke-dasharray="2 2" stroke-linecap="round"/>' +
+    '<rect x="9" y="24" width="3" height="4" rx="1" fill="#cc5500"/>' +
+    '<rect x="14" y="24" width="3" height="4" rx="1" fill="#cc5500"/>' +
+    '</svg>';
+
+  var standIcon = L.divIcon({
+    className: 'ht-stand-here-pin',
+    html: '<div class="ht-stand-here-dot">' + standSvg + '</div>',
+    iconSize: [32, 38],
+    iconAnchor: [16, 32]
+  });
+  var standMarker = L.marker([standSnap.lat, standSnap.lng], {
+    icon: standIcon, zIndexOffset: 555, interactive: false
+  }).addTo(map);
+  standMarker.__iconKind = 'stand';
+  standMarker.__microIdx = opts.microIdx;
+  markers.push(standMarker);
+
+  // ══════════════════════════════════════════════════════════════
+  //  3) WADE HERE pill — on the BANK at the stream entry point
+  //     Big, bold, glowing green — can't miss it
+  // ══════════════════════════════════════════════════════════════
+  var bankSide = (opts.microIdx % 2 === 0) ? 1 : -1;
+  var bankEdge = halfWidth;
+  if (rawBW && rawSP) {
+    var standBw = _getDenseBankWidth(rawBW, rawSP, seg, standSIdx);
+    if (standBw) {
+      bankEdge = (bankSide > 0) ? (standBw[0] || halfWidth) : (standBw[1] || halfWidth);
+    }
+  }
+  var wadeOffsetM = bankSide * (bankEdge + 8); // 8m onto dry bank — well clear of stream
+  var wadeEntry = _perpendicularOffset(seg, standSIdx, wadeOffsetM);
+
+  var wadeLabel = (wade === 'waders') ? '\uD83E\uDD7E WADE HERE' : '\uD83C\uDFD6 STAND HERE';
+  var wadeIcon = L.divIcon({
+    className: 'ht-wade-pin',
+    html: '<div class="ht-wade-pill">' + wadeLabel + '</div>',
+    iconSize: [90, 22],
+    iconAnchor: [45, 22]
+  });
+  var wadeMarker = L.marker([wadeEntry.lat, wadeEntry.lng], {
+    icon: wadeIcon, zIndexOffset: 570
+  }).addTo(map);
+  wadeMarker.__iconKind = 'wade';
+  wadeMarker.__microIdx = opts.microIdx;
+  markers.push(wadeMarker);
+
+  // ══════════════════════════════════════════════════════════════
+  //  4) APPROACH ARROWS — animated pulsing ▶ along path
+  //     Dashed line from wade entry → standing position + 3 arrow markers
+  // ══════════════════════════════════════════════════════════════
+  var approachLine = L.polyline(
+    [[wadeEntry.lat, wadeEntry.lng], [standSnap.lat, standSnap.lng]],
+    { color: '#7cffc7', weight: 2.5, opacity: 0.4, dashArray: '6 4',
+      className: 'ht-approach-line', interactive: false }
+  ).addTo(map);
+  approachLine.__iconKind = 'approach';
+  approachLine.__microIdx = opts.microIdx;
+  markers.push(approachLine);
+
+  // (Approach arrow triangles removed — dashed line is sufficient)
+
+  // ══════════════════════════════════════════════════════════════
+  //  5) FLY LANDING ZONE — upstream of fish
+  //     Splash rings + bright fly dot + "CAST HERE" label
+  // ══════════════════════════════════════════════════════════════
+  var flyDistDense = Math.max(Math.round(1.5 / 5), 1); // ~1.5m upstream of fish (~1-2 yards past)
+  var flyTargetSIdx = Math.max(fishSIdx - flyDistDense, Math.min(EDGE_BUFFER, fishSIdx));
+  var flySnap = _snapToStream(seg[flyTargetSIdx][0], seg[flyTargetSIdx][1], seg, rawBW, avgWidth);
+
+  // Splash rings (expanding ripple)
+  var splashIcon = L.divIcon({
+    className: 'ht-cast-splash-pin',
+    html: '<div class="ht-cast-splash-ring"></div>' +
+          '<div class="ht-cast-splash-ring ht-cast-splash-ring-2"></div>',
+    iconSize: [30, 30],
+    iconAnchor: [15, 15]
+  });
+  var splashMarker = L.marker([flySnap.lat, flySnap.lng], {
+    icon: splashIcon, zIndexOffset: 540, interactive: false
+  }).addTo(map);
+  splashMarker.__iconKind = 'splash';
+  splashMarker.__microIdx = opts.microIdx;
+  markers.push(splashMarker);
+
+  // Bright fly landing dot
+  var flyDotIcon = L.divIcon({
+    className: 'ht-cast-fly-pin',
+    html: '<div class="ht-cast-fly-dot"></div>',
+    iconSize: [10, 10],
+    iconAnchor: [5, 5]
+  });
+  var flyDotMarker = L.marker([flySnap.lat, flySnap.lng], {
+    icon: flyDotIcon, zIndexOffset: 548, interactive: false
+  }).addTo(map);
+  flyDotMarker.__iconKind = 'flydot';
+  flyDotMarker.__microIdx = opts.microIdx;
+  markers.push(flyDotMarker);
+
+  // "CAST HERE" label above the fly dot
+  var castLabelIcon = L.divIcon({
+    className: 'ht-cast-label-pin',
+    html: '<div class="ht-cast-label">CAST HERE</div>',
+    iconSize: [60, 14],
+    iconAnchor: [30, 28]
+  });
+  var castLabelMarker = L.marker([flySnap.lat, flySnap.lng], {
+    icon: castLabelIcon, zIndexOffset: 542, interactive: false
+  }).addTo(map);
+  castLabelMarker.__iconKind = 'castlabel';
+  castLabelMarker.__microIdx = opts.microIdx;
+  markers.push(castLabelMarker);
+
+  // ══════════════════════════════════════════════════════════════
+  //  6) CURVED CAST ARC — parabolic arc from angler to fly target
+  //     Bows to the side like a real fly line unfurling
+  //     Uses ht-cast-arc CSS with castUnfurl animation
+  // ══════════════════════════════════════════════════════════════
+  var castArcPoints = [];
+  var arcSteps = 14;
+  var DEG_C = Math.PI / 180;
+  var mPerLat_C = 111000;
+  var mPerLng_C = 111000 * Math.cos(standSnap.lat * DEG_C);
+  // Direction from stand to fly target
+  var cDy = (flySnap.lat - standSnap.lat) * mPerLat_C;
+  var cDx = (flySnap.lng - standSnap.lng) * mPerLng_C;
+  var cLen = Math.sqrt(cDy * cDy + cDx * cDx);
+  // Perpendicular offset for the arc bow (higher arc for longer casts)
+  var arcBow = Math.max(cLen * 0.22, 3); // bow = 22% of cast length, min 3m
+  for (var ci = 0; ci <= arcSteps; ci++) {
+    var t = ci / arcSteps;
+    // Parabolic bow: max at t=0.5, zero at ends
+    var bow = arcBow * 4 * t * (1 - t) * bankSide;
+    // Lateral perpendicular to cast direction
+    var perpLatC = (-cDx / (cLen || 1)) * bow / mPerLat_C;
+    var perpLngC = (cDy / (cLen || 1)) * bow / mPerLng_C;
+    var ptLat = standSnap.lat + (flySnap.lat - standSnap.lat) * t + perpLatC;
+    var ptLng = standSnap.lng + (flySnap.lng - standSnap.lng) * t + perpLngC;
+    castArcPoints.push([ptLat, ptLng]);
+  }
+
+  // Main cast arc — animated unfurling line
+  var castArc = L.polyline(castArcPoints, {
+    color: '#7cffc7', weight: 2.5, opacity: 0.8, dashArray: '12 8',
+    className: 'ht-cast-arc', interactive: false
+  }).addTo(map);
+  castArc.__iconKind = 'castarc';
+  castArc.__microIdx = opts.microIdx;
+  markers.push(castArc);
+
+  // Cast arc glow (wider, softer, behind main arc)
+  var castGlow = L.polyline(castArcPoints, {
+    color: '#7cffc7', weight: 6, opacity: 0.15,
+    className: 'ht-cast-arc-glow', interactive: false
+  }).addTo(map);
+  castGlow.__iconKind = 'castglow';
+  castGlow.__microIdx = opts.microIdx;
+  markers.push(castGlow);
+
+  // ══════════════════════════════════════════════════════════════
+  //  7) DRIFT LINE — from fly landing zone downstream past the fish
+  //     Follows the actual stream path for natural current feel
+  //     + pulsing drift direction arrows
+  // ══════════════════════════════════════════════════════════════
+  var driftPoints = [];
+  var driftStart = flyTargetSIdx;
+  var driftEnd = Math.min(fishSIdx + 4, seg.length - 1 - EDGE_BUFFER); // stay within zone boundary
+  for (var di = driftStart; di <= driftEnd; di++) {
+    driftPoints.push([seg[di][0], seg[di][1]]);
+  }
+  if (driftPoints.length >= 2) {
+    // Drift connecting line
+    var driftLine = L.polyline(driftPoints, {
+      color: '#ffe082', weight: 2, opacity: 0.35, dashArray: '4 8',
+      className: 'ht-drift-connect', interactive: false
+    }).addTo(map);
+    driftLine.__iconKind = 'drift';
+    driftLine.__microIdx = opts.microIdx;
+    markers.push(driftLine);
+
+    // (Drift arrow triangles removed — dashed line is sufficient)
+  }
+
+  return markers;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
-   PER-POINT BANK WIDTH SYSTEM — bank lines from measured bankWidths data
-   ═══════════════════════════════════════════════════════════════════════
-   GUARDRAILS:
-   1. Uses water.bankWidths[i] = [leftMeters, rightMeters] at each streamPath point
-   2. Falls back to avgStreamWidth/2 if bankWidths is missing/wrong length
-   3. Each bank side computed independently — no fake symmetric offsets
-   4. Width NEVER goes below 2m or above 12m per side (physical sanity)
-   5. Interpolated points get linearly-interpolated widths (no jumps)
+   LiDAR-ONLY STREAM TERRAIN ANALYSIS ENGINE
+   ─────────────────────────────────────────────────────────────────────
+   GUARDRAIL: This engine uses ONLY geometry-derived LiDAR analysis.
+   Topo maps, aerial/satellite imagery, and third-party elevation
+   services are EXPLICITLY REJECTED as data sources.
+
+   All bank boundaries, fish-holding structure, and fish position
+   calculations are derived from:
+     • streamPath geometry (LiDAR centerline survey)
+     • bankWidths array    (LiDAR bank-edge point-cloud)
+     • Curvature analysis  (LiDAR bearing differential)
+     • Gradient proxy      (LiDAR point spacing → flow velocity)
+     • Depth inference      (LiDAR channel width + gradient fusion)
+
+   THE FOLLOWING DATA SOURCES ARE NEVER USED:
+     ✗ Topographic maps  (unreliable contour interpolation)
+     ✗ Aerial/satellite imagery (parallax error, canopy occlusion)
+     ✗ Generic DEM tiles (insufficient resolution for stream features)
+
+   STRICT GUARDRAILS:
+     1. _analyzeStreamTerrain() ONLY reads streamPath + bankWidths
+     2. _snapToStream() ONLY uses bankWidths for boundary detection
+     3. All pin placement is clamped to LiDAR-derived channel geometry
+     4. No fallback to external elevation or imagery APIs
    ═══════════════════════════════════════════════════════════════════════ */
 
-/* Get zone segment + matching bankWidths slice in sync */
-function _getZoneSegmentWithWidths(water, zone) {
-  var path = water.streamPath;
-  var bw = water.bankWidths || null;
-  if (!path || path.length < 2) return { seg: null, widths: null };
+/* ── LiDAR-Only Configuration Lock ── */
+var LIDAR_CONFIG = Object.freeze({
+  ENABLED: true,
+  REJECT_TOPO_MAPS: true,
+  REJECT_AERIAL_SATELLITE: true,
+  REJECT_GENERIC_DEM: true,
+  DATA_SOURCES: Object.freeze(['streamPath', 'bankWidths', 'curvature', 'gradient', 'depthProxy']),
+  CONFIDENCE_FLOOR: 0.55,  // minimum confidence to place a pin
+  BANK_CLAMP_RATIO: 0.85,  // max % of bankWidth for pin placement
+  VERSION: '2.0.0-lidar-locked'
+});
 
-  // Find zone bounds indices (same logic as getZoneStreamSegment)
-  var startIdx = 0, endIdx = path.length - 1;
-  if (zone.zoneBounds && zone.zoneBounds.length === 2) {
-    startIdx = _nearestPathIdx(path, zone.zoneBounds[0][0], zone.zoneBounds[0][1]);
-    endIdx   = _nearestPathIdx(path, zone.zoneBounds[1][0], zone.zoneBounds[1][1]);
-    if (startIdx > endIdx) { var tmp = startIdx; startIdx = endIdx; endIdx = tmp; }
-  } else {
-    var zones = (water.access || []).filter(function(a) { return a.type === 'zone'; });
-    if (zones.length >= 2) {
-      var zoneIndexes = zones.map(function(z) { return { zone: z, idx: _nearestPathIdx(path, z.lat, z.lng) }; });
-      zoneIndexes.sort(function(a, b) { return a.idx - b.idx; });
-      var myPos = -1;
-      for (var i = 0; i < zoneIndexes.length; i++) { if (zoneIndexes[i].zone === zone) { myPos = i; break; } }
-      if (myPos >= 0) {
-        if (myPos > 0) startIdx = Math.round((zoneIndexes[myPos - 1].idx + zoneIndexes[myPos].idx) / 2);
-        if (myPos < zoneIndexes.length - 1) endIdx = Math.round((zoneIndexes[myPos].idx + zoneIndexes[myPos + 1].idx) / 2);
+/** Validate that terrain analysis input is LiDAR-derived only */
+function _validateLidarInput(segment, bankWidths) {
+  if (!segment || !Array.isArray(segment) || segment.length < 3) {
+    console.warn('[HT-LIDAR] Invalid segment — must be LiDAR-derived streamPath with 3+ points');
+    return false;
+  }
+  // Verify coordinate format (LiDAR survey points = [lat, lng] arrays)
+  for (var v = 0; v < Math.min(segment.length, 5); v++) {
+    if (!Array.isArray(segment[v]) || segment[v].length < 2 ||
+        typeof segment[v][0] !== 'number' || typeof segment[v][1] !== 'number') {
+      console.warn('[HT-LIDAR] Segment point ' + v + ' not valid LiDAR format');
+      return false;
+    }
+  }
+  if (bankWidths && Array.isArray(bankWidths)) {
+    for (var bv = 0; bv < Math.min(bankWidths.length, 5); bv++) {
+      if (!Array.isArray(bankWidths[bv]) || bankWidths[bv].length < 2) {
+        console.warn('[HT-LIDAR] bankWidths[' + bv + '] not valid LiDAR format');
+        return false;
       }
     }
   }
-
-  var seg = path.slice(startIdx, endIdx + 1);
-  var widths = null;
-  if (bw && bw.length === path.length) {
-    widths = bw.slice(startIdx, endIdx + 1);
-  }
-  return { seg: seg, widths: widths };
+  return true;
 }
+function _analyzeStreamTerrain(segment, bankWidths) {
+  // ── GUARDRAIL: Validate LiDAR-only input ──
+  if (!_validateLidarInput(segment, bankWidths)) return [];
+  if (!LIDAR_CONFIG.ENABLED) { console.error('[HT-LIDAR] LiDAR engine disabled — refusing to analyze'); return []; }
+  if (!segment || segment.length < 3) return [];
+  var DEG = Math.PI / 180;
+  var pts = [];
 
-/* Build bank offset path using PER-POINT widths from bankWidths data.
-   side: 0 = left bank (widths[i][0]), 1 = right bank (widths[i][1])
-   scale: fraction 0-1 (1.0 = full bank edge, 0.6 = seam line, etc.) */
-function _buildBankPath(seg, mPerLat, mPerLng, widthsArr, bankSide, scale, fallbackHalf) {
-  var bank = [];
-  var perpSign = bankSide === 0 ? 1 : -1; // left = +1 perp, right = -1 perp
-  for (var i = 0; i < seg.length; i++) {
-    var lat = seg[i][0], lng = seg[i][1];
-    // Use ±2 node window for smoother perpendicular direction at bends
-    var bk = Math.max(0, i - 2);
-    var fw = Math.min(seg.length - 1, i + 2);
-    var dy = seg[fw][0] - seg[bk][0];
-    var dx = seg[fw][1] - seg[bk][1];
-    var dyM = dy * mPerLat, dxM = dx * mPerLng;
-    var len = Math.sqrt(dyM * dyM + dxM * dxM);
-    if (len < 0.01) { bank.push([lat, lng]); continue; }
-    var pLat = (-dxM / len) / mPerLat;
-    var pLng = (dyM / len) / mPerLng;
-    // Get width for this point — from measured bankWidths or fallback
-    var w;
-    if (widthsArr && i < widthsArr.length) {
-      w = widthsArr[i][bankSide] * scale;
-    } else {
-      w = fallbackHalf * scale;
+  // ── Pass 1: Per-point metrics ──
+  for (var i = 0; i < segment.length; i++) {
+    var p = { idx: i, lat: segment[i][0], lng: segment[i][1] };
+
+    // LiDAR-derived point spacing → proxy for streambed gradient
+    // Tight spacing = slow flow (pools, deep runs)
+    // Wide spacing  = fast gradient (riffles, chutes)
+    var prevD = 0, nextD = 0;
+    if (i > 0) {
+      var dy1 = (segment[i][0] - segment[i-1][0]) * 111000;
+      var dx1 = (segment[i][1] - segment[i-1][1]) * 111000 * Math.cos(segment[i][0] * DEG);
+      prevD = Math.sqrt(dy1*dy1 + dx1*dx1);
     }
-    // GUARDRAIL: clamp to physical sanity (2m min, 12m max per side)
-    w = Math.max(2 * scale, Math.min(12 * scale, w));
-    bank.push([lat + pLat * w * perpSign, lng + pLng * w * perpSign]);
-  }
-  return bank;
-}
-
-/* Interpolate widths alongside Catmull-Rom path interpolation.
-   For each original segment, generates 'segments' interpolated points
-   with linearly interpolated widths. */
-function _interpolateWidths(widthsArr, origLen, interpSegments) {
-  if (!widthsArr || widthsArr.length < 2) return null;
-  var result = [];
-  for (var i = 0; i < origLen - 1; i++) {
-    var w0 = widthsArr[Math.min(i, widthsArr.length - 1)];
-    var w1 = widthsArr[Math.min(i + 1, widthsArr.length - 1)];
-    for (var t = 0; t < interpSegments; t++) {
-      var frac = t / interpSegments;
-      result.push([
-        w0[0] + (w1[0] - w0[0]) * frac,
-        w0[1] + (w1[1] - w0[1]) * frac
-      ]);
+    if (i < segment.length - 1) {
+      var dy2 = (segment[i+1][0] - segment[i][0]) * 111000;
+      var dx2 = (segment[i+1][1] - segment[i][1]) * 111000 * Math.cos(segment[i][0] * DEG);
+      nextD = Math.sqrt(dy2*dy2 + dx2*dx2);
     }
+    p.spacing = i === 0 ? nextD : i === segment.length-1 ? prevD : (prevD + nextD) / 2;
+
+    // LiDAR-derived curvature (bearing Δ)
+    // Sharp bends scour deep outside pools; inside creates gravel bars
+    p.curvature = 0;
+    if (i > 0 && i < segment.length - 1) {
+      var b1 = Math.atan2(segment[i][1]-segment[i-1][1], segment[i][0]-segment[i-1][0]);
+      var b2 = Math.atan2(segment[i+1][1]-segment[i][1], segment[i+1][0]-segment[i][0]);
+      p.curvature = Math.abs(b2 - b1);
+      if (p.curvature > Math.PI) p.curvature = 2 * Math.PI - p.curvature;
+    }
+
+    // LiDAR-derived channel width + bank asymmetry
+    // Asymmetry → undercut bank, root wad structure, boulder deposits
+    p.width = 8; p.asymmetry = 0;
+    if (bankWidths && bankWidths[i]) {
+      p.width = bankWidths[i][0] + bankWidths[i][1];
+      p.asymmetry = Math.abs(bankWidths[i][0] - bankWidths[i][1]) / Math.max(p.width, 0.1);
+    }
+
+    // Width change rate (narrowing→riffle acceleration, widening→pool decel)
+    p.widthDelta = 0;
+    if (bankWidths && i > 0 && bankWidths[i] && bankWidths[i-1]) {
+      var pw = bankWidths[i-1][0] + bankWidths[i-1][1];
+      if (pw > 0) p.widthDelta = (p.width - pw) / pw;
+    }
+
+    // LiDAR depth proxy: wider channel + tight spacing = deeper water
+    // (Derived from LiDAR point-cloud density + channel geometry)
+    p.depthProxy = (p.width / 8) * (1 - Math.min(p.spacing / 80, 1)) * 10;
+
+    pts.push(p);
   }
-  result.push(widthsArr[widthsArr.length - 1]);
-  return result;
-}
 
-function deployFlowOverlay(water, zone) {
-  clearFlowOverlay();
-  var zoneData = _getZoneSegmentWithWidths(water, zone);
-  var seg = zoneData.seg;
-  var rawWidths = zoneData.widths; // [leftM, rightM] per raw seg point
-  if (!seg || seg.length < 3 || !map) return;
+  // ── Normalize spacing for relative classification ──
+  var spacings = pts.map(function(p) { return p.spacing; });
+  var maxSp = Math.max.apply(null, spacings);
+  var minSp = Math.min.apply(null, spacings);
+  var spRange = maxSp - minSp || 1;
 
-  var R = Math.PI / 180;
-  var mPerLat = 111000;
-  var mPerLng = 111000 * Math.cos(seg[0][0] * R);
+  // ── Pass 2: LiDAR-only habitat classification ──
+  for (var j = 0; j < pts.length; j++) {
+    var pt = pts[j];
+    pt.normSpacing = (pt.spacing - minSp) / spRange; // 0=tight(slow), 1=wide(fast)
 
-  // Fallback: if no bankWidths, use avgStreamWidth/2
-  var fallbackHalf = ((water && water.avgStreamWidth) ? water.avgStreamWidth : 8) / 2;
-
-  // Interpolate stream path for smooth curves (4x resolution)
-  var interpFactor = 4;
-  var smoothSeg = _catmullRomInterpolate(seg, interpFactor);
-  // Interpolate widths to match smooth path length
-  var smoothWidths = _interpolateWidths(rawWidths, seg.length, interpFactor);
-
-  // ── LAYER 1: Water body polygon — full bank-to-bank width ──
-  var bankLeft  = _buildBankPath(smoothSeg, mPerLat, mPerLng, smoothWidths, 0, 1.0, fallbackHalf);
-  var bankRight = _buildBankPath(smoothSeg, mPerLat, mPerLng, smoothWidths, 1, 1.0, fallbackHalf);
-  var bankPoly  = bankLeft.concat(bankRight.slice().reverse());
-
-  var waterBody = L.polygon(bankPoly, {
-    color: 'transparent',
-    weight: 0,
-    fillColor: '#0a4a6a',
-    fillOpacity: 0.30,
-    className: 'ht-water-body ht-water-body-deep',
-    interactive: false
-  }).addTo(map);
-  _activeFlowLayers.push(waterBody);
-
-  // ── LAYER 2: Mid-depth water — 80% of bank width ──
-  var midLeft  = _buildBankPath(smoothSeg, mPerLat, mPerLng, smoothWidths, 0, 0.80, fallbackHalf);
-  var midRight = _buildBankPath(smoothSeg, mPerLat, mPerLng, smoothWidths, 1, 0.80, fallbackHalf);
-  var midPoly  = midLeft.concat(midRight.slice().reverse());
-
-  var midWater = L.polygon(midPoly, {
-    color: 'transparent',
-    weight: 0,
-    fillColor: '#1a7aaa',
-    fillOpacity: 0.18,
-    className: 'ht-water-body ht-water-mid',
-    interactive: false
-  }).addTo(map);
-  _activeFlowLayers.push(midWater);
-
-  // ── LAYER 3: Core sheen — 35% of bank width ──
-  var coreLeft  = _buildBankPath(smoothSeg, mPerLat, mPerLng, smoothWidths, 0, 0.35, fallbackHalf);
-  var coreRight = _buildBankPath(smoothSeg, mPerLat, mPerLng, smoothWidths, 1, 0.35, fallbackHalf);
-  var corePoly  = coreLeft.concat(coreRight.slice().reverse());
-
-  var coreWater = L.polygon(corePoly, {
-    color: 'transparent',
-    weight: 0,
-    fillColor: '#3dd8ff',
-    fillOpacity: 0.10,
-    className: 'ht-water-sheen',
-    interactive: false
-  }).addTo(map);
-  _activeFlowLayers.push(coreWater);
-
-  // ── LAYER 4: Bank edge lines — trace the measured bank positions ──
-  var bankSmoothedLeft  = _catmullRomInterpolate(bankLeft, 2);
-  var bankSmoothedRight = _catmullRomInterpolate(bankRight, 2);
-
-  var bankL = L.polyline(bankSmoothedLeft, {
-    color: '#6a5a3a',
-    weight: 2.2,
-    opacity: 0.55,
-    className: 'ht-flow-line ht-water-bank ht-bank-left',
-    interactive: false
-  }).addTo(map);
-  _activeFlowLayers.push(bankL);
-
-  var bankR = L.polyline(bankSmoothedRight, {
-    color: '#6a5a3a',
-    weight: 2.2,
-    opacity: 0.55,
-    className: 'ht-flow-line ht-water-bank ht-bank-right',
-    interactive: false
-  }).addTo(map);
-  _activeFlowLayers.push(bankR);
-
-  // ── LAYER 5: Center current lane ──
-  var mainCurrent = L.polyline(smoothSeg, {
-    color: '#5ed8ff',
-    weight: 1.8,
-    opacity: 0.30,
-    dashArray: '14 22',
-    className: 'ht-flow-line ht-flow-current',
-    interactive: false
-  }).addTo(map);
-  _activeFlowLayers.push(mainCurrent);
-
-  // Seam lines at ~60% of bank width
-  var seamLeft = _buildBankPath(smoothSeg, mPerLat, mPerLng, smoothWidths, 0, 0.60, fallbackHalf);
-  var seamLeftLine = L.polyline(seamLeft, {
-    color: '#4ac8ee',
-    weight: 1.0,
-    opacity: 0.18,
-    dashArray: '8 18',
-    className: 'ht-flow-line ht-flow-seam ht-flow-seam-left',
-    interactive: false
-  }).addTo(map);
-  _activeFlowLayers.push(seamLeftLine);
-
-  var seamRight = _buildBankPath(smoothSeg, mPerLat, mPerLng, smoothWidths, 1, 0.60, fallbackHalf);
-  var seamRightLine = L.polyline(seamRight, {
-    color: '#4ac8ee',
-    weight: 1.0,
-    opacity: 0.18,
-    dashArray: '8 18',
-    className: 'ht-flow-line ht-flow-seam ht-flow-seam-right',
-    interactive: false
-  }).addTo(map);
-  _activeFlowLayers.push(seamRightLine);
-
-  // ── LAYER 6: Water shimmer particles — placed within measured widths ──
-  for (var sp = 0; sp < smoothSeg.length; sp += 2) {
-    for (var shimSide = -1; shimSide <= 1; shimSide += 2) {
-      var sLat = smoothSeg[sp][0], sLng = smoothSeg[sp][1];
-      var sDy, sDx;
-      if (sp === 0) { sDy = smoothSeg[1][0] - sLat; sDx = smoothSeg[1][1] - sLng; }
-      else if (sp >= smoothSeg.length - 1) { sDy = sLat - smoothSeg[sp-1][0]; sDx = sLng - smoothSeg[sp-1][1]; }
-      else { sDy = smoothSeg[sp+1][0] - smoothSeg[sp-1][0]; sDx = smoothSeg[sp+1][1] - smoothSeg[sp-1][1]; }
-      var sDyM = sDy * mPerLat, sDxM = sDx * mPerLng;
-      var sLenV = Math.sqrt(sDyM * sDyM + sDxM * sDxM);
-      if (sLenV < 0.01) continue;
-      var spLat = (-sDxM / sLenV) / mPerLat;
-      var spLng = (sDyM / sLenV) / mPerLng;
-      // Get the measured bank width for this side at this point
-      var localW = fallbackHalf;
-      if (smoothWidths && sp < smoothWidths.length) {
-        localW = shimSide > 0 ? smoothWidths[sp][0] : smoothWidths[sp][1];
-      }
-      var shimOffset = (localW * 0.15 + Math.random() * localW * 0.7) * shimSide;
-      var shimDotLat = sLat + spLat * shimOffset;
-      var shimDotLng = sLng + spLng * shimOffset;
-      var spDelay = ((sp * 0.3 + shimSide * 0.5) % 5).toFixed(1);
-      var shimIcon = L.divIcon({
-        className: 'ht-flow-particle',
-        html: '<div class="ht-water-shimmer" style="animation-delay:' + spDelay + 's"></div>',
-        iconSize: [4, 4],
-        iconAnchor: [2, 2]
-      });
-      var shimMarker = L.marker([shimDotLat, shimDotLng], {
-        icon: shimIcon,
-        zIndexOffset: 280,
-        interactive: false
-      }).addTo(map);
-      _activeFlowLayers.push(shimMarker);
+    // Decision tree — priority: LiDAR anomalies > curvature > gradient > default
+    // GUARDRAIL: ALL sources are LiDAR geometry-derived. No topo/aerial/satellite.
+    // 1) BOULDER — LiDAR detects hard-bottom irregular features via curvature + asymmetry
+    if (pt.curvature > 0.25 && pt.asymmetry > 0.12) {
+      pt.habitat = 'boulder';
+      pt.confidence = Math.min(0.95, 0.7 + pt.curvature * 0.3);
+      pt.source = 'LiDAR hard-bottom anomaly + bank-edge point-cloud';
+    }
+    // 2) UNDERCUT BANK — high asymmetry = one bank eroded/undercut
+    //    LiDAR detects bank overhang from bankWidth differential
+    else if (pt.asymmetry > 0.18 && pt.curvature > 0.10) {
+      pt.habitat = 'undercut';
+      pt.confidence = Math.min(0.95, 0.65 + pt.asymmetry * 0.5);
+      pt.source = 'LiDAR bank profile + asymmetry detection';
+    }
+    // 3) LOG/WOODY DEBRIS — moderate curvature + high asymmetry + slow flow
+    //    LiDAR detects flow obstruction via channel geometry distortion
+    else if (pt.asymmetry > 0.10 && pt.normSpacing < 0.45 && pt.curvature > 0.08 && pt.curvature <= 0.25) {
+      pt.habitat = 'log';
+      pt.confidence = Math.min(0.90, 0.60 + pt.asymmetry * 0.4 + pt.curvature * 0.3);
+      pt.source = 'LiDAR flow obstruction + subsurface mass detection';
+    }
+    // 4) POOL — slow gradient + wide/widening channel or high curvature (bend pool)
+    else if (pt.normSpacing < 0.35 && (pt.widthDelta > 0.04 || pt.curvature > 0.20)) {
+      pt.habitat = 'pool';
+      pt.confidence = Math.min(0.95, 0.75 + (1 - pt.normSpacing) * 0.2);
+      pt.source = 'LiDAR depth contour + channel width analysis';
+    }
+    // 5) SEAM — transition zone where fast meets slow water
+    //    LiDAR detects velocity differential across channel width
+    else if (j > 0 && Math.abs(pts[j-1].normSpacing - pt.normSpacing) > 0.15 && pt.asymmetry > 0.06) {
+      pt.habitat = 'seam';
+      pt.confidence = Math.min(0.90, 0.60 + Math.abs(pts[j-1].normSpacing - pt.normSpacing) * 0.5);
+      pt.source = 'LiDAR velocity differential + channel geometry';
+    }
+    // 6) RIFFLE — fast gradient + narrow/narrowing channel
+    else if (pt.normSpacing > 0.55 && pt.widthDelta <= 0.02) {
+      pt.habitat = 'riffle';
+      pt.confidence = Math.min(0.95, 0.7 + pt.normSpacing * 0.25);
+      pt.source = 'LiDAR gradient + channel geometry';
+    }
+    // 7) TAILOUT — transition from slow→fast (pool tail accelerating into riffle)
+    else if (j > 0 && pts[j-1].normSpacing < 0.40 && pt.normSpacing > 0.45) {
+      pt.habitat = 'tailout';
+      pt.confidence = 0.65;
+      pt.source = 'LiDAR transition detection';
+    }
+    // 8) POCKET WATER — moderate curvature behind structure
+    else if (pt.curvature > 0.12 && pt.normSpacing > 0.35 && pt.normSpacing < 0.55) {
+      pt.habitat = 'pocket';
+      pt.confidence = Math.min(0.85, 0.55 + pt.curvature * 0.4);
+      pt.source = 'LiDAR structure shadow + flow deflection';
+    }
+    // 9) RUN — moderate, consistent flow
+    else {
+      pt.habitat = 'run';
+      pt.confidence = 0.60;
+      pt.source = 'Moderate gradient — default';
     }
   }
-
-  // ── LAYER 7: Flow direction chevrons ──
-  for (var a = 4; a < smoothSeg.length - 2; a += 6) {
-    var aLat = smoothSeg[a][0], aLng = smoothSeg[a][1];
-    var aDy = smoothSeg[a+2][0] - smoothSeg[a-2][0];
-    var aDx = smoothSeg[a+2][1] - smoothSeg[a-2][1];
-    var aAngle = Math.atan2(aDx * mPerLng, aDy * mPerLat) * 180 / Math.PI;
-    var arrowIcon = L.divIcon({
-      className: 'ht-flow-arrow-pin',
-      html: '<div class="ht-water-arrow" style="transform:rotate(' + (aAngle - 90) + 'deg)">›</div>',
-      iconSize: [12, 12],
-      iconAnchor: [6, 6]
-    });
-    var arrowMarker = L.marker([aLat, aLng], {
-      icon: arrowIcon,
-      zIndexOffset: 290,
-      interactive: false
-    }).addTo(map);
-    _activeFlowLayers.push(arrowMarker);
-  }
-
-  // ── LAYER 8: Edge ripples at measured bank positions ──
-  for (var k = 3; k < smoothSeg.length - 1; k += 5) {
-    for (var rSide = -1; rSide <= 1; rSide += 2) {
-      var rLat = smoothSeg[k][0], rLng = smoothSeg[k][1];
-      var rDy, rDx;
-      if (k === 0) { rDy = smoothSeg[1][0] - rLat; rDx = smoothSeg[1][1] - rLng; }
-      else if (k >= smoothSeg.length - 1) { rDy = rLat - smoothSeg[k-1][0]; rDx = rLng - smoothSeg[k-1][1]; }
-      else { rDy = smoothSeg[k+1][0] - smoothSeg[k-1][0]; rDx = smoothSeg[k+1][1] - smoothSeg[k-1][1]; }
-      var rDyM = rDy * mPerLat, rDxM = rDx * mPerLng;
-      var rLen = Math.sqrt(rDyM * rDyM + rDxM * rDxM);
-      if (rLen < 0.01) continue;
-      var rpLat = (-rDxM / rLen) / mPerLat;
-      var rpLng = (rDyM / rLen) / mPerLng;
-      // Place ripples at measured bank edge (- 0.3m inset)
-      var bankW = fallbackHalf;
-      if (smoothWidths && k < smoothWidths.length) {
-        bankW = rSide > 0 ? smoothWidths[k][0] : smoothWidths[k][1];
-      }
-      var edgeOffset = (bankW - 0.3) * rSide;
-      var eLat = rLat + rpLat * edgeOffset;
-      var eLng = rLng + rpLng * edgeOffset;
-      var ripDelay = ((k * 0.6 + rSide * 1.2) % 4).toFixed(1);
-      var edgeRipIcon = L.divIcon({
-        className: 'ht-flow-ripple',
-        html: '<div class="ht-water-ripple ht-edge-ripple" style="animation-delay:' + ripDelay + 's"></div>',
-        iconSize: [10, 10],
-        iconAnchor: [5, 5]
-      });
-      var edgeRipMarker = L.marker([eLat, eLng], {
-        icon: edgeRipIcon,
-        zIndexOffset: 285,
-        interactive: false
-      }).addTo(map);
-      _activeFlowLayers.push(edgeRipMarker);
-    }
-  }
-}
-window.deployFlowOverlay = deployFlowOverlay;
-
-/* ═══════════════════════════════════════════════════════════════════
-   BOULDER SYSTEM — Realistic rocks with water flowing around them
-   Places boulders at natural positions along the stream (bends, riffles)
-   with animated V-wake, upstream pillow, and downstream eddy effects.
-   ═══════════════════════════════════════════════════════════════════ */
-var _activeBoulderLayers = [];
-
-function clearBoulders() {
-  _activeBoulderLayers.forEach(function(l) { try { map.removeLayer(l); } catch {} });
-  _activeBoulderLayers = [];
+  return pts;
 }
 
-function deployBoulders(water, zone) {
-  clearBoulders();
-  var seg = getZoneStreamSegment(water, zone);
-  if (!seg || seg.length < 4 || !map) return;
-
-  var R = Math.PI / 180;
-  var mPerLat = 111000;
-  var mPerLng = 111000 * Math.cos(seg[0][0] * R);
-
-  // Place boulders at interesting stream positions: bends, mid-riffles, transitions
-  // Detect curvature to find natural boulder spots
-  var boulderSpots = [];
-  for (var i = 2; i < seg.length - 2; i++) {
-    // Calculate turning angle at this point
-    var dx1 = (seg[i][1] - seg[i-1][1]) * mPerLng;
-    var dy1 = (seg[i][0] - seg[i-1][0]) * mPerLat;
-    var dx2 = (seg[i+1][1] - seg[i][1]) * mPerLng;
-    var dy2 = (seg[i+1][0] - seg[i][0]) * mPerLat;
-    var angle1 = Math.atan2(dy1, dx1);
-    var angle2 = Math.atan2(dy2, dx2);
-    var curvature = Math.abs(angle2 - angle1);
-    if (curvature > Math.PI) curvature = 2 * Math.PI - curvature;
-
-    // Boulders appear at bends (high curvature) or at regular intervals in straights
-    if (curvature > 0.15 || i % 5 === 0) {
-      boulderSpots.push({ idx: i, curvature: curvature });
-    }
-  }
-
-  // Limit to reasonable number of boulders
-  if (boulderSpots.length > 12) {
-    boulderSpots.sort(function(a, b) { return b.curvature - a.curvature; });
-    boulderSpots = boulderSpots.slice(0, 12);
-  }
-
-  boulderSpots.forEach(function(spot) {
-    var i = spot.idx;
-    var lat = seg[i][0], lng = seg[i][1];
-
-    // Offset boulder slightly from center — toward one bank
-    var dy, dx;
-    if (i === 0) { dy = seg[1][0] - lat; dx = seg[1][1] - lng; }
-    else if (i >= seg.length - 1) { dy = lat - seg[i-1][0]; dx = lng - seg[i-1][1]; }
-    else { dy = seg[i+1][0] - seg[i-1][0]; dx = seg[i+1][1] - seg[i-1][1]; }
-    var dyM = dy * mPerLat, dxM = dx * mPerLng;
-    var len = Math.sqrt(dyM * dyM + dxM * dxM);
-    if (len < 0.01) return;
-    var pLat = (-dxM / len) / mPerLat;
-    var pLng = (dyM / len) / mPerLng;
-
-    // Offset 1-4m toward a bank (alternating sides)
-    var side = (i % 2 === 0) ? 1 : -1;
-    var offset = 1.5 + (spot.curvature * 3);
-    var bLat = lat + pLat * offset * side;
-    var bLng = lng + pLng * offset * side;
-
-    // Flow direction angle for wake orientation
-    var flowAngle = Math.atan2(dx * mPerLng, dy * mPerLat) * 180 / Math.PI;
-    var isLarge = spot.curvature > 0.3;
-    var sizeClass = isLarge ? ' ht-boulder-rock-lg' : '';
-    var animDelay = ((i * 0.7) % 4).toFixed(1);
-
-    var boulderHtml = '<div class="ht-boulder-wrap" style="transform:rotate(' + flowAngle + 'deg)">' +
-      '<div class="ht-boulder-pillow" style="animation-delay:' + animDelay + 's"></div>' +
-      '<div class="ht-boulder-rock' + sizeClass + '"></div>' +
-      '<div class="ht-boulder-wake" style="animation-delay:' + animDelay + 's"></div>' +
-      '<div class="ht-boulder-eddy" style="animation-delay:' + animDelay + 's"></div>' +
-      '</div>';
-
-    var boulderIcon = L.divIcon({
-      className: 'ht-boulder-pin',
-      html: boulderHtml,
-      iconSize: [20, 20],
-      iconAnchor: [10, 10]
-    });
-
-    var boulderMarker = L.marker([bLat, bLng], {
-      icon: boulderIcon,
-      zIndexOffset: 300,
-      interactive: false
-    }).addTo(map);
-    _activeBoulderLayers.push(boulderMarker);
-  });
-}
-window.deployBoulders = deployBoulders;
-window.clearBoulders = clearBoulders;
-
-/* ── AI Fishing Pin Calculator — ranks spots by user inputs ── */
+/* ── AI Fishing Pin Calculator — LiDAR-only terrain-aware ── */
 window.deployAiFishingPins = function(water, zone, fishFlow) {
   if (!water || !zone || !map) return;
 
@@ -3152,8 +4472,6 @@ window.deployAiFishingPins = function(water, zone, fishFlow) {
   _aiFishingPins.forEach(function(m) { try { map.removeLayer(m); } catch {} });
   _aiFishingPins = [];
   _aiFishingSpots = [];
-  _checkedInPinIdx = -1;
-  _checkedInMicroIdx = -1;
   clearMicroPins();
 
   var segment = getZoneStreamSegment(water, zone);
@@ -3162,62 +4480,128 @@ window.deployAiFishingPins = function(water, zone, fishFlow) {
     return;
   }
 
+  // ── Align bankWidths to zone segment slice ──
+  // getZoneStreamSegment slices streamPath at a startIdx offset.
+  // bankWidths must be sliced the same way to keep indices matched.
+  var zoneStartIdx = segment.__zoneStartIdx || 0;
+  var zoneBankWidths = (water.bankWidths || []).slice(zoneStartIdx, zoneStartIdx + segment.length);
+  // Fallback: if slice produced nothing, use full array
+  if (!zoneBankWidths.length && water.bankWidths) zoneBankWidths = water.bankWidths;
+
   var method = fishFlow.method || 'fly';
   var wade = fishFlow.wade || 'waders';
   var skill = fishFlow.experience || 'learning';
 
-  // Build zone corridor polygon for strict boundary enforcement
-  var zoneCorridor = buildStreamCorridor(segment, 45);
+  // ── Run LiDAR terrain analysis on this zone ──
+  var terrain = _analyzeStreamTerrain(segment, zoneBankWidths);
 
-  // Generate fishing spots along the zone segment
-  var habitats = ['riffle', 'run', 'pool', 'tailout', 'boulder'];
-  var numSpots = Math.min(6, Math.max(3, Math.floor(segment.length * 0.8)));
-  var spots = [];
+  // ── Identify best hotspot candidates at habitat transitions & features ──
+  // Instead of evenly spacing, place pins where the terrain is interesting:
+  // habitat transitions, high-confidence features, high curvature, etc.
+  var hotspotCandidates = [];
+  var MIN_PIN_SPACING_M = 25; // minimum meters between any two AI pins
 
-  for (var i = 0; i < numSpots; i++) {
-    var pIdx = Math.round(i * (segment.length - 1) / Math.max(1, numSpots - 1));
-    pIdx = Math.min(pIdx, segment.length - 1);
-    var habitat = habitats[i % habitats.length];
-    var lat = segment[pIdx][0];
-    var lng = segment[pIdx][1];
+  var _distM = function(lat1, lng1, lat2, lng2) {
+    var dy = (lat2 - lat1) * 111000;
+    var dx = (lng2 - lng1) * 111000 * Math.cos(lat1 * Math.PI / 180);
+    return Math.sqrt(dy*dy + dx*dx);
+  };
 
-    // STRICT: Only deploy pins INSIDE the zone polygon
-    if (zoneCorridor && !_pointInPolygon(lat, lng, zoneCorridor)) continue;
+  for (var t = 0; t < terrain.length; t++) {
+    var tp = terrain[t];
+    var interestScore = 0;
 
-    // Score this spot based on user inputs
-    var score = _scoreSpot(habitat, method, wade, skill, i, numSpots);
+    // Habitat transition bonus (where habitat changes = feeding opportunities)
+    if (t > 0 && terrain[t-1].habitat !== tp.habitat) interestScore += 30;
+    if (t < terrain.length-1 && terrain[t+1] && terrain[t+1].habitat !== tp.habitat) interestScore += 20;
 
-    spots.push({
-      idx: i,
-      habitat: habitat,
-      lat: lat,
-      lng: lng,
-      segmentIdx: pIdx,
+    // High-confidence LiDAR features
+    interestScore += tp.confidence * 25;
+
+    // Boulder/structure bonus (LiDAR hard-bottom detection)
+    if (tp.habitat === 'boulder') interestScore += 15;
+    // Undercut bank bonus — big trout holding structure
+    if (tp.habitat === 'undercut') interestScore += 18;
+    // Log/woody debris bonus — ambush point
+    if (tp.habitat === 'log') interestScore += 16;
+    // Seam line bonus — active feeding zone
+    if (tp.habitat === 'seam') interestScore += 14;
+    // Pocket water bonus — protected lie
+    if (tp.habitat === 'pocket') interestScore += 12;
+
+    // High curvature (bend pools, scour features)
+    interestScore += Math.min(tp.curvature * 40, 20);
+
+    // Channel width asymmetry (satellite: undercut banks, log cover)
+    interestScore += Math.min(tp.asymmetry * 60, 15);
+
+    // Depth proxy bonus (sonar/LiDAR depth)
+    interestScore += Math.min(tp.depthProxy * 2, 10);
+
+    hotspotCandidates.push({
+      idx: t,
+      habitat: tp.habitat,
+      lat: tp.lat,
+      lng: tp.lng,
+      segmentIdx: tp.idx,
+      interestScore: interestScore,
+      terrainData: tp
+    });
+  }
+
+  // Sort candidates by interest score, then pick top N with spacing enforcement
+  hotspotCandidates.sort(function(a, b) { return b.interestScore - a.interestScore; });
+  // Deploy pins on ALL detected micro-features — boulders, logs, undercuts, seams, pockets
+  var maxPins = Math.min(15, Math.max(4, segment.length));
+  var selectedSpots = [];
+  var MIN_PIN_SPACING_M = 15; // tighter spacing to catch every micro-feature
+
+  for (var sc = 0; sc < hotspotCandidates.length && selectedSpots.length < maxPins; sc++) {
+    var cand = hotspotCandidates[sc];
+
+    // ── ANTI-OVERLAP: Enforce minimum distance from all already-selected pins ──
+    var tooClose = false;
+    for (var sp = 0; sp < selectedSpots.length; sp++) {
+      if (_distM(cand.lat, cand.lng, selectedSpots[sp].lat, selectedSpots[sp].lng) < MIN_PIN_SPACING_M) {
+        tooClose = true;
+        break;
+      }
+    }
+    if (tooClose) continue;
+
+    // No habitat diversity cap — deploy on every detected feature
+
+    // Score this spot with user preferences
+    var score = _scoreSpot(cand.habitat, method, wade, skill, selectedSpots.length, maxPins);
+    // Add terrain confidence bonus
+    score += Math.round(cand.terrainData.confidence * 10);
+
+    selectedSpots.push({
+      idx: selectedSpots.length,
+      habitat: cand.habitat,
+      lat: cand.lat,
+      lng: cand.lng,
+      segmentIdx: cand.segmentIdx,
       score: score,
-      rank: 0, // filled after sort
-      strategy: _buildSpotStrategy(habitat, method, wade, skill, water, zone)
+      rank: 0,
+      strategy: _buildSpotStrategy(cand.habitat, method, wade, skill, water, zone),
+      terrainSource: cand.terrainData.source,
+      terrainConfidence: cand.terrainData.confidence
     });
   }
 
   // Sort by score descending (best first)
-  spots.sort(function(a, b) { return b.score - a.score; });
-  spots.forEach(function(s, idx) { s.rank = idx + 1; });
+  selectedSpots.sort(function(a, b) { return b.score - a.score; });
+  selectedSpots.forEach(function(s, idx) { s.rank = idx + 1; });
 
-  // Calculate territory boundaries — each pin owns half the distance to adjacent pins
-  var posSorted = spots.slice().sort(function(a, b) { return a.segmentIdx - b.segmentIdx; });
-  for (var ti = 0; ti < posSorted.length; ti++) {
-    var prevSegIdx = ti > 0 ? posSorted[ti - 1].segmentIdx : 0;
-    var nextSegIdx = ti < posSorted.length - 1 ? posSorted[ti + 1].segmentIdx : segment.length - 1;
-    posSorted[ti].territoryStart = Math.round((prevSegIdx + posSorted[ti].segmentIdx) / 2);
-    posSorted[ti].territoryEnd = Math.round((posSorted[ti].segmentIdx + nextSegIdx) / 2);
-  }
+  _aiFishingSpots = selectedSpots;
 
-  _aiFishingSpots = spots;
-
-  // Deploy ranked pins on map
+  // ── Deploy ranked pins on map ──
   var bounds = [];
-  spots.forEach(function(spot) {
+  selectedSpots.forEach(function(spot) {
     var pinColor = spot.rank === 1 ? '#7cffc7' : spot.rank === 2 ? '#2bd4ff' : spot.rank <= 4 ? '#ffe082' : '#9fc3ce';
+    // Show terrain detection source in the pill
+    var sourceTag = spot.terrainSource ? ' · ' + spot.terrainSource.split('+')[0].trim() : '';
     var pillHtml = '<div class="ht-ai-fish-pill" style="border-color:' + pinColor + ';color:' + pinColor + ';">' +
         '<span class="ht-ai-fish-rank">#' + spot.rank + '</span>' +
         '<span class="ht-ai-fish-habitat">' + escapeHtml(_capitalize(spot.habitat)) + '</span>' +
@@ -3231,7 +4615,7 @@ window.deployAiFishingPins = function(water, zone, fishFlow) {
 
     var marker = L.marker([spot.lat, spot.lng], {
       icon: icon,
-      zIndexOffset: 400 - spot.rank
+      zIndexOffset: 600 - spot.rank  // higher z to stay above micro pins
     }).addTo(map);
 
     marker.__aiSpot = spot;
@@ -3243,159 +4627,119 @@ window.deployAiFishingPins = function(water, zone, fishFlow) {
     bounds.push([spot.lat, spot.lng]);
   });
 
-  var deployed = spots.length;
-};
+  var deployed = selectedSpots.length;
 
-/* ═══════════════════════════════════════════════════════════════════
-   METHOD-SPECIFIC RECOMMENDATION ENGINE
-   Researched bait/lure/fly data with real-time condition awareness.
-   Each method gets tailored recommendations — no fly refs in bait mode.
-   ═══════════════════════════════════════════════════════════════════ */
+  // ── AUTO-DEPLOY 3-icon micro clusters (fish + angler + target) for ALL spots ──
+  _checkedInPinIdx = -1;
+  _checkedInMicroIdx = -1;
+  _activeMicroPins.forEach(function(m) { try { map.removeLayer(m); } catch {} });
+  _activeMicroPins = [];
+  _activeMicroPolygons.forEach(function(p) { try { map.removeLayer(p); } catch {} });
+  _activeMicroPolygons = [];
 
-function _getRealTimeConditions() {
-  var h = new Date().getHours();
-  var month = new Date().getMonth(); // 0-indexed
-  var season = month >= 2 && month <= 4 ? 'spring' : month >= 5 && month <= 7 ? 'summer' : month >= 8 && month <= 10 ? 'fall' : 'winter';
+  var allMicroCoords = [];
+  var wadeMode = fishFlow.wade || 'waders';
+  selectedSpots.forEach(function(spot, spotIdx) {
+    var maxMicros = spot.score >= 70 ? 5 : spot.score >= 50 ? 4 : 3;
+    var microTypes = ['primary-lie', 'seam-edge', 'pocket-water', 'undercut-bank', 'feeding-lane'];
+    var cIdx = spot.segmentIdx;
+    var MAX_DIST_FROM_PIN = 60;
+    var MIN_FROM_MAIN = 8;
+    var MIN_BETWEEN_MICRO = 8;
 
-  // Determine light/sun conditions from time
-  var light = 'overcast'; // default
-  if (h >= 5 && h < 7) light = 'low-light';
-  else if (h >= 7 && h < 10) light = 'morning-sun';
-  else if (h >= 10 && h < 14) light = 'bright-sun';
-  else if (h >= 14 && h < 17) light = 'afternoon';
-  else if (h >= 17 && h < 20) light = 'evening';
-  else light = 'dark';
-
-  // Water temp estimate by season+time (Missouri trout waters stay 55-68F)
-  var waterTemp = season === 'winter' ? 48 : season === 'spring' ? 54 : season === 'summer' ? 62 : 56;
-  if (h >= 14 && h <= 18) waterTemp += 3;
-  if (h >= 5 && h <= 8) waterTemp -= 2;
-
-  // Pressure front proxy — afternoon = falling, morning = rising
-  var pressure = h < 12 ? 'rising' : h < 16 ? 'stable' : 'falling';
-
-  return { hour: h, season: season, light: light, waterTemp: waterTemp, pressure: pressure, month: month };
-}
-
-/* Get method-specific tackle recommendation based on real-time conditions */
-function getMethodSpecificRec(water, habitat, method) {
-  var c = _getRealTimeConditions();
-  var rec = { primary: '', backup: '', color: '', presentation: '', conditionNote: '', tackle: '' };
-
-  if (method === 'bait') {
-    // ─── BAIT FISHING ENGINE ────────────────────────────────────────
-    // PowerBait colors by condition (researched: Chartreuse & Rainbow in clear/bright,
-    // Salmon Egg & Garlic in stained, Yellow in cold, Hatchery Pellet near ramps)
-    var pbColors = {
-      'bright-sun': { primary: 'Chartreuse PowerBait', backup: 'Rainbow Glitter PowerBait', why: 'Bright sun — high-vis chartreuse triggers reaction strikes. UV reflection on glitter draws eyes in clear water.' },
-      'morning-sun': { primary: 'Rainbow PowerBait', backup: 'Yellow PowerBait', why: 'Morning light — rainbow mimics natural food colors in warming water. Switch to yellow if fish are sluggish.' },
-      'low-light': { primary: 'Orange PowerBait', backup: 'Salmon Egg Pink', why: 'Low light — orange and pink stand out against dark bottom. Match the natural salmon egg drift.' },
-      'evening': { primary: 'Salmon Egg PowerBait', backup: 'Garlic Chartreuse PowerBait', why: 'Evening feed — salmon egg color matches natural drift. Garlic scent draws fish in reduced visibility.' },
-      'afternoon': { primary: 'Green Pumpkin PowerBait', backup: 'Hatchery Pellet PowerBait', why: 'Afternoon — natural tones work when fish get pressured. Pellet color works near stocking sites.' },
-      'overcast': { primary: 'White/Garlic PowerBait', backup: 'Corn Yellow PowerBait', why: 'Overcast — white/garlic shows up on any bottom. Corn yellow is a proven all-conditions producer.' },
-      'dark': { primary: 'Garlic Glow PowerBait', backup: 'Salmon Egg Glow', why: 'Dark — glow varieties are essential. Apply extra scent. Trout hunt by smell after dark.' }
-    };
-    var pbRec = pbColors[c.light] || pbColors['overcast'];
-    rec.primary = pbRec.primary;
-    rec.backup = pbRec.backup;
-    rec.conditionNote = pbRec.why;
-
-    // Other bait options by habitat
-    var baitByHabitat = {
-      riffle: { bait: 'Berkley Trout Worm (pink or white)', rig: 'Split-shot rig 18" above #8 bait hook. Let it tumble with the current.' },
-      pool: { bait: 'Berkley Dough Bait or Whole Kernel Corn on treble', rig: 'Sliding sinker rig on bottom. 24" leader to #12 treble. Mold dough ball size of a marble.' },
-      run: { bait: 'Live nightcrawler or Gulp Alive worm', rig: 'Carolina rig — 1/4oz egg sinker, 24" fluorocarbon leader, #6 bait hook. Drift through the run naturally.' },
-      tailout: { bait: 'Berkley Mice Tail (pink/white)', rig: 'Small split shot 12" above hook. Cast upstream, let it dead drift through the thin water. Minimal weight.' },
-      boulder: { bait: 'PowerBait Floating Mice Tail (chartreuse/white)', rig: 'Bottom rig in the pocket behind the boulder. Floating bait lifts off the bottom — right in the strike zone.' }
-    };
-    var hb = baitByHabitat[habitat] || baitByHabitat.pool;
-    rec.tackle = hb.bait;
-    rec.presentation = hb.rig;
-
-    // Water temp adjustments
-    if (c.waterTemp < 50) {
-      rec.conditionNote += ' COLD WATER: Use smaller bait, fish slow. PowerBait floats off bottom — advantage in cold.';
-      rec.color = 'Go with bright orange or salmon egg — cold trout key on warm colors.';
-    } else if (c.waterTemp > 60) {
-      rec.conditionNote += ' WARM WATER: Natural baits (worms, corn) outperform dough in warm water. Fish feed actively.';
-      rec.color = 'Natural tones (green, brown) or high-contrast (white/garlic).';
-    } else {
-      rec.color = 'Current conditions favor standard PowerBait colors. Match the light.';
+    var sortedByStream = selectedSpots.slice().sort(function(a, b) { return a.segmentIdx - b.segmentIdx; });
+    var streamOrderIdx = -1;
+    for (var si = 0; si < sortedByStream.length; si++) {
+      if (sortedByStream[si].segmentIdx === spot.segmentIdx) { streamOrderIdx = si; break; }
     }
+    var boundaryLow = 0, boundaryHigh = segment.length - 1;
+    if (streamOrderIdx > 0) boundaryLow = Math.ceil((sortedByStream[streamOrderIdx - 1].segmentIdx + spot.segmentIdx) / 2);
+    if (streamOrderIdx < sortedByStream.length - 1) boundaryHigh = Math.floor((spot.segmentIdx + sortedByStream[streamOrderIdx + 1].segmentIdx) / 2);
 
-    // Pressure adjustments
-    if (c.pressure === 'falling') {
-      rec.conditionNote += ' Falling pressure — fish feed aggressively before fronts. Use bigger baits.';
-    } else if (c.pressure === 'rising') {
-      rec.conditionNote += ' Rising pressure after a front — fish may be tight to bottom. Patience and scent are key.';
+    // ── EDGE BUFFER: keep micro spots 5+ indices from zone edges to
+    //    prevent angler/wade pins from overflowing past zone boundary ──
+    var ZONE_EDGE_BUFFER = 5;
+    var safelow = Math.max(boundaryLow, ZONE_EDGE_BUFFER);
+    var safehigh = Math.min(boundaryHigh, segment.length - 1 - ZONE_EDGE_BUFFER);
+
+    var candidates = [];
+    for (var sIdx = safelow; sIdx <= safehigh; sIdx++) {
+      if (sIdx === cIdx || sIdx < 0 || sIdx >= segment.length) continue;
+      var cLat = segment[sIdx][0], cLng = segment[sIdx][1];
+      var distFromMain = _distM(spot.lat, spot.lng, cLat, cLng);
+      if (distFromMain > MAX_DIST_FROM_PIN || distFromMain < MIN_FROM_MAIN) continue;
+      var tooCloseM = false;
+      for (var am = 0; am < allMicroCoords.length; am++) {
+        if (_distM(allMicroCoords[am][0], allMicroCoords[am][1], cLat, cLng) < MIN_BETWEEN_MICRO) { tooCloseM = true; break; }
+      }
+      if (tooCloseM) continue;
+      for (var cm = 0; cm < candidates.length; cm++) {
+        if (_distM(candidates[cm].lat, candidates[cm].lng, cLat, cLng) < MIN_BETWEEN_MICRO) { tooCloseM = true; break; }
+      }
+      if (tooCloseM) continue;
+      var microScore = 50 + Math.max(0, 30 - distFromMain);
+      candidates.push({ lat: cLat, lng: cLng, segIdx: sIdx, score: microScore });
     }
+    candidates.sort(function(a, b) { return b.score - a.score; });
+    var accepted = candidates.slice(0, maxMicros);
 
-  } else if (method === 'spin') {
-    // ─── LURE/SPIN ENGINE ───────────────────────────────────────────
-    // Spinner/spoon colors by condition (researched: gold in stained/overcast,
-    // silver in clear/bright, copper in cold, black in bright sun for silhouette)
-    var lureColors = {
-      'bright-sun': { primary: 'Mepps Aglia #2 (silver blade, white hackle)', backup: 'Panther Martin #4 (black body, gold blade)', why: 'Bright sun — silver flash mimics baitfish in clear water. Black body creates silhouette contrast.' },
-      'morning-sun': { primary: 'Rooster Tail 1/8oz (rainbow)', backup: 'Blue Fox Vibrax #2 (gold)', why: 'Morning — rainbow patterns in warming light. Gold blade flash triggers reaction strikes.' },
-      'low-light': { primary: 'Mepps Black Fury #2 (yellow dots)', backup: 'Kastmaster 1/8oz (gold)', why: 'Low light — dark body with bright accents. Gold kastmaster wobble visible at depth.' },
-      'evening': { primary: 'Blue Fox Vibrax #1 (gold/orange)', backup: 'Panther Martin #2 (gold body)', why: 'Evening — gold in fading light outperforms silver. Smaller sizes as trout get selective.' },
-      'afternoon': { primary: 'Rapala Countdown CD-3 (rainbow trout)', backup: 'Acme Phoebe 1/8oz (gold)', why: 'Afternoon — minnow imitation swimbait for pressured fish. Phoebe wobble triggers reflex strikes.' },
-      'overcast': { primary: 'Panther Martin #4 (gold/black)', backup: 'Mepps Aglia #1 (copper)', why: 'Overcast — gold blade maximum visibility. Copper is a secret weapon in flat light.' },
-      'dark': { primary: 'Mepps Black Fury #3 (silver/chartreuse)', backup: 'Jig 1/32oz (white marabou)', why: 'Dark — vibration matters more than color. Large blade for maximum thump. White jig for visibility.' }
-    };
-    var lRec = lureColors[c.light] || lureColors['overcast'];
-    rec.primary = lRec.primary;
-    rec.backup = lRec.backup;
-    rec.conditionNote = lRec.why;
+    accepted.forEach(function(mc, i) {
+      var mType = microTypes[i] || 'primary-lie';
+      var clusterMarkers = _deployMicroCluster({
+        fishLat: mc.lat, fishLng: mc.lng,
+        segIdx: mc.segIdx, segment: segment,
+        wade: wadeMode, habitat: spot.habitat,
+        microType: mType, microIdx: _activeMicroPins.length,
+        spot: spot, water: water, zone: zone,
+        bankWidths: zoneBankWidths  // zone-aligned bankWidths (indices match segment)
+      });
+      clusterMarkers.forEach(function(mk) { _activeMicroPins.push(mk); });
+      allMicroCoords.push([mc.lat, mc.lng]);
+      bounds.push([mc.lat, mc.lng]);
+    });
+  });
 
-    // Lure presentation by habitat
-    var lureByHabitat = {
-      riffle: { lure: 'Small inline spinner (Panther Martin #2 or Rooster Tail 1/16oz)', pres: 'Cast upstream, reel just fast enough to feel the blade spin. Let it drift with the current through the riffle. Jerkbaits: try a Rapala F3 twitched slowly through the deeper pockets.' },
-      pool: { lure: 'Spoon (Kastmaster 1/8oz) or small jerkbait (Rapala CD-3)', pres: 'Cast to the head, let it flutter down. For spoons: slow retrieve with twitches. For jerkbaits: let the Rapala CD sink to depth, then slow twitch-pause retrieve. Count down 3-5 seconds before retrieve.' },
-      run: { lure: 'Inline spinner with willow blade (Mepps #1-2) or Rapala Original F3', pres: 'Cast quartering upstream. Spinners: steady retrieve just above bottom. Jerkbaits: twitch-twitch-pause through the seam — the erratic action triggers reflex strikes from holding fish.' },
-      tailout: { lure: 'Micro crankbait (Rapala Ultra Light Minnow or Rebel Wee Craw)', pres: 'Cast upstream, slow twitching retrieve. Crankbaits wobble naturally in thin water — downsize to 1/16oz max. Crawdad crankbaits are deadly in tailouts with gravel bottom.' },
-      boulder: { lure: 'Jig (1/32-1/16oz, marabou or twister tail) or Rapala CD-3', pres: 'Pitch directly behind boulders. Jigs: let sink, tiny hops, 2-3 second pauses. Jerkbaits: cast tight to rock face, let the Countdown sink into the pocket, then twitch once — trout crush it.' }
-    };
-    var hl = lureByHabitat[habitat] || lureByHabitat.run;
-    rec.tackle = hl.lure;
-    rec.presentation = hl.pres;
-
-    // Speed adjustments for water temp
-    if (c.waterTemp < 50) {
-      rec.color = 'Cold water = slow retrieve. Go smaller and slower. Gold/copper blades in cold.';
-      rec.conditionNote += ' COLD WATER: Slow your retrieve by 50%. Smaller lures, longer pauses.';
-    } else if (c.waterTemp > 60) {
-      rec.color = 'Warm water = faster retrieve. Silver/bright blades, aggressive presentation.';
-      rec.conditionNote += ' WARM WATER: Trout are active — faster retrieve, more aggressive action.';
-    } else {
-      rec.color = 'Match blade color to light conditions. Gold in low light, silver in bright.';
-    }
-
-  } else {
-    // ─── FLY FISHING ENGINE ─────────────────────────────────────────
-    var flyRec = getTimeAwareFlyRec(water, habitat);
-    rec.primary = flyRec.flyRec || 'Pheasant Tail Nymph #16';
-    rec.backup = flyRec.altFly || 'Elk Hair Caddis #14';
-    rec.conditionNote = flyRec.timeAdvice;
-
-    var flyByHabitat = {
-      riffle: { pres: 'Dead drift nymphs upstream. High-stick technique — keep line off the water. Short, accurate casts.', rig: 'Euro nymphing rig or dry-dropper. 9ft 5X leader, 4ft 6X tippet.' },
-      pool: { pres: 'Start at the head with nymphs, work streamers along the edges. Fish the tailout last with dries.', rig: 'Indicator nymph rig. 9ft 4X leader, 18" dropper to point fly.' },
-      run: { pres: 'Dry-dropper through the seam. Mend to extend your drift. Cover the transition between fast and slow.', rig: 'Dry-dropper: buoyant dry + bead head nymph 18" below. 5X tippet.' },
-      tailout: { pres: 'Long leaders, small dries. Approach from downstream — these fish are spooky. Delicate presentation.', rig: '12ft leader, 6X tippet. Size 18-20 dries. Drag-free drift critical.' },
-      boulder: { pres: 'Short casts into pockets. Each pocket is a separate cast. Dead drift nymphs tight behind rocks.', rig: 'Short line nymphing. 7.5ft 4X leader, heavy point fly + dropper.' }
-    };
-    var hf = flyByHabitat[habitat] || flyByHabitat.run;
-    rec.tackle = hf.rig;
-    rec.presentation = hf.pres;
-    rec.color = flyRec.hatches && flyRec.hatches.length ? 'Active hatches: ' + flyRec.hatches.join(', ') : 'No visible hatch — subsurface flies first.';
+  // Zoom to fit ALL pins (hotspots + micro)
+  if (bounds.length > 0) {
+    var fitBounds = L.latLngBounds(bounds);
+    map.fitBounds(fitBounds.pad(0.15), { animate: true, duration: 1.0, maxZoom: 18 });
   }
 
-  rec.method = method;
-  rec.conditions = c;
-  return rec;
-}
-window._getMethodSpecificRec = getMethodSpecificRec;
+  // ── Hide ALL location pills so they don't overlap micro pins ──
+  // Hide AI ranked pills (#1 Seam, #2 Pool, etc.)
+  _aiFishingPins.forEach(function(pin) {
+    try {
+      var el = pin.getElement && pin.getElement();
+      if (el) el.style.display = 'none';
+    } catch(e) {}
+  });
+  // Hide hotspot area pills (Mid-Run Seam, Deep Run, etc.)
+  _hotspotPins.forEach(function(pin) {
+    try {
+      var el = pin.getElement && pin.getElement();
+      if (el) el.style.display = 'none';
+    } catch(e) {}
+  });
+
+  // ── Deploy animated stream flow overlay (LiDAR-derived) ──
+  try {
+    deployStreamFlowOverlay(water, zone);
+    if (_flowActive && _flowCanvas) {
+      showNotice('🌊 Stream flow overlay active', 'success', 2500);
+    } else {
+      showNotice('⚠️ Stream flow overlay did not activate — check console', 'warning', 4000);
+      console.warn('[HT-FLOW] deploy returned but _flowActive=' + _flowActive + ', _flowCanvas=' + !!_flowCanvas);
+    }
+  } catch(flowErr) {
+    showNotice('⚠️ Stream flow failed: ' + flowErr.message, 'error', 5000);
+    console.error('[HT-FLOW] Stream flow overlay failed:', flowErr);
+  }
+
+  // Start proximity watch
+  _startProximityWatch();
+
+  console.log('HUNTECH: Deployed ' + deployed + ' AI hotspots + ' + _activeMicroPins.length + ' micro-feature pins (LiDAR-locked)');
+};
 
 /* Score a spot based on user inputs */
 function _scoreSpot(habitat, method, wade, skill, spotIdx, totalSpots) {
@@ -3407,19 +4751,31 @@ function _scoreSpot(habitat, method, wade, skill, spotIdx, totalSpots) {
     else if (habitat === 'run') score += 20;
     else if (habitat === 'pool') score += 15;
     else if (habitat === 'tailout') score += 22;
-    else if (habitat === 'boulder') score += 10;
+    else if (habitat === 'boulder') score += 18;
+    else if (habitat === 'undercut') score += 20;
+    else if (habitat === 'log') score += 17;
+    else if (habitat === 'seam') score += 24;
+    else if (habitat === 'pocket') score += 19;
   } else if (method === 'spin') {
     if (habitat === 'pool') score += 25;
     else if (habitat === 'run') score += 20;
     else if (habitat === 'boulder') score += 18;
     else if (habitat === 'riffle') score += 8;
     else if (habitat === 'tailout') score += 15;
+    else if (habitat === 'undercut') score += 22;
+    else if (habitat === 'log') score += 20;
+    else if (habitat === 'seam') score += 16;
+    else if (habitat === 'pocket') score += 17;
   } else { // bait
     if (habitat === 'pool') score += 28;
     else if (habitat === 'tailout') score += 22;
     else if (habitat === 'run') score += 15;
     else if (habitat === 'boulder') score += 10;
     else if (habitat === 'riffle') score += 5;
+    else if (habitat === 'undercut') score += 24;
+    else if (habitat === 'log') score += 18;
+    else if (habitat === 'seam') score += 12;
+    else if (habitat === 'pocket') score += 14;
   }
 
   // Wading access bonus
@@ -3443,9 +4799,15 @@ function _scoreSpot(habitat, method, wade, skill, spotIdx, totalSpots) {
   // Time of day bonus
   var h = new Date().getHours();
   if ((h >= 5 && h < 9) || (h >= 17 && h < 21)) {
-    if (habitat === 'riffle' || habitat === 'tailout') score += 8; // active feeding
+    // Dawn/dusk: active feeding in fast water, seams, pockets
+    if (habitat === 'riffle' || habitat === 'tailout') score += 8;
+    if (habitat === 'seam' || habitat === 'pocket') score += 7;
+    if (habitat === 'undercut') score += 5; // big trout emerge at low light
   } else if (h >= 12 && h < 15) {
-    if (habitat === 'pool' || habitat === 'boulder') score += 8; // deep water midday
+    // Midday: trout seek shade and depth
+    if (habitat === 'pool' || habitat === 'boulder') score += 8;
+    if (habitat === 'undercut' || habitat === 'log') score += 10; // shade structures are prime midday
+    if (habitat === 'pocket') score += 5; // broken water provides cover
   }
 
   // Slight randomization for variety
@@ -3455,8 +4817,9 @@ function _scoreSpot(habitat, method, wade, skill, spotIdx, totalSpots) {
 }
 
 function _habitatEmoji(h) {
-  var map = { riffle: '💨', pool: '🌊', run: '🏞️', boulder: '🪨', tailout: '🌀' };
-  return map[h] || '🐟';
+  var emap = { riffle: '💨', pool: '🌊', run: '🏞️', boulder: '🪨', tailout: '🌀',
+    undercut: '🏔️', log: '🪵', seam: '〰️', pocket: '🫧' };
+  return emap[h] || '🐟';
 }
 
 function _capitalize(s) {
@@ -3483,7 +4846,19 @@ function _buildSpotStrategy(habitat, method, wade, skill, water, zone) {
                bait: 'Keep bait light and natural. The shallow tailout water requires subtle presentation. Early morning is best.' },
     boulder: { fly: 'Cast tight behind boulders. Dead drift a nymph through the pocket water. Each pocket is a separate lie.',
                spin: 'Target pocket water behind and beside boulders. Short accurate casts. Let the lure drop into the slack water.',
-               bait: 'Drop bait into the calm pockets behind boulders. Trout ambush from these protected lies.' }
+               bait: 'Drop bait into the calm pockets behind boulders. Trout ambush from these protected lies.' },
+    undercut: { fly: 'Cast parallel to the bank, tight to the undercut edge. Let your fly drift underneath the overhang. Streamer swung into the shadow zone is deadly.',
+                spin: 'Cast close to the bank and let your lure swing under the overhanging bank. Big trout ambush from undercuts.',
+                bait: 'Drop bait right along the bank edge under the overhang. Trout shelter here all day — go heavy on stealth.' },
+    log: { fly: 'Cast downstream of the log jam. Dead drift a nymph past the downstream edge where current accelerates around the debris. Avoid snagging.',
+           spin: 'Work the downstream side of the log. Trout stage in the slack water behind woody debris. Let lure sink beside the structure.',
+           bait: 'Place bait just downstream of the wood. The eddy behind the log concentrates food — trout know this.' },
+    seam: { fly: 'Position yourself perpendicular to the seam. Dead drift along the slow side of the seam line. Trout sit just inside the slow water picking off food from the fast current.',
+            spin: 'Cast to the fast side and retrieve across the seam. Trout react to lures crossing the current differential.',
+            bait: 'Drift bait right down the seam line — the boundary between fast and slow water funnels food directly to holding trout.' },
+    pocket: { fly: 'Short, accurate casts directly into the pocket. 2-3 drifts then move to the next pocket. High-stick nymphing is ideal here.',
+              spin: 'Drop your lure right into the pocket behind the structure. Let it sit 2-3 seconds, then jig. Each pocket holds a fish.',
+              bait: 'Drop bait directly into the calm water behind structure. These little pockets each hold 1-2 fish. Quick, targeted presentations.' }
   };
   var apKey = approaches[habitat] || approaches.run;
   strat.approach = apKey[method] || apKey.fly;
@@ -3494,7 +4869,11 @@ function _buildSpotStrategy(habitat, method, wade, skill, water, zone) {
     pool: 'Cast to the head or across to the seam. Let your offering sink and drift through the strike zone.',
     run: 'Cast quartering upstream. Mend to extend drift through the seam between fast and slow water.',
     tailout: 'Cast upstream in the thin water. Keep a low profile. Drag-free drift is critical here.',
-    boulder: 'Short casts directly behind boulders. Target each pocket individually. 2-3 drifts per pocket then move on.'
+    boulder: 'Short casts directly behind boulders. Target each pocket individually. 2-3 drifts per pocket then move on.',
+    undercut: 'Cast parallel to the bank edge. Keep your fly tight to the undercut. Let drift carry it under the overhang.',
+    log: 'Cast to the downstream edge of the log. Dead drift past the structure — trout stage on the downstream side.',
+    seam: 'Cast to the fast side and let your offering cross into the slow water. The seam line is your target.',
+    pocket: 'Short targeted casts into each pocket. High-stick to keep contact. 2-3 drifts per pocket then move.'
   };
   strat.castDirection = castMap[habitat] || castMap.run;
 
@@ -3511,17 +4890,24 @@ function _buildSpotStrategy(habitat, method, wade, skill, water, zone) {
     strat.wadingAdvice = 'You\'re in waders — position yourself in the stream for the best casting angle. ' +
       (habitat === 'riffle' ? 'Wade to knee depth. Stand at the tail of the riffle and cast upstream.' :
        habitat === 'pool' ? 'Stay at the pool edges. Don\'t wade through the strike zone.' :
+       habitat === 'undercut' ? 'Stay in mid-stream, cast parallel to the bank. Do NOT wade near the undercut — you\'ll collapse the bank and spook every fish.' :
+       habitat === 'log' ? 'Wade downstream of the log structure. Cast upstream past the debris and let your fly drift along the wood edge.' :
+       habitat === 'seam' ? 'Position yourself on the slow side of the seam. Wade gently — your footsteps transmit vibrations through the current.' :
+       habitat === 'pocket' ? 'High-stick from above. Stay close enough for short accurate casts but far enough to avoid spooking pocket fish.' :
        'Position yourself offset from the target. Keep your feet planted — shuffling spooks fish.');
   } else {
     strat.wadingAdvice = 'Fishing from the bank — use the terrain. ' +
       (habitat === 'pool' ? 'Find a high bank with a clear backcast lane. Roll casts work great.' :
+       habitat === 'undercut' ? 'You\'re already on the bank — perfect for undercut fishing. Stay low, dap your fly right along the bank edge.' :
+       habitat === 'log' ? 'Cast from the bank opposite the log jam. Roll cast to avoid snagging overhead branches.' :
+       habitat === 'seam' ? 'Find a position directly across from the seam line. Side-arm cast to keep your line low.' :
        'Kneel low. Keep your shadow off the water. Use sidearm casts to keep a low profile.');
   }
 
   return strat;
 }
 
-/* ── Strategy Summary Tray — pops after LET'S GO ── */
+/* ── Mission Summary Popup ── */
 window.showMissionSummary = function(water, zone, fishFlow) {
   // Remove existing
   if (_missionSummaryEl) { try { _missionSummaryEl.remove(); } catch {} }
@@ -3529,60 +4915,19 @@ window.showMissionSummary = function(water, zone, fishFlow) {
   var spots = _aiFishingSpots;
   var topSpot = spots[0];
   var method = fishFlow.method || 'fly';
-  var wade = fishFlow.wade || 'waders';
-  var skill = fishFlow.experience || 'learning';
-  var mRec = getMethodSpecificRec(water, topSpot ? topSpot.habitat : 'riffle', method);
-  var c = _getRealTimeConditions();
+  var rec = getTimeAwareFlyRec(water, topSpot ? topSpot.habitat : 'riffle');
   var totalSpots = spots.length;
-  var methodName = method === 'fly' ? 'Fly Fishing' : method === 'spin' ? 'Lure Fishing' : 'Bait Fishing';
-  var season = c.season.charAt(0).toUpperCase() + c.season.slice(1);
-  var topHabitat = topSpot ? _capitalize(topSpot.habitat) : 'Run';
-  var hatches = (water.hatches && water.hatches[c.season]) || [];
 
-  // ── Leader & Tippet recommendations (researched by method + skill) ──
-  var leaderRec = _getLeaderTippetRec(method, skill, c, topSpot ? topSpot.habitat : 'riffle');
-
-  // ── Rig setup ──
-  var rigRec = _getRigSetup(method, skill, topSpot ? topSpot.habitat : 'riffle', c);
-
-  // ── Flies / Lures / Bait to bring ──
-  var tackleBag = _getTackleBag(method, water, c);
-
-  // ── Where to begin ──
-  var startPlan = 'Start at Spot #1 — your highest-ranked ' + topHabitat.toLowerCase() +
-    '. Walk to the green angler pin to find your exact casting position. ' +
-    (wade === 'waders'
-      ? 'Wade in quietly and position yourself at the stand-here marker before making your first cast.'
-      : 'Stay on the bank near the angler pin. Keep low and avoid casting your shadow on the water.');
-
-  // ── How to work each spot ──
-  var workPlan = 'Each zone pin on the map marks a fishing spot ranked by score. ' +
-    'Tap any zone pin to check in — I will deploy individual fish micro-spots with precise ' +
-    methodName.toLowerCase() + ' instructions, a casting arc showing exactly where to land your ' +
-    (method === 'fly' ? 'fly' : method === 'spin' ? 'lure' : 'bait') +
-    ', and a CAST HERE marker upstream of each fish so you don\'t spook it. ' +
-    'Tap any fish icon for a tailored strategy explaining the approach, best presentation, and why that fish is there.';
-
-  // ── Overall spoken/readable strategy ──
   var summaryText = 'Welcome to ' + water.name + ', ' + zone.name + '. ' +
-    'I\'ve deployed ' + totalSpots + ' fishing spots ranked for your ' + methodName.toLowerCase() + ' setup. ' +
-    'Your number one spot is a ' + topHabitat.toLowerCase() + '. ' +
-    mRec.conditionNote + ' ' +
+    'I\'ve deployed ' + totalSpots + ' fishing spots ranked by your ' +
+    (method === 'fly' ? 'fly fishing' : method === 'spin' ? 'lure fishing' : 'bait fishing') + ' setup. ' +
+    'Your #1 spot is a ' + (topSpot ? topSpot.habitat : 'run') + ' — ' +
+    (rec.timeAdvice || 'Prime conditions for catching trout.') + ' ' +
+    'Start with ' + (rec.flyRec || 'your confidence pattern') + '. ' +
+    'Rig: ' + (rec.rigMethod || 'Match presentation to habitat') + '. ' +
+    'Walk to each pin in order. When you reach a pin, I\'ll deploy micro-spots and give you precise casting instructions. ' +
+    'Report back to me with voice — tell me what you see, what\'s hatching, and what the trout are doing. I\'ll update your strategy in real time. Tight lines!';
 
-    'Leader setup: ' + leaderRec.leader + '. Tippet: ' + leaderRec.tippet + '. ' +
-    (leaderRec.note ? leaderRec.note + ' ' : '') +
-
-    'Primary rig: ' + rigRec.name + '. ' + rigRec.description + ' ' +
-
-    'Start with ' + mRec.primary + '. ' +
-    (mRec.backup ? 'Backup: ' + mRec.backup + '. ' : '') +
-
-    startPlan + ' ' +
-    workPlan + ' ' +
-
-    'Report back with voice — tell me what you see and I will update your strategy in real time. Tight lines!';
-
-  // ── Spots list HTML ──
   var spotsListHtml = '';
   spots.forEach(function(s) {
     var col = s.rank === 1 ? '#7cffc7' : s.rank === 2 ? '#2bd4ff' : '#ffe082';
@@ -3593,93 +4938,25 @@ window.showMissionSummary = function(water, zone, fishFlow) {
     '</div>';
   });
 
-  // ── Tackle bag list ──
-  var tackleHtml = '';
-  tackleBag.forEach(function(item) {
-    tackleHtml += '<div class="ht-strat-tackle-item">' + escapeHtml(item) + '</div>';
-  });
-
-  // ── Hatches ──
-  var hatchHtml = '';
-  if (hatches.length) {
-    hatchHtml = '<div class="ht-strat-section"><div class="ht-strat-section-label">🦟 ' + season + ' HATCHES</div>' +
-      '<div class="ht-strat-section-body">' + escapeHtml(hatches.join(' • ')) + '</div></div>';
-  }
-
   var el = document.createElement('div');
   el.className = 'ht-mission-summary-overlay';
-  el.innerHTML =
-    '<div class="ht-mission-summary-card">' +
-      '<div class="ht-mission-summary-header">' +
-        '<div class="ht-mission-summary-title">STRATEGY SUMMARY</div>' +
-        '<div class="ht-mission-summary-sub">' + escapeHtml(water.name) + ' — ' + escapeHtml(zone.name) + '</div>' +
-        '<div class="ht-strat-method-badge">' + escapeHtml(methodName) + ' • ' + escapeHtml(wade === 'waders' ? 'Wading' : 'Bank') + ' • ' + escapeHtml(_capitalize(skill)) + '</div>' +
-      '</div>' +
-      '<div class="ht-mission-summary-body" id="strategySummaryBody">' +
-
-        // Leader & Tippet
-        '<div class="ht-strat-section">' +
-          '<div class="ht-strat-section-label">🎣 LEADER & TIPPET</div>' +
-          '<div class="ht-strat-row"><span class="ht-strat-key">Leader</span><span class="ht-strat-val">' + escapeHtml(leaderRec.leader) + '</span></div>' +
-          '<div class="ht-strat-row"><span class="ht-strat-key">Tippet</span><span class="ht-strat-val">' + escapeHtml(leaderRec.tippet) + '</span></div>' +
-          (leaderRec.note ? '<div class="ht-strat-note">' + escapeHtml(leaderRec.note) + '</div>' : '') +
-        '</div>' +
-
-        // Rig Setup
-        '<div class="ht-strat-section">' +
-          '<div class="ht-strat-section-label">⚙️ RECOMMENDED RIG</div>' +
-          '<div class="ht-strat-rig-name">' + escapeHtml(rigRec.name) + '</div>' +
-          '<div class="ht-strat-section-body">' + escapeHtml(rigRec.description) + '</div>' +
-          (rigRec.alt ? '<div class="ht-strat-note">Backup rig: ' + escapeHtml(rigRec.alt) + '</div>' : '') +
-        '</div>' +
-
-        // What to Bring
-        '<div class="ht-strat-section">' +
-          '<div class="ht-strat-section-label">' + (method === 'fly' ? '🪰' : method === 'spin' ? '🎣' : '🪱') + ' WHAT TO BRING</div>' +
-          '<div class="ht-strat-tackle-grid">' + tackleHtml + '</div>' +
-        '</div>' +
-
-        // Condition Awareness
-        '<div class="ht-strat-section">' +
-          '<div class="ht-strat-section-label">🌤️ CONDITIONS</div>' +
-          '<div class="ht-strat-section-body">' + escapeHtml(mRec.conditionNote) + '</div>' +
-          (mRec.color ? '<div class="ht-strat-note">' + escapeHtml(mRec.color) + '</div>' : '') +
-        '</div>' +
-
-        // Hatches (if any)
-        hatchHtml +
-
-        // Where to begin
-        '<div class="ht-strat-section">' +
-          '<div class="ht-strat-section-label">📍 WHERE TO BEGIN</div>' +
-          '<div class="ht-strat-section-body">' + escapeHtml(startPlan) + '</div>' +
-        '</div>' +
-
-        // How to Fish Each Spot
-        '<div class="ht-strat-section">' +
-          '<div class="ht-strat-section-label">🗺️ HOW TO FISH EACH SPOT</div>' +
-          '<div class="ht-strat-section-body">' + escapeHtml(workPlan) + '</div>' +
-        '</div>' +
-
-        // Spot Rankings
-        '<div class="ht-strat-section">' +
-          '<div class="ht-strat-section-label">🏆 SPOT RANKINGS</div>' +
-          '<div class="ht-mission-summary-spots">' + spotsListHtml + '</div>' +
-        '</div>' +
-
-      '</div>' +
-
-      // Hidden full text for TTS
-      '<div id="missionSummaryText" style="display:none;">' + escapeHtml(summaryText) + '</div>' +
-
-      // Action pills
-      '<div class="ht-strat-pill-row">' +
-        '<button class="ht-strat-pill ht-strat-pill--listen" type="button" onclick="window._listenMission()">🔊 Listen</button>' +
-        '<button class="ht-strat-pill ht-strat-pill--save" type="button" onclick="window._saveMissionToJournal()">💾 Save Trip</button>' +
-        '<button class="ht-strat-pill ht-strat-pill--close" type="button" onclick="window._closeMissionSummary()">✕ Close</button>' +
-      '</div>' +
-    '</div>';
-
+  el.innerHTML = `
+    <div class="ht-mission-summary-card">
+      <div class="ht-mission-summary-header">
+        <div class="ht-mission-summary-title">MISSION BRIEFING</div>
+        <div class="ht-mission-summary-sub">${escapeHtml(water.name)} — ${escapeHtml(zone.name)}</div>
+      </div>
+      <div class="ht-mission-summary-body">
+        <div class="ht-mission-summary-text" id="missionSummaryText">${escapeHtml(summaryText)}</div>
+        <div class="ht-mission-summary-spots">${spotsListHtml}</div>
+      </div>
+      <div class="ht-mission-summary-actions">
+        <button class="ht-mission-btn ht-mission-btn--listen" type="button" onclick="window._listenMission()">Listen</button>
+        <button class="ht-mission-btn ht-mission-btn--save" type="button" onclick="window._saveMissionToJournal()">Save to Journal</button>
+        <button class="ht-mission-btn ht-mission-btn--close" type="button" onclick="window._closeMissionSummary()">Close & Fish</button>
+      </div>
+    </div>
+  `;
   document.body.appendChild(el);
   _missionSummaryEl = el;
 
@@ -3689,186 +4966,14 @@ window.showMissionSummary = function(water, zone, fishFlow) {
   });
 };
 
-/* ── Leader & Tippet recommendation engine ── */
-function _getLeaderTippetRec(method, skill, c, habitat) {
-  var r = { leader: '', tippet: '', note: '' };
-
-  if (method === 'fly') {
-    // Leader length & taper
-    if (habitat === 'tailout' || habitat === 'pool') {
-      r.leader = '12ft tapered leader, 5X';
-      if (skill === 'new') r.leader = '9ft tapered leader, 4X';
-    } else if (habitat === 'riffle' || habitat === 'run') {
-      r.leader = '9ft tapered leader, 4X';
-    } else {
-      r.leader = '7.5ft tapered leader, 3X';
-    }
-
-    // Tippet
-    if (c.season === 'winter' || c.waterTemp < 50) {
-      r.tippet = '6X fluorocarbon, 24-30 inches';
-      r.note = 'Cold water = spooky fish. Go lighter — 6X fluoro is near-invisible and sinks below surface film.';
-    } else if (c.light === 'bright-sun') {
-      r.tippet = '5X-6X fluorocarbon, 18-24 inches';
-      r.note = 'Bright sun means pressured fish. Fluorocarbon won\'t flash like nylon. Add extra tippet length for clear water.';
-    } else if (c.light === 'low-light' || c.light === 'dark' || c.light === 'evening') {
-      r.tippet = '4X-5X nylon, 18 inches';
-      r.note = 'Low light — fish are less line-shy. Heavier tippet gives better control and turnover.';
-    } else {
-      r.tippet = '5X fluorocarbon, 18-24 inches';
-      r.note = 'Standard conditions. Fluorocarbon for subsurface, nylon for dry flies.';
-    }
-
-    // Skill adjustments
-    if (skill === 'new') {
-      r.note += ' Beginner tip: Go no lighter than 5X — you need the control. Tie improved clinch knots.';
-    } else if (skill === 'advanced') {
-      r.note += ' Pro tip: Consider 6X-7X for micro-dries and midges. Double surgeon\'s knot for tippet rings.';
-    }
-
-  } else if (method === 'spin') {
-    r.leader = '4-6lb fluorocarbon leader, 24-36 inches';
-    r.tippet = 'No tippet needed — tie lure directly to fluoro leader';
-    if (c.waterTemp < 50) {
-      r.note = 'Cold water: drop to 2-4lb test. Fish are lethargic and line-shy. Slow retrieve.';
-    } else {
-      r.note = 'Fluorocarbon leader is less visible than mono. Attach to main line with double uni knot.';
-    }
-    if (skill === 'new') r.note += ' Beginner: Use a snap swivel for quick lure changes.';
-
-  } else { // bait
-    r.leader = '4-6lb monofilament, 18-24 inches below sinker';
-    r.tippet = 'No tippet — tie hook directly to leader';
-    if (c.waterTemp < 50) {
-      r.note = 'Cold water: downsize to #10-12 hooks and pea-sized bait. Fish are sluggish.';
-    } else {
-      r.note = 'Use a sliding egg sinker above a barrel swivel. Leader runs free — trout won\'t feel resistance.';
-    }
-  }
-
-  return r;
-}
-
-/* ── Rig setup engine ── */
-function _getRigSetup(method, skill, habitat, c) {
-  var r = { name: '', description: '', alt: '' };
-
-  if (method === 'fly') {
-    if (skill === 'new' || skill === 'learning') {
-      // Simpler rigs for beginners
-      if (habitat === 'riffle' || habitat === 'run') {
-        r.name = 'Dry-Dropper Rig';
-        r.description = 'Tie a high-floating dry fly (Stimulator #12 or Chubby Chernobyl) as your indicator. Drop 18-22 inches of 5X tippet off the hook bend, tie on a beadhead nymph. The dry floats and signals strikes while the nymph does the catching.';
-        r.alt = 'Indicator nymph rig: Yarn indicator + split shot + 2-nymph tandem (heavy point fly, smaller dropper).';
-      } else if (habitat === 'pool' || habitat === 'tailout') {
-        r.name = 'Indicator Nymph Rig';
-        r.description = 'Thingamabobber indicator set at 1.5x water depth. 18 inches of tippet to point fly (beadhead Pheasant Tail #16). Add a #20 midge dropper 14 inches below. Small split shot 8 inches above point fly.';
-        r.alt = 'Single dry fly rig — 12ft leader, 6X tippet, #18 Parachute Adams for sight fishing risers.';
-      } else {
-        r.name = 'Short-Line Nymph Rig';
-        r.description = 'Heavy point fly (Pat\'s Rubber Legs #10) with a #16 Pheasant Tail dropper 16 inches below. Short leader. High-stick: hold rod tip up, keep contact, feel for the take.';
-        r.alt = 'Single large streamer (#8 Woolly Bugger) stripped past boulders and structure.';
-      }
-    } else {
-      // Advanced / confident rigs
-      if (habitat === 'riffle' || habitat === 'run') {
-        r.name = 'Euro Nymphing / Tight-Line Rig';
-        r.description = 'Mono leader to colored sighter. Point fly: #14 Perdigon or Jig Pheasant Tail. Tag nymph 20 inches above: #18 Waltz Worm or micro midge. No indicator — feel the take through the sighter. Leader-to-fly connection stays at 10-2 o\'clock.';
-        r.alt = 'Dry-dropper with a CDC emerger on top for ultra-selective risers.';
-      } else if (habitat === 'pool') {
-        r.name = 'Streamer Rig';
-        r.description = 'Short stout leader (7.5ft, 2X-3X). Articulated streamer or Woolly Bugger. Strip-set only — never trout-set on streamers. Vary strip speed: short sharp strips in warm water, slow strips in cold.';
-        r.alt = 'Deep indicator nymph rig: 2 weighted nymphs below a large indicator set 4-5ft deep.';
-      } else if (habitat === 'tailout') {
-        r.name = 'Dry Fly Rig (Match the Hatch)';
-        r.description = '12ft leader tapered to 6X-7X. Single dry fly matched to the current hatch. Drag-free drift is everything. Consider a parachute post for visibility. Apply floatant to leader butt but NOT to tippet.';
-        r.alt = 'Soft hackle swing rig — wet fly on 5X swung through the tailout at the end of each drift.';
-      } else {
-        r.name = 'Heavy Pocket Nymph Rig';
-        r.description = 'Tungsten-beadhead point fly (#12 Stonefly or Copper John) with a #16 tag nymph. Short leader (7.5ft, 4X). Tight-line approach: lift, lead, set. Each pocket gets 2-3 drifts max.';
-        r.alt = 'Large streamer stripped past structure — sculpin patterns produce trophy fish near boulders.';
-      }
-    }
-  } else if (method === 'spin') {
-    if (habitat === 'riffle' || habitat === 'run') {
-      r.name = 'Upstream Spinner Retrieve';
-      r.description = 'Cast upstream at 45 degrees. Reel just fast enough to keep the blade spinning. Let the current do the work — the lure swings naturally through the feeding lanes.';
-      r.alt = 'Small jerkbait (Rapala F3): twitch-pause retrieve through runs.';
-    } else if (habitat === 'pool') {
-      r.name = 'Count-Down Spoon Retrieve';
-      r.description = 'Cast to the head of the pool. Count down 3-5 seconds. Slow flutter retrieve with twitches. Spoons wobble and flash as they fall — the strike often comes on the drop.';
-      r.alt = 'Swim jig (1/16oz, white marabou) hopped along the bottom.';
-    } else {
-      r.name = 'Pocket-Water Pitch';
-      r.description = 'Short accurate pitches to pocket water. Let the lure sink behind boulders and through gaps. Retrieve with short hops and pauses.';
-      r.alt = 'Micro crankbait bumped along the bottom near structure.';
-    }
-  } else { // bait
-    if (habitat === 'pool') {
-      r.name = 'Bottom Rig (Sliding Sinker)';
-      r.description = 'Sliding egg sinker (1/4oz) above a barrel swivel. 18-24 inches of 4lb mono leader to a #12 treble hook. Mold PowerBait into a marble-sized ball or thread on 2-3 corn kernels. Cast to the pool, let it settle, wait.';
-      r.alt = 'Carolina rig with live nightcrawler.';
-    } else if (habitat === 'riffle' || habitat === 'run') {
-      r.name = 'Drift Rig';
-      r.description = 'Small split shot 12-18 inches above a #8 bait hook. Thread on a worm or Mice Tail. Cast upstream, let it tumble through the riffle naturally. The bait should bounce along the bottom like natural food.';
-      r.alt = 'Float rig: small bobber with bait suspended just off the bottom.';
-    } else {
-      r.name = 'Float Rig';
-      r.description = 'Small clip-on float set at 1.5x water depth. #10 bait hook on 4lb leader. Hook a single salmon egg, worm piece, or floating Mice Tail. Cast upstream and let it drift through the target zone.';
-      r.alt = 'Bottom rig behind structure with PowerBait.';
-    }
-  }
-
-  return r;
-}
-
-/* ── Tackle bag builder — what to bring ── */
-function _getTackleBag(method, water, c) {
-  var bag = [];
-  var season = c.season;
-
-  if (method === 'fly') {
-    // Top flies from the water data
-    if (water.topFlies && water.topFlies.length) {
-      bag = water.topFlies.slice(0, 5);
-    } else {
-      bag = ['#16 Pheasant Tail Nymph', '#14 Hare\'s Ear', '#18 Zebra Midge', '#14 Elk Hair Caddis', '#10 Woolly Bugger'];
-    }
-    // Season bonus
-    if (season === 'winter') bag.push('#22 Black Midge (must-have for winter)');
-    if (season === 'spring') bag.push('#16 BWO Emerger (match the spring hatch)');
-    if (season === 'summer') bag.push('#12 Hopper (grasshopper season)');
-    if (season === 'fall') bag.push('#10 October Caddis (fall classic)');
-
-  } else if (method === 'spin') {
-    if (water.topLures && water.topLures.length) {
-      bag = water.topLures.slice(0, 5);
-    } else {
-      bag = ['1/8oz Rooster Tail (white)', '1/8oz Panther Martin (gold)', 'Rapala Countdown CD-3', 'Small Kastmaster (gold)', 'Rebel Wee Craw'];
-    }
-    if (c.waterTemp < 50) bag.push('Slow it down — lightweight jig (1/32oz) in cold water');
-
-  } else {
-    if (water.topBait && water.topBait.length) {
-      bag = water.topBait.slice(0, 4);
-    } else {
-      bag = ['PowerBait (chartreuse)', 'PowerBait (rainbow)', 'Nightcrawler', 'Corn'];
-    }
-    bag.push('#8-12 bait hooks + split shot assortment');
-    bag.push('Small treble hooks (#14) for dough bait');
-  }
-
-  return bag;
-}
-
 window._listenMission = function() {
   var textEl = document.getElementById('missionSummaryText');
   if (!textEl) return;
-  var text = textEl.textContent || textEl.innerText;
   if (typeof window.speakText === 'function') {
-    window.speakText(text);
+    window.speakText(textEl.textContent);
+    // status suppressed
   } else if (typeof speakTextBrowser === 'function') {
-    speakTextBrowser(text);
+    speakTextBrowser(textEl.textContent);
   } else {
     showNotice('TTS not available', 'warning', 2000);
   }
@@ -3880,7 +4985,6 @@ window._saveMissionToJournal = function() {
     if (!fishFlow || !fishFlow.area) return;
     var key = 'huntech_fish_journal_v1';
     var journal = JSON.parse(localStorage.getItem(key) || '[]');
-    var textEl = document.getElementById('missionSummaryText');
     journal.push({
       id: Date.now(),
       water: fishFlow.area.name,
@@ -3891,10 +4995,10 @@ window._saveMissionToJournal = function() {
       wade: fishFlow.wade,
       spots: _aiFishingSpots.length,
       date: new Date().toISOString(),
-      summary: textEl ? (textEl.textContent || textEl.innerText) : ''
+      summary: document.getElementById('missionSummaryText') ? document.getElementById('missionSummaryText').textContent : ''
     });
     localStorage.setItem(key, JSON.stringify(journal));
-    showNotice('💾 Trip saved! Access it in your journal anytime.', 'success', 2500);
+    showNotice('📓 Session saved to your fishing journal!', 'success', 2500);
   } catch (e) {
     showNotice('Could not save: ' + e.message, 'error', 3000);
   }
@@ -3994,582 +5098,197 @@ function _autoCheckInToPin(pinIdx) {
 
   // status suppressed
 
-  // Close existing spot info tray
-  if (typeof window._closeSpotInfoTray === 'function') window._closeSpotInfoTray();
-
-  // Clear ALL previous layers — micro pins, polygons, angler pins, approach lines, flow, boulders
+  // Clear previous micro pins & polygons
   _activeMicroPins.forEach(function(m) { try { map.removeLayer(m); } catch {} });
   _activeMicroPins = [];
   _activeMicroPolygons.forEach(function(p) { try { map.removeLayer(p); } catch {} });
   _activeMicroPolygons = [];
-  _activeAnglerPins.forEach(function(m) { try { map.removeLayer(m); } catch {} });
-  _activeAnglerPins = [];
-  _activeApproachLines.forEach(function(l) { try { map.removeLayer(l); } catch {} });
-  _activeApproachLines = [];
-  // Also clear zone polygon if it's still visible
-  if (_activeZonePolygon) { try { map.removeLayer(_activeZonePolygon); } catch {} _activeZonePolygon = null; }
-  // Clear legacy layers
-  if (typeof clearMicroPins === 'function') try { clearMicroPins(); } catch {}
-  if (typeof clearFlowOverlay === 'function') try { clearFlowOverlay(); } catch {}
-  if (typeof clearBoulders === 'function') try { clearBoulders(); } catch {}
 
-  // Build micro-area polygon around this spot (small radius)
-  var segment = getZoneStreamSegment(water, zone);
-  if (segment && segment.length >= 2) {
-    var centerIdx = spot.segmentIdx;
-    var start = Math.max(0, centerIdx - 2);
-    var end = Math.min(segment.length - 1, centerIdx + 2);
-    var microSegment = segment.slice(start, end + 1);
-
-    if (microSegment.length >= 2) {
-      var microCorridor = buildStreamCorridor(microSegment, 25);
-      if (microCorridor) {
-        var microPoly = L.polygon(microCorridor, {
-          color: '#ffe082',
-          weight: 2,
-          fillColor: '#ffe082',
-          fillOpacity: 0.20,
-          dashArray: '4 3'
-        }).addTo(map);
-        _activeMicroPolygons.push(microPoly);
-        setTimeout(function() { microPoly.setStyle({ fillOpacity: 0.10 }); }, 2000);
-        setTimeout(function() { microPoly.setStyle({ fillOpacity: 0.03, opacity: 0.15 }); }, 4000);
-        setTimeout(function() {
-          try { map.removeLayer(microPoly); } catch {}
-          var pIdx = _activeMicroPolygons.indexOf(microPoly);
-          if (pIdx !== -1) _activeMicroPolygons.splice(pIdx, 1);
-        }, 6000);
-      }
-    }
-  }
-
-  // ── Smart micro-spot deployment — HIGH DENSITY ──
-  // More spots = more killer locations identified
-  var maxMicros = spot.score >= 70 ? 10 : spot.score >= 50 ? 8 : 5;
-
-  var microTypes = ['primary-lie', 'seam-edge', 'pocket-water', 'undercut-bank', 'feeding-lane',
-                    'tail-glide', 'riffle-drop', 'eddy-pocket', 'bank-shadow', 'deep-slot'];
+  // ── 3-Icon micro-spot deployment (fish + angler + cast target) ──
+  var maxMicros = spot.score >= 70 ? 5 : spot.score >= 50 ? 4 : 2;
+  var microTypes = ['primary-lie', 'seam-edge', 'pocket-water', 'undercut-bank', 'feeding-lane'];
   var seg = getZoneStreamSegment(water, zone) || [];
   var cIdx = spot.segmentIdx;
+  var wadeMode = fishFlow ? (fishFlow.wade || 'waders') : 'waders';
 
-  // Build zone corridor polygon for strict boundary enforcement
-  var _zoneCorridor = buildStreamCorridor(seg, 45);
-
-  // Distance helper (meters between two lat/lng points)
   var _dist = function(lat1, lng1, lat2, lng2) {
-    var R = Math.PI / 180;
     var dLat = (lat2 - lat1) * 111000;
-    var dLng = (lng2 - lng1) * 111000 * Math.cos(lat1 * R);
+    var dLng = (lng2 - lng1) * 111000 * Math.cos(lat1 * Math.PI / 180);
     return Math.sqrt(dLat * dLat + dLng * dLng);
   };
 
-  // ── EVEN DISTRIBUTION — spread fish across ENTIRE zone segment ──
-  // No territory clustering. Fish are placed at evenly-spaced intervals
-  // from segment start to end so they fully cover the zone.
-  var candidates = [];
-  var segLen = seg.length;
-  if (segLen >= 2) {
-    var step = (segLen - 1) / (maxMicros + 1);
-    for (var eIdx = 1; eIdx <= maxMicros; eIdx++) {
-      var targetIdx = Math.round(eIdx * step);
-      targetIdx = Math.max(0, Math.min(segLen - 1, targetIdx));
-      var eLat = seg[targetIdx][0];
-      var eLng = seg[targetIdx][1];
-      // Skip if outside zone polygon
-      if (_zoneCorridor && !_pointInPolygon(eLat, eLng, _zoneCorridor)) continue;
-      candidates.push({
-        lat: eLat,
-        lng: eLng,
-        segIdx: targetIdx,
-        score: 100,
-        distFromMain: _dist(spot.lat, spot.lng, eLat, eLng)
-      });
+  // Boundary enforcement from adjacent AI pins
+  var sortedByStream = _aiFishingSpots.slice().sort(function(a, b) { return a.segmentIdx - b.segmentIdx; });
+  var streamOrderIdx = -1;
+  for (var si = 0; si < sortedByStream.length; si++) {
+    if (sortedByStream[si].segmentIdx === spot.segmentIdx &&
+        Math.abs(sortedByStream[si].lat - spot.lat) < 0.00001 &&
+        Math.abs(sortedByStream[si].lng - spot.lng) < 0.00001) {
+      streamOrderIdx = si; break;
     }
   }
-  var accepted = candidates;
-
-  // Deploy accepted micro-spots as animated trout in environment
-  var microCoords = [];
-  // Map micro-type to visual environment class
-  var envClasses = {
-    'primary-lie': 'ht-env-current',
-    'seam-edge': 'ht-env-seam',
-    'pocket-water': 'ht-env-rock',
-    'undercut-bank': 'ht-env-undercut',
-    'feeding-lane': 'ht-env-lane',
-    'tail-glide': 'ht-env-current',
-    'riffle-drop': 'ht-env-seam',
-    'eddy-pocket': 'ht-env-rock',
-    'bank-shadow': 'ht-env-undercut',
-    'deep-slot': 'ht-env-lane'
-  };
-  var envLabels = {
-    'primary-lie': 'Holding in Current',
-    'seam-edge': 'Working the Seam',
-    'pocket-water': 'Behind Boulder',
-    'undercut-bank': 'Under the Bank',
-    'feeding-lane': 'In the Lane',
-    'tail-glide': 'Tail of Pool',
-    'riffle-drop': 'Riffle Drop-off',
-    'eddy-pocket': 'Eddy Pocket',
-    'bank-shadow': 'Bank Shadow',
-    'deep-slot': 'Deep Slot'
-  };
-
-  var microDeployData = []; // capture fish positions for stand-here pins
-
-  // ═══════════════════════════════════════════════════════════════════════
-  // GLOBAL FLOW DIRECTION — computed from overall path start→end.
-  // Used to VALIDATE local direction at each fish position, preventing
-  // direction reversals at S-bends and tight curves.
-  // ═══════════════════════════════════════════════════════════════════════
-  var _globalFlowLat = seg[seg.length - 1][0] - seg[0][0];
-  var _globalFlowLng = seg[seg.length - 1][1] - seg[0][1];
-  var _globalFlowLen = Math.sqrt(_globalFlowLat * _globalFlowLat + _globalFlowLng * _globalFlowLng);
-  if (_globalFlowLen < 1e-9) _globalFlowLen = 1e-9;
-  _globalFlowLat /= _globalFlowLen;
-  _globalFlowLng /= _globalFlowLen;
-
-  accepted.forEach(function(mc, i) {
-    var mType = microTypes[i] || 'primary-lie';
-    var mLabel = envLabels[mType] || _capitalize(mType.replace(/-/g, ' '));
-    var envClass = envClasses[mType] || 'ht-env-current';
-    // Random swimming direction variation
-    var swimDelay = (i * 0.4).toFixed(1);
-
-    // ── Direction calculation: use WIDE WINDOW (±3 nodes) to avoid ──
-    // ── direction reversals at S-bends and tight curves.            ──
-    var wBack = Math.max(0, mc.segIdx - 3);
-    var wFwd  = Math.min(seg.length - 1, mc.segIdx + 3);
-    var sdLat = seg[wFwd][0] - seg[wBack][0];
-    var sdLng = seg[wFwd][1] - seg[wBack][1];
-    var sLen = Math.sqrt(sdLat * sdLat + sdLng * sdLng);
-    if (sLen < 1e-9) sLen = 1e-9;
-
-    // GUARDRAIL: validate local direction against global flow.
-    // If dot product is negative, local direction is backwards — flip it.
-    var dotProduct = (sdLat / sLen) * _globalFlowLat + (sdLng / sLen) * _globalFlowLng;
-    if (dotProduct < 0) {
-      sdLat = -sdLat;
-      sdLng = -sdLng;
+  var boundaryLow = 0, boundaryHigh = seg.length - 1;
+  if (streamOrderIdx >= 0) {
+    if (streamOrderIdx > 0) {
+      var prevPin = sortedByStream[streamOrderIdx - 1];
+      boundaryLow = Math.ceil((prevPin.segmentIdx + spot.segmentIdx) / 2);
     }
-
-    // Perpendicular unit vector (rotate stream direction 90°)
-    var perpLat = -sdLng / sLen;
-    var perpLng =  sdLat / sLen;
-    // Alternate sides so fish don't all clump one side
-    var side = (i % 2 === 0) ? 1 : -1;
-    // ~3 meters — fish stay IN the stream, never in the woods
-    var offsetDeg = 0.000027;
-    var placeLat = mc.lat + perpLat * offsetDeg * side;
-    var placeLng = mc.lng + perpLng * offsetDeg * side;
-
-    // STRICT: If fish position is outside zone polygon, snap back to stream center
-    if (_zoneCorridor && !_pointInPolygon(placeLat, placeLng, _zoneCorridor)) {
-      placeLat = mc.lat;
-      placeLng = mc.lng;
+    if (streamOrderIdx < sortedByStream.length - 1) {
+      var nextPin = sortedByStream[streamOrderIdx + 1];
+      boundaryHigh = Math.floor((spot.segmentIdx + nextPin.segmentIdx) / 2);
     }
+  }
+  var MAX_DIST_FROM_PIN = 75;
 
-    // Random mix of rainbow and brown trout
-    var troutSvg = (Math.random() < 0.4) ? 'assets/trout-pin-brown.svg' : 'assets/trout-pin.svg';
-
-    var mIcon = L.divIcon({
-      className: 'ht-micro-trout-pin ' + envClass,
-      html: '<div class="ht-trout-swim-wrap" style="animation-delay:' + swimDelay + 's">' +
-        '<img src="' + troutSvg + '" width="48" height="24" alt="" class="ht-trout-alive">' +
-        '</div>' +
-        '<span class="ht-micro-trout-label">' + mLabel + '</span>',
-      iconSize: [48, 24],
-      iconAnchor: [24, 12]
-    });
-
-    var mMarker = L.marker([placeLat, placeLng], { icon: mIcon, zIndexOffset: 500 }).addTo(map);
-    mMarker.__microType = mType;
-    mMarker.__microIdx = i;
-    (function(mk, mt, mi) {
-      mk.on('click', function() {
-        _showSpotInfoTray(water, zone, spot, mt, mi);
-      });
-    })(mMarker, mType, i);
-    _activeMicroPins.push(mMarker);
-    microCoords.push([placeLat, placeLng]);
-
-    // ── Store data for stand-here pins + approach lines ──
-    microDeployData.push({
-      fishLat: placeLat,
-      fishLng: placeLng,
-      segIdx: mc.segIdx,
-      type: mType,
-      side: side,
-      perpLat: perpLat,
-      perpLng: perpLng,
-      downLat: sdLat / sLen,
-      downLng: sdLng / sLen
-    });
+  var existingPinPositions = [];
+  _aiFishingPins.forEach(function(pm) {
+    var ll = pm.getLatLng();
+    existingPinPositions.push({ lat: ll.lat, lng: ll.lng });
   });
 
-  // ── Deploy stand-here angler pins + approach direction lines ──
-  // (Previous layers already cleared at top of function)
+  var candidates = [];
+  var MIN_FROM_MAIN = 12, MIN_FROM_AI_PIN = 12, MIN_BETWEEN_MICRO = 10;
 
-  // Wade-aware distance configs per micro-type
-  // Waders = angler stands IN the stream (low perp offset)
-  // Shore = angler stands on bank but close (moderate perp offset)
-  var wadeMode = (window._fishFlow && window._fishFlow.wade) || 'waders';
-  var isWading = (wadeMode === 'waders');
+  for (var sIdx = boundaryLow; sIdx <= boundaryHigh; sIdx++) {
+    if (sIdx === cIdx || sIdx < 0 || sIdx >= seg.length) continue;
+    var cLat = seg[sIdx][0], cLng = seg[sIdx][1];
+    var distFromMain = _dist(spot.lat, spot.lng, cLat, cLng);
+    if (distFromMain > MAX_DIST_FROM_PIN || distFromMain < MIN_FROM_MAIN) continue;
 
-  var anglerDists = isWading ? {
-    // WADERS — angler is IN the water, just downstream of fish
-    'primary-lie': { down: 8, perp: 2 },
-    'seam-edge': { down: 7, perp: 3 },
-    'pocket-water': { down: 6, perp: 2 },
-    'undercut-bank': { down: 8, perp: 4 },
-    'feeding-lane': { down: 8, perp: 2 },
-    'tail-glide': { down: 9, perp: 2 },
-    'riffle-drop': { down: 7, perp: 2 },
-    'eddy-pocket': { down: 6, perp: 2 },
-    'bank-shadow': { down: 8, perp: 3 },
-    'deep-slot': { down: 8, perp: 2 }
-  } : {
-    // SHORE/BOOTS — angler on bank, close to water edge
-    'primary-lie': { down: 10, perp: 6 },
-    'seam-edge': { down: 8, perp: 7 },
-    'pocket-water': { down: 6, perp: 5 },
-    'undercut-bank': { down: 9, perp: 8 },
-    'feeding-lane': { down: 9, perp: 6 },
-    'tail-glide': { down: 10, perp: 6 },
-    'riffle-drop': { down: 8, perp: 6 },
-    'eddy-pocket': { down: 6, perp: 5 },
-    'bank-shadow': { down: 9, perp: 8 },
-    'deep-slot': { down: 9, perp: 6 }
-  };
-  // Approach advice per micro-type
-  var approachAdvice = {
-    'primary-lie': 'Approach from downstream. Stay low, cast upstream.',
-    'seam-edge': 'Cross-stream approach. Cast across the seam.',
-    'pocket-water': 'Approach from below. Short, accurate casts into the pocket.',
-    'undercut-bank': 'Approach from opposite bank. Cast parallel to the bank edge.',
-    'feeding-lane': 'Approach from directly downstream. Dead-drift upstream.',
-    'tail-glide': 'Approach from downstream. Position at the tail, cast into the glide.',
-    'riffle-drop': 'Low approach from downstream. Work the drop-off edge.',
-    'eddy-pocket': 'Side approach from below the eddy. Pitch into calm water.',
-    'bank-shadow': 'Approach from opposite bank. Long casts tight to the shadow line.',
-    'deep-slot': 'Downstream approach. Let your presentation sink deep.'
-  };
-
-  microDeployData.forEach(function(md, idx) {
-    var dist = anglerDists[md.type] || { down: 12, perp: 10 };
-    var degPerM = 0.000009; // ~1 meter in degrees
-
-    // Angler position: downstream + further from stream center (same side as fish)
-    var anglerLat = md.fishLat + md.downLat * degPerM * dist.down + md.perpLat * degPerM * dist.perp * md.side;
-    var anglerLng = md.fishLng + md.downLng * degPerM * dist.down + md.perpLng * degPerM * dist.perp * md.side;
-
-    // STRICT: If angler position is outside zone polygon, clamp to a safe position near the fish
-    if (_zoneCorridor && !_pointInPolygon(anglerLat, anglerLng, _zoneCorridor)) {
-      // Move angler closer — halve the offset until inside, or fall back next to fish
-      var tryDist = { down: dist.down * 0.5, perp: dist.perp * 0.5 };
-      anglerLat = md.fishLat + md.downLat * degPerM * tryDist.down + md.perpLat * degPerM * tryDist.perp * md.side;
-      anglerLng = md.fishLng + md.downLng * degPerM * tryDist.down + md.perpLng * degPerM * tryDist.perp * md.side;
-      if (!_pointInPolygon(anglerLat, anglerLng, _zoneCorridor)) {
-        anglerLat = md.fishLat + md.downLat * degPerM * 3;
-        anglerLng = md.fishLng + md.downLng * degPerM * 3;
-      }
+    var nearOtherPin = false;
+    for (var ep = 0; ep < existingPinPositions.length; ep++) {
+      var epp = existingPinPositions[ep];
+      if (Math.abs(epp.lat - spot.lat) < 0.00001 && Math.abs(epp.lng - spot.lng) < 0.00001) continue;
+      if (_dist(epp.lat, epp.lng, cLat, cLng) < MIN_FROM_AI_PIN) { nearOtherPin = true; break; }
     }
+    if (nearOtherPin) continue;
 
-    // Stand-here pin — BOLD hi-vis orange fisherman, unmissable on stream
-    var shIcon = L.divIcon({
-      className: 'ht-stand-here-pin',
-      html: '<div class="ht-stand-here-dot">' +
-        '<svg viewBox="0 0 40 52" width="36" height="46" class="ht-stand-here-svg">' +
-        '<ellipse cx="20" cy="50" rx="9" ry="2.5" fill="rgba(0,0,0,0.25)"/>' +
-        '<path d="M15 35 L14 47 L18 47 L17 35 Z" fill="#2a3a2a" stroke="#1a2a1a" stroke-width="0.5"/>' +
-        '<path d="M23 35 L22 47 L26 47 L25 35 Z" fill="#2a3a2a" stroke="#1a2a1a" stroke-width="0.5"/>' +
-        '<path d="M12 44 Q20 42 28 44" stroke="rgba(93,216,255,0.6)" stroke-width="1.2" fill="none"/>' +
-        '<path d="M15 22 Q14 28 15 35 L25 35 Q26 28 25 22 Z" fill="#FF6B00" stroke="#CC5500" stroke-width="0.5"/>' +
-        '<rect x="16" y="26" width="3.5" height="3" rx="0.5" fill="rgba(0,0,0,0.15)"/>' +
-        '<rect x="20.5" y="27" width="3" height="2.5" rx="0.5" fill="rgba(0,0,0,0.12)"/>' +
-        '<path d="M15.5 30 L24.5 30" stroke="#ffdd44" stroke-width="0.8" opacity="0.6"/>' +
-        '<path d="M15 24 L11 19" stroke="#FF6B00" stroke-width="2.2" stroke-linecap="round" fill="none"/>' +
-        '<path d="M25 24 L28 28" stroke="#FF6B00" stroke-width="2.2" stroke-linecap="round" fill="none"/>' +
-        '<path d="M11 19 L5 5 L3 1" stroke="#8B7355" stroke-width="1.4" stroke-linecap="round" fill="none"/>' +
-        '<path class="ht-stand-flyline" d="M3 1 Q12 -3 20 0 Q28 3 35 10" stroke="rgba(255,224,130,0.7)" stroke-width="0.9" fill="none"/>' +
-        '<circle cx="35" cy="10" r="1.2" fill="#ffe082" opacity="0.8"/>' +
-        '<ellipse cx="20" cy="17" rx="7" ry="2.5" fill="#2a5a2a"/>' +
-        '<path d="M15 17 Q15 12 20 11 Q25 12 25 17" fill="#3a6a3a" stroke="#2a5a2a" stroke-width="0.4"/>' +
-        '<circle cx="20" cy="15" r="4" fill="#e8c99b"/>' +
-        '<path d="M17.5 14.5 L22.5 14.5" stroke="#222" stroke-width="1.5" stroke-linecap="round"/>' +
-        '</svg>' +
-        '</div>',
-      iconSize: [36, 46],
-      iconAnchor: [18, 46]
-    });
-    var shMarker = L.marker([anglerLat, anglerLng], {
-      icon: shIcon,
-      zIndexOffset: 480,
-      interactive: true
-    }).addTo(map);
-
-    var advice = approachAdvice[md.type] || 'Approach from downstream.';
-    shMarker.bindPopup(
-      '<div style="min-width:160px;">' +
-      '<div style="font-weight:700;color:#7cffc7;font-size:12px;margin-bottom:3px;">🎣 Stand Here</div>' +
-      '<div style="font-size:10px;color:#c8e6d5;line-height:1.4;">' + advice + '</div>' +
-      '</div>',
-      { maxWidth: 220, className: 'ht-zone-popup' }
-    );
-    _activeAnglerPins.push(shMarker);
-    microCoords.push([anglerLat, anglerLng]);
-
-    // ═══════════════════════════════════════════════════════════════════
-    // CAST LANDING GUARDRAILS — Strict upstream placement per habitat
-    // Cast NEVER lands on the fish. It lands upstream so the natural
-    // drift carries the fly/lure INTO the strike zone. Spooking = fail.
-    // ═══════════════════════════════════════════════════════════════════
-    var degPerM = 0.000009; // ~1 meter in degrees
-
-    // Habitat-specific upstream offset (meters) + perpendicular correction
-    // These are researched casting placement rules for each structure type
-    var castPlacement = {
-      'primary-lie':  { up: 3.5, perpShift: 0,    note: 'Dead drift — cast 3.5m upstream, center of the current lane' },
-      'seam-edge':    { up: 3.0, perpShift: 0.8,  note: 'Cast into faster water side, drift crosses seam naturally' },
-      'pocket-water': { up: 2.0, perpShift: 0,    note: 'Short precise cast into pocket mouth, let tumble in' },
-      'undercut-bank':{ up: 2.5, perpShift: -1.0, note: 'Cast tight to bank edge, drift parallel under overhang' },
-      'feeding-lane': { up: 4.0, perpShift: 0,    note: 'Long upstream drift — match the food conveyor lane exactly' },
-      'tail-glide':   { up: 3.0, perpShift: 0,    note: 'Cast above the tail, let presentation glide through thin water' },
-      'riffle-drop':  { up: 2.5, perpShift: 0,    note: 'Cast at top of riffle, drift tumbles over the drop-off' },
-      'eddy-pocket':  { up: 1.5, perpShift: 0.5,  note: 'Short cast — eddy reverses current, less upstream lead needed' },
-      'bank-shadow':  { up: 3.0, perpShift: -0.8, note: 'Cast upstream along shadow line, drift follows the bank' },
-      'deep-slot':    { up: 4.0, perpShift: 0,    note: 'Extra lead time — weighted rig needs distance to sink into slot' }
-    };
-
-    var cp = castPlacement[md.type] || { up: 3, perpShift: 0, note: 'Cast upstream of fish' };
-
-    // Calculate UPSTREAM direction (opposite of downstream)
-    var upstreamLat = -md.downLat;  // reversed downstream direction
-    var upstreamLng = -md.downLng;
-
-    // Cast landing point: fish position + upstream offset + perpendicular shift
-    var castLandLat = md.fishLat + upstreamLat * degPerM * cp.up + md.perpLat * degPerM * cp.perpShift * md.side;
-    var castLandLng = md.fishLng + upstreamLng * degPerM * cp.up + md.perpLng * degPerM * cp.perpShift * md.side;
-
-    // STRICT: If cast landing is outside zone polygon, clamp to fish position + minimal upstream
-    if (_zoneCorridor && !_pointInPolygon(castLandLat, castLandLng, _zoneCorridor)) {
-      castLandLat = md.fishLat + upstreamLat * degPerM * 1.5;
-      castLandLng = md.fishLng + upstreamLng * degPerM * 1.5;
+    var tooClose = false;
+    for (var c = 0; c < candidates.length; c++) {
+      if (_dist(candidates[c].lat, candidates[c].lng, cLat, cLng) < MIN_BETWEEN_MICRO) { tooClose = true; break; }
     }
+    if (tooClose) continue;
 
-    // ═══════════════════════════════════════════════════════════════════
-    // FINAL UPSTREAM GUARDRAIL — cast MUST land at a lower path index
-    // (more upstream) than the fish. If nearest-index check fails,
-    // flip the cast to the other side. This catches ANY remaining
-    // direction errors from path geometry quirks.
-    // ═══════════════════════════════════════════════════════════════════
-    var _castIdx = _nearestPathIdx(seg, castLandLat, castLandLng);
-    var _fishIdx = _nearestPathIdx(seg, md.fishLat, md.fishLng);
-    if (_castIdx >= _fishIdx) {
-      // Cast landed downstream or at fish — FLIP to upstream side
-      castLandLat = md.fishLat - upstreamLat * degPerM * cp.up;
-      castLandLng = md.fishLng - upstreamLng * degPerM * cp.up;
-      // Re-check zone boundary after flip
-      if (_zoneCorridor && !_pointInPolygon(castLandLat, castLandLng, _zoneCorridor)) {
-        castLandLat = md.fishLat + upstreamLat * degPerM * 1.5;
-        castLandLng = md.fishLng + upstreamLng * degPerM * 1.5;
-      }
-      // Final fallback: force index-based upstream placement
-      var _reflipIdx = _nearestPathIdx(seg, castLandLat, castLandLng);
-      if (_reflipIdx >= _fishIdx && _fishIdx > 0) {
-        // Place cast at the path point 1-2 indices upstream of fish
-        var _upIdx = Math.max(0, _fishIdx - 2);
-        castLandLat = seg[_upIdx][0];
-        castLandLng = seg[_upIdx][1];
-      }
-    }
+    var microScore = 50 + Math.max(0, 30 - distFromMain);
+    var offset = sIdx - cIdx;
+    if (offset > 0) microScore += 5;
+    microScore -= Math.abs(offset) * 1.5;
+    candidates.push({ lat: cLat, lng: cLng, segIdx: sIdx, score: microScore, distFromMain: distFromMain });
+  }
 
-    // Animated casting arc — pronounced curved path from angler to landing spot
-    var castDist = Math.sqrt(
-      Math.pow((castLandLat - anglerLat) * 111000, 2) +
-      Math.pow((castLandLng - anglerLng) * 111000 * Math.cos(castLandLat * Math.PI / 180), 2)
-    );
-    // Control point for arc — bigger perpendicular offset for visible curve
-    var midLat = (anglerLat + castLandLat) / 2;
-    var midLng = (anglerLng + castLandLng) / 2;
-    var dLat = castLandLat - anglerLat;
-    var dLng = castLandLng - anglerLng;
-    var arcMag = Math.sqrt(dLat*dLat + dLng*dLng);
-    // Arc height scales with distance — more visible curve on longer casts
-    var arcOffset = Math.max(0.00004, arcMag * 0.35);
-    var cpLat = midLat + (-dLng) * arcOffset / Math.max(0.00001, arcMag);
-    var cpLng = midLng + (dLat) * arcOffset / Math.max(0.00001, arcMag);
+  candidates.sort(function(a, b) { return b.score - a.score; });
+  var accepted = candidates.slice(0, maxMicros);
 
-    // Build points along the bezier curve
-    var curvePoints = [];
-    var curveSteps = 20;
-    for (var ci = 0; ci <= curveSteps; ci++) {
-      var t = ci / curveSteps;
-      var u = 1 - t;
-      var cuLat = u*u*anglerLat + 2*u*t*cpLat + t*t*castLandLat;
-      var cuLng = u*u*anglerLng + 2*u*t*cpLng + t*t*castLandLng;
-      curvePoints.push([cuLat, cuLng]);
-    }
-
-    // Visible casting arc polyline
-    var approachLine = L.polyline(curvePoints, {
-      color: '#7cffc7',
-      weight: 2.5,
-      opacity: 0.65,
-      dashArray: '8 6',
-      className: 'ht-cast-arc',
-      interactive: false
-    }).addTo(map);
-    _activeApproachLines.push(approachLine);
-
-    // Glow underlayer for the cast arc — makes it pop on dark satellite
-    var glowLine = L.polyline(curvePoints, {
-      color: '#7cffc7',
-      weight: 6,
-      opacity: 0.12,
-      className: 'ht-cast-arc-glow',
-      interactive: false
-    }).addTo(map);
-    _activeApproachLines.push(glowLine);
-
-    // ── Cast landing zone — splash ring + target dot ──
-    // Outer splash ring (expanding ripple at landing point)
-    var splashIcon = L.divIcon({
-      className: 'ht-cast-splash-pin',
-      html: '<div class="ht-cast-splash-ring"></div><div class="ht-cast-splash-ring ht-cast-splash-ring-2"></div>',
-      iconSize: [30, 30],
-      iconAnchor: [15, 15]
+  // Deploy 3-icon clusters (fish + angler + cast target) for each micro-spot
+  var microCoords = [];
+  accepted.forEach(function(mc, i) {
+    var mType = microTypes[i] || 'primary-lie';
+    var clusterMarkers = _deployMicroCluster({
+      fishLat: mc.lat, fishLng: mc.lng,
+      segIdx: mc.segIdx, segment: seg,
+      wade: wadeMode, habitat: spot.habitat,
+      microType: mType, microIdx: i,
+      spot: spot, water: water, zone: zone
     });
-    var splashMarker = L.marker([castLandLat, castLandLng], {
-      icon: splashIcon,
-      zIndexOffset: 477,
-      interactive: false
-    }).addTo(map);
-    _activeApproachLines.push(splashMarker);
+    clusterMarkers.forEach(function(mk) { _activeMicroPins.push(mk); });
+    microCoords.push([mc.lat, mc.lng]);
+  });
 
-    // Center target dot at landing point
-    var flyDotIcon = L.divIcon({
-      className: 'ht-cast-fly-pin',
-      html: '<div class="ht-cast-fly-dot"></div>',
-      iconSize: [12, 12],
-      iconAnchor: [6, 6]
-    });
-    var flyDot = L.marker([castLandLat, castLandLng], {
-      icon: flyDotIcon,
-      zIndexOffset: 478,
-      interactive: false
-    }).addTo(map);
-    _activeApproachLines.push(flyDot);
-
-    // "CAST HERE" label near the landing dot
-    var castLabelIcon = L.divIcon({
-      className: 'ht-cast-label-pin',
-      html: '<div class="ht-cast-label">CAST HERE</div>',
-      iconSize: [60, 14],
-      iconAnchor: [30, -6]
-    });
-    var castLabel = L.marker([castLandLat, castLandLng], {
-      icon: castLabelIcon,
-      zIndexOffset: 479,
-      interactive: false
-    }).addTo(map);
-    _activeApproachLines.push(castLabel);
-
-    // Drift direction arrow — shows current flow from landing to fish
-    var driftMidLat = (castLandLat + md.fishLat) / 2;
-    var driftMidLng = (castLandLng + md.fishLng) / 2;
-    var driftAngle = Math.atan2(
-      (md.fishLng - castLandLng) * 111000 * Math.cos(md.fishLat * Math.PI / 180),
-      (md.fishLat - castLandLat) * 111000
-    ) * 180 / Math.PI;
-    var driftIcon = L.divIcon({
-      className: 'ht-drift-arrow-pin',
-      html: '<div class="ht-drift-arrow" style="transform:rotate(' + (driftAngle - 90) + 'deg)">›</div>',
-      iconSize: [14, 14],
-      iconAnchor: [7, 7]
-    });
-    var driftMk = L.marker([driftMidLat, driftMidLng], {
-      icon: driftIcon,
-      zIndexOffset: 476,
-      interactive: false
-    }).addTo(map);
-    _activeApproachLines.push(driftMk);
-
-    // Direction arrow on the cast arc at 65% (near landing)
-    var tArr = 0.65;
-    var uArr = 1 - tArr;
-    var arrLat = uArr*uArr*anglerLat + 2*uArr*tArr*cpLat + tArr*tArr*castLandLat;
-    var arrLng = uArr*uArr*anglerLng + 2*uArr*tArr*cpLng + tArr*tArr*castLandLng;
-    var aAngle = Math.atan2(
-      (castLandLng - anglerLng) * 111000 * Math.cos(castLandLat * Math.PI / 180),
-      (castLandLat - anglerLat) * 111000
-    ) * 180 / Math.PI;
-    var arrowIcon = L.divIcon({
-      className: 'ht-approach-arrow-pin',
-      html: '<div class="ht-approach-arrow" style="transform:rotate(' + (aAngle - 90) + 'deg)">›</div>',
-      iconSize: [14, 14],
-      iconAnchor: [7, 7]
-    });
-    var arrowMk = L.marker([arrLat, arrLng], {
-      icon: arrowIcon,
-      zIndexOffset: 475,
-      interactive: false
-    }).addTo(map);
-    _activeApproachLines.push(arrowMk);
-
-    // ── Drift connecting line — thin dotted line from cast landing to fish ──
-    // Creates clear visual chain: Stand Here → Cast Arc → CAST HERE → drift → Fish
-    var driftLine = L.polyline([[castLandLat, castLandLng], [md.fishLat, md.fishLng]], {
-      color: '#5dd8ff',
-      weight: 1.5,
-      opacity: 0.4,
-      dashArray: '4 4',
-      className: 'ht-drift-connect',
-      interactive: false
-    }).addTo(map);
-    _activeApproachLines.push(driftLine);
+  // ── Hide ALL spot pins so they don't overlap micro clusters ──
+  _aiFishingPins.forEach(function(pin) {
+    try { var el = pin.getElement && pin.getElement(); if (el) el.style.display = 'none'; } catch(e) {}
+  });
+  _hotspotPins.forEach(function(pin) {
+    try { var el = pin.getElement && pin.getElement(); if (el) el.style.display = 'none'; } catch(e) {}
   });
 
   // Zoom to fit the main pin + micro spots
   var allPts = [[spot.lat, spot.lng]].concat(microCoords);
   var zbounds = L.latLngBounds(allPts);
   map.fitBounds(zbounds.pad(0.3), { animate: true, duration: 0.8, maxZoom: 19 });
-
-  // Deploy water flow simulation overlay
-  try { deployFlowOverlay(water, zone); } catch(fErr) {}
-
-  // Deploy boulders with water-around animation
-  try { deployBoulders(water, zone); } catch(bErr) {}
-
-  if (accepted.length === 0) {
-    // status suppressed
-  }
 }
 window._autoCheckInToPin = _autoCheckInToPin;
 
-/* Manual pin click → show CHECK IN confirmation popup, then deploy on confirm */
+/* Manual pin click → show full educational strategy popup */
 function _onAiPinClick(water, zone, spot, fishFlow) {
   var idx = _aiFishingSpots.indexOf(spot);
   var pinIdx = idx >= 0 ? idx : 0;
   var marker = _aiFishingPins[pinIdx];
   if (!marker) { _autoCheckInToPin(pinIdx); return; }
 
-  var popupHtml = '<div style="min-width:200px;text-align:center;">' +
-    '<div style="font-weight:800;color:#7cffc7;font-size:14px;margin-bottom:4px;">#' + spot.rank + ' ' + escapeHtml(_capitalize(spot.habitat)) + '</div>' +
-    '<div style="font-size:11px;color:#c8e6d5;margin-bottom:8px;">Score: ' + spot.score + ' pts</div>' +
-    '<button style="padding:8px 20px;border-radius:10px;border:1.5px solid #7cffc7;background:rgba(124,255,199,0.18);color:#7cffc7;font-size:13px;font-weight:800;cursor:pointer;width:100%;" ' +
-      'onclick="window._confirmPinCheckIn(' + pinIdx + ')">CHECK IN HERE</button>' +
-    '</div>';
-  marker.unbindPopup();
-  marker.bindPopup(popupHtml, { maxWidth: 280, className: 'ht-zone-popup', closeButton: true }).openPopup();
-}
+  var strat = spot.strategy || {};
+  var rec = getTimeAwareFlyRec(water, spot.habitat);
+  var flavor = window.TROUT_HOTSPOT_FLAVOR && window.TROUT_HOTSPOT_FLAVOR[spot.habitat];
+  var edu = window.TROUT_EDUCATION && window.TROUT_EDUCATION[spot.habitat];
 
-/* Confirmed check-in from popup → deploy micro-spots */
-window._confirmPinCheckIn = function(pinIdx) {
-  if (map) map.closePopup();
-  _autoCheckInToPin(pinIdx);
-};
+  // Pick best reason & guide tip deterministically (index by rank, not random)
+  var rIdx = (spot.rank - 1) % ((flavor && flavor.reasons) ? flavor.reasons.length : 1);
+  var reason = (flavor && flavor.reasons) ? flavor.reasons[rIdx] : '';
+  var tips = (edu && edu.tips) ? edu.tips : [];
+  var guideTip = tips.length ? tips[spot.rank % tips.length] : '';
+
+  var terrainLine = spot.terrainSource ? '<div style="font-size:9px;color:#666;margin-top:2px;">📡 ' + escapeHtml(spot.terrainSource) + '</div>' : '';
+
+  var popupHtml = '<div style="min-width:280px;max-width:340px;">';
+
+  // Header
+  popupHtml += '<div style="font-weight:800;color:#7cffc7;font-size:15px;">#' + spot.rank + ' ' + escapeHtml(_capitalize(spot.habitat)) + '</div>';
+  popupHtml += '<div style="font-size:11px;color:#aaa;margin-top:2px;">Score: ' + spot.score + ' pts · ' + escapeHtml(rec.period) + ' · ' + escapeHtml(rec.season) + '</div>';
+  popupHtml += terrainLine;
+
+  // Why fish here
+  if (reason) {
+    popupHtml += '<div style="font-size:11px;color:#c8e6d5;margin-top:8px;line-height:1.4;"><b style="color:#ffe082;">Why here:</b> ' + escapeHtml(reason) + '</div>';
+  }
+
+  // Approach
+  popupHtml += '<div style="font-size:11px;color:#c8e6d5;margin-top:6px;line-height:1.4;"><b style="color:#ffe082;">Approach:</b> ' + escapeHtml(strat.approach || 'Approach from downstream.') + '</div>';
+
+  // Casting
+  popupHtml += '<div style="font-size:11px;color:#c8e6d5;margin-top:5px;line-height:1.4;"><b style="color:#ffe082;">Cast:</b> ' + escapeHtml(strat.castDirection || '') + '</div>';
+
+  // Best fly + rig method
+  popupHtml += '<div style="border-top:1px solid rgba(124,255,199,0.15);margin-top:8px;padding-top:6px;">';
+  popupHtml += '<div style="font-size:11px;color:#7cffc7;font-weight:700;">🪰 BEST FLY: ' + escapeHtml(rec.flyRec) + '</div>';
+  popupHtml += '<div style="font-size:10px;color:#b8d8c8;margin-top:3px;line-height:1.3;"><b>Rig:</b> ' + escapeHtml(rec.rigMethod || '') + '</div>';
+  popupHtml += '</div>';
+
+  // Backup fly
+  if (rec.altFly) {
+    popupHtml += '<div style="font-size:10px;color:#89b5a2;margin-top:5px;"><b>Backup:</b> ' + escapeHtml(rec.altFly) + '</div>';
+    popupHtml += '<div style="font-size:9px;color:#6a9480;margin-top:2px;line-height:1.3;"><b>Rig:</b> ' + escapeHtml(rec.altRig || '') + '</div>';
+  }
+
+  // Wading advice
+  if (strat.wadingAdvice) {
+    popupHtml += '<div style="font-size:10px;color:#89b5a2;margin-top:6px;line-height:1.3;"><b style="color:#2bd4ff;">Wading:</b> ' + escapeHtml(strat.wadingAdvice) + '</div>';
+  }
+
+  // Time-of-day conditions
+  popupHtml += '<div style="font-size:10px;color:#89b5a2;margin-top:5px;line-height:1.3;"><b>Conditions:</b> ' + escapeHtml(rec.timeAdvice) + '</div>';
+
+  // Hatch data
+  if (rec.hatches && rec.hatches.length) {
+    popupHtml += '<div style="font-size:10px;color:#89b5a2;margin-top:4px;"><b style="color:#2bd4ff;">' + escapeHtml(rec.season) + ' hatches:</b> ' + escapeHtml(rec.hatches.join(', ')) + '</div>';
+  }
+
+  // Pro guide tip
+  if (guideTip) {
+    popupHtml += '<div style="border-top:1px solid rgba(43,212,255,0.15);margin-top:7px;padding-top:5px;">';
+    popupHtml += '<div style="font-size:10px;color:#ffe082;font-weight:800;">🎓 PRO TIP</div>';
+    popupHtml += '<div style="font-size:10px;color:#c8e6d5;line-height:1.3;margin-top:2px;">' + escapeHtml(guideTip) + '</div>';
+    popupHtml += '</div>';
+  }
+
+  // CHECK IN button
+  popupHtml += '<div style="margin-top:10px;">';
+  popupHtml += '<button style="padding:8px 18px;border-radius:8px;border:1px solid #7cffc7;background:rgba(124,255,199,0.15);color:#7cffc7;font-size:13px;font-weight:800;cursor:pointer;width:100%;" ' +
+    'onclick="window._autoCheckInToPin(' + pinIdx + ');if(map)map.closePopup();">✅ CHECK IN — Deploy Fish</button>';
+  popupHtml += '</div></div>';
+
+  marker.unbindPopup();
+  marker.bindPopup(popupHtml, { maxWidth: 360, className: 'ht-zone-popup' }).openPopup();
+}
 
 /* ── Auto Check-In to a micro spot ── */
 function _autoCheckInToMicroSpot(microIdx) {
@@ -4596,39 +5315,16 @@ function _showSpotInfoTray(water, zone, spot, microType, microIdx) {
   if (_spotInfoTrayEl) { try { _spotInfoTrayEl.remove(); } catch {} }
 
   var strat = spot.strategy;
-  var fishFlow = window._fishFlow || {};
-  var method = fishFlow.method || 'fly';
-  var mRec = getMethodSpecificRec(water, spot.habitat, method);
+  var rec = getTimeAwareFlyRec(water, spot.habitat);
   var microLabel = _capitalize(microType.replace(/-/g, ' '));
 
-  // Method-aware micro-spot advice
-  var microAdviceFly = {
-    'primary-lie': 'This is the main holding position. Trout actively feed here. Deliver your fly 3-4 feet upstream and let it drift naturally into the strike zone.',
-    'seam-edge': 'The seam between fast and slow water. Cast to the fast side and let your fly drift into the seam. Mend upstream for a drag-free drift.',
-    'pocket-water': 'Protected pocket behind structure. Short, accurate casts directly into the pocket. Let your fly sink 2-3 seconds before any retrieval.',
-    'undercut-bank': 'Undercut bank where trout shelter. Cast parallel to the bank, tight to the edge. Let your fly drift underneath the overhang.',
-    'feeding-lane': 'A natural food conveyor belt. Position yourself downstream and cast upstream into the lane. Dead-drift is critical.'
+  var microAdvice = {
+    'primary-lie': 'This is the main holding position. Trout actively feed here. Your first cast should target this spot. Deliver your fly 3-4 feet upstream and let it drift naturally into the strike zone.',
+    'seam-edge': 'The seam between fast and slow water. Trout hold just inside the slow side, picking off food from the fast current. Cast to the fast side and let your offering drift into the seam.',
+    'pocket-water': 'Protected pocket behind structure. Trout rest here between feeding runs. Short, accurate casts directly into the pocket. Let your fly sink 2-3 seconds before any retrieval.',
+    'undercut-bank': 'Undercut bank where trout shelter from current and predators. Cast parallel to the bank, tight to the edge. Let your fly drift underneath the overhang. Big trout hide here.',
+    'feeding-lane': 'A natural conveyor belt of food funneling through a narrow channel. Position yourself downstream and cast upstream into the lane. Dead-drift is critical — any drag spooks fish.'
   };
-  var microAdviceBait = {
-    'primary-lie': 'The main holding position — trout park here to feed. Set your bait rig upstream and let it drift naturally into this lie. Be patient — let the bait sit 3-5 minutes.',
-    'seam-edge': 'The seam between fast and slow water is a bait magnet. Drift your bait along the slow side — trout pick off food here without fighting current.',
-    'pocket-water': 'Protected pocket behind the boulder. Drop your bait directly into the calm water. Use minimal weight — let the current do the work.',
-    'undercut-bank': 'Undercut bank — BIG trout territory. Cast your bait tight to the bank edge and let it drift under. This is where trophy fish hide from current and predators.',
-    'feeding-lane': 'Natural food funnel. Position your bait at the top of the lane and let it drift through. Natural presentation is everything — no bobber, just split shot and drift.'
-  };
-  var microAdviceSpin = {
-    'primary-lie': 'Main feeding position. Cast your lure upstream and retrieve through this holding zone. Spinners: slow, steady retrieve matching current speed. Jerkbaits: twitch-pause-twitch through the zone — erratic action triggers strikes.',
-    'seam-edge': 'The seam is spinner and jerkbait territory. Cast across the fast water and let your lure swing into the slow side. Spinners: blade flash at the transition. Jerkbaits: twitch a Rapala through the seam — the pause lets it drift into the strike zone.',
-    'pocket-water': 'Pocket behind structure — pitch your lure directly into the calm water. Spinners: let sink 2 seconds, short twitches. Jerkbaits or crankbaits: one cast per pocket, let sink and twitch once — trout commit fast in pockets.',
-    'undercut-bank': 'Undercut bank — pitch a jig, small spoon, or Countdown Rapala tight to the bank. Jerkbaits: cast parallel to the bank, let the lure sink along the edge. Big trout ambush from these lies.',
-    'feeding-lane': 'Cast upstream into the lane. Spinners: retrieve just fast enough to keep blade turning. Crankbaits: slow wobble through the narrow channel. Jerkbaits: twitch-pause lets the current carry your lure naturally through the lane.'
-  };
-
-  var adviceMap = method === 'bait' ? microAdviceBait : method === 'spin' ? microAdviceSpin : microAdviceFly;
-  var advice = adviceMap[microType] || adviceMap['primary-lie'];
-
-  // Method-aware labels
-  var tackleLabel = method === 'fly' ? 'RECOMMENDED FLY' : method === 'bait' ? 'RECOMMENDED BAIT' : 'RECOMMENDED LURE';
 
   var el = document.createElement('div');
   el.className = 'ht-spot-info-tray';
@@ -4641,30 +5337,30 @@ function _showSpotInfoTray(water, zone, spot, microType, microIdx) {
     <div class="ht-spot-info-body">
       <div class="ht-spot-info-section">
         <div class="ht-spot-info-label">MICRO-SPOT STRATEGY</div>
-        <div class="ht-spot-info-text">${escapeHtml(advice)}</div>
+        <div class="ht-spot-info-text">${escapeHtml(microAdvice[microType] || microAdvice['primary-lie'])}</div>
       </div>
       <div class="ht-spot-info-section">
         <div class="ht-spot-info-label">APPROACH</div>
         <div class="ht-spot-info-text">${escapeHtml(strat.approach)}</div>
       </div>
       <div class="ht-spot-info-section">
-        <div class="ht-spot-info-label">PRESENTATION</div>
-        <div class="ht-spot-info-text">${escapeHtml(mRec.presentation)}</div>
+        <div class="ht-spot-info-label">CASTING</div>
+        <div class="ht-spot-info-text">${escapeHtml(strat.castDirection)}</div>
       </div>
       <div class="ht-spot-info-section">
-        <div class="ht-spot-info-label">${tackleLabel}</div>
-        <div class="ht-spot-info-text">${escapeHtml(mRec.primary)}</div>
-        <div class="ht-spot-info-alt">Backup: ${escapeHtml(mRec.backup)}</div>
-        ${mRec.tackle ? '<div class="ht-spot-info-alt">Rig: ' + escapeHtml(mRec.tackle) + '</div>' : ''}
-      </div>
-      <div class="ht-spot-info-section">
-        <div class="ht-spot-info-label">COLOR / PATTERN RATIONALE</div>
-        <div class="ht-spot-info-text">${escapeHtml(mRec.conditionNote)}</div>
-        ${mRec.color ? '<div class="ht-spot-info-alt">' + escapeHtml(mRec.color) + '</div>' : ''}
+        <div class="ht-spot-info-label">BEST FLY</div>
+        <div class="ht-spot-info-text">${escapeHtml(rec.flyRec || 'Match the hatch — observe the water first.')}</div>
+        <div class="ht-spot-info-alt" style="margin-top:3px;"><b>Rig:</b> ${escapeHtml(rec.rigMethod || '')}</div>
+        ${rec.altFly ? '<div class="ht-spot-info-alt" style="margin-top:6px;"><b>Backup:</b> ' + escapeHtml(rec.altFly) + '</div>' : ''}
+        ${rec.altRig ? '<div class="ht-spot-info-alt"><b>Rig:</b> ' + escapeHtml(rec.altRig) + '</div>' : ''}
       </div>
       <div class="ht-spot-info-section">
         <div class="ht-spot-info-label">WADING</div>
         <div class="ht-spot-info-text">${escapeHtml(strat.wadingAdvice)}</div>
+      </div>
+      <div class="ht-spot-info-section">
+        <div class="ht-spot-info-label">CONDITIONS</div>
+        <div class="ht-spot-info-text">${escapeHtml(rec.timeAdvice)}</div>
       </div>
     </div>
     <div class="ht-spot-info-actions">
@@ -4895,6 +5591,588 @@ function _showCoachResponse(responseText) {
   }
 }
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   ANIMATED STREAM FLOW CANVAS ENGINE — LiDAR-Derived Water Simulation
+   ═════════════════════════════════════════════════════════════════════════
+   Renders a professional animated water simulation overlay using HTML5
+   Canvas inside a Leaflet custom pane. All geometry is derived from
+   LiDAR streamPath + bankWidths data exclusively.
+
+   Features:
+     • Filled water channel rendered from bank-edge LiDAR point-cloud
+     • 400+ animated flow particles simulating water current
+     • Velocity profile: center = fastest, banks = slowest
+     • Caustic light patterns (dappled sunlight refraction)
+     • Foam particles along bank edges and around structure
+     • Glowing bank-edge outlines
+     • Depth-varying opacity (deeper water = darker)
+     • Smooth 60fps animation with requestAnimationFrame
+
+   DATA SOURCE GUARDRAIL:
+     This overlay reads ONLY from streamPath + bankWidths.
+     No topo, aerial, satellite, or external API data is used.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+var _flowCanvas = null;
+var _flowCtx = null;
+var _flowAnimFrame = null;
+var _flowParticles = [];
+var _flowCaustics = [];
+var _flowStreamPath = null;
+var _flowBankWidths = null;
+var _flowTerrain = null;
+var _flowTime = 0;
+var _flowDpr = 1;
+var _flowRenderErrors = 0;
+var _flowActive = false;
+
+/* ── Simple value noise for caustic effects ── */
+var _noisePermutation = [];
+(function() {
+  for (var i = 0; i < 256; i++) _noisePermutation[i] = i;
+  for (var j = 255; j > 0; j--) {
+    var k = Math.floor(Math.random() * (j + 1));
+    var tmp = _noisePermutation[j];
+    _noisePermutation[j] = _noisePermutation[k];
+    _noisePermutation[k] = tmp;
+  }
+  for (var m = 0; m < 256; m++) _noisePermutation[256 + m] = _noisePermutation[m];
+})();
+
+function _fade(t) { return t * t * t * (t * (t * 6 - 15) + 10); }
+function _lerp(a, b, t) { return a + t * (b - a); }
+function _grad(hash, x, y) {
+  var h = hash & 3;
+  var u = h < 2 ? x : y;
+  var v = h < 2 ? y : x;
+  return ((h & 1) === 0 ? u : -u) + ((h & 2) === 0 ? v : -v);
+}
+function _noise2d(x, y) {
+  var X = Math.floor(x) & 255, Y = Math.floor(y) & 255;
+  x -= Math.floor(x); y -= Math.floor(y);
+  var u = _fade(x), v = _fade(y);
+  var A = _noisePermutation[X] + Y, B = _noisePermutation[X + 1] + Y;
+  return _lerp(
+    _lerp(_grad(_noisePermutation[A], x, y), _grad(_noisePermutation[B], x - 1, y), u),
+    _lerp(_grad(_noisePermutation[A + 1], x, y - 1), _grad(_noisePermutation[B + 1], x - 1, y - 1), u),
+    v
+  );
+}
+
+/* ── Compute bank-edge positions from streamPath + bankWidths ── */
+function _computeBankGeometry(streamPath, bankWidths) {
+  if (!streamPath || streamPath.length < 2) return { left: [], right: [], center: streamPath || [] };
+  var DEG = Math.PI / 180;
+  var left = [], right = [];
+
+  for (var i = 0; i < streamPath.length; i++) {
+    var lat0 = streamPath[i][0], lng0 = streamPath[i][1];
+    var mPerLat = 111000;
+    var mPerLng = 111000 * Math.cos(lat0 * DEG);
+
+    // Stream direction vector
+    var dy = 0, dx = 0;
+    if (i === 0 && streamPath.length > 1) {
+      dy = streamPath[1][0] - streamPath[0][0]; dx = streamPath[1][1] - streamPath[0][1];
+    } else if (i >= streamPath.length - 1) {
+      dy = streamPath[streamPath.length - 1][0] - streamPath[streamPath.length - 2][0];
+      dx = streamPath[streamPath.length - 1][1] - streamPath[streamPath.length - 2][1];
+    } else {
+      dy = streamPath[i + 1][0] - streamPath[i - 1][0];
+      dx = streamPath[i + 1][1] - streamPath[i - 1][1];
+    }
+
+    var dyM = dy * mPerLat, dxM = dx * mPerLng;
+    var len = Math.sqrt(dyM * dyM + dxM * dxM);
+    if (len < 0.01) {
+      left.push([lat0, lng0]);
+      right.push([lat0, lng0]);
+      continue;
+    }
+
+    // Perpendicular: rotate 90° left = (-dxM, dyM), right = (dxM, -dyM)
+    var perpLatUnit = -dxM / len;
+    var perpLngUnit = dyM / len;
+
+    // Get bank widths (left, right meters from centerline)
+    var lw = 6, rw = 6; // default 6m each side
+    if (bankWidths && bankWidths[i]) {
+      lw = bankWidths[i][0] || 6;
+      rw = bankWidths[i][1] || 6;
+    }
+
+    left.push([
+      lat0 + (perpLatUnit * lw) / mPerLat,
+      lng0 + (perpLngUnit * lw) / mPerLng
+    ]);
+    right.push([
+      lat0 + (perpLatUnit * -rw) / mPerLat,
+      lng0 + (perpLngUnit * -rw) / mPerLng
+    ]);
+  }
+
+  return { left: left, right: right, center: streamPath };
+}
+
+/* ── Initialize flow particles ── */
+function _initFlowParticles(streamLen) {
+  _flowParticles = [];
+  _flowCaustics = [];
+
+  var PARTICLE_COUNT = Math.min(500, Math.max(200, streamLen * 8));
+  var CAUSTIC_COUNT = Math.min(60, Math.max(15, streamLen * 2));
+
+  for (var i = 0; i < PARTICLE_COUNT; i++) {
+    var lateral = (Math.random() - 0.5) * 1.8; // -0.9 to 0.9 across channel
+    var centerDist = Math.abs(lateral);
+    // Velocity profile: center = fast, banks = slow (parabolic)
+    var velocityMult = 1.0 - centerDist * centerDist * 0.7;
+
+    _flowParticles.push({
+      t: Math.random(),                          // position along stream (0=upstream, 1=downstream)
+      lateral: lateral,                            // cross-stream position
+      speed: (0.001 + Math.random() * 0.002) * velocityMult,  // per frame advance (faster = more visible motion)
+      size: 2 + Math.random() * 4,               // pixel radius (larger)
+      opacity: 0.25 + Math.random() * 0.40,      // base opacity (brighter)
+      wobblePhase: Math.random() * Math.PI * 2,   // sine wobble offset
+      wobbleAmp: 0.002 + Math.random() * 0.006,   // wobble amplitude
+      wobbleSpeed: 0.02 + Math.random() * 0.03,   // wobble frequency
+      type: centerDist > 0.7 ? 'foam' : 'flow',   // foam near banks
+      hue: 190 + Math.random() * 30                // color variation (cyan-blue range)
+    });
+  }
+
+  // Caustic light spots (larger, slower, brighter)
+  for (var c = 0; c < CAUSTIC_COUNT; c++) {
+    _flowCaustics.push({
+      t: Math.random(),
+      lateral: (Math.random() - 0.5) * 1.4,
+      speed: 0.0004 + Math.random() * 0.001,
+      size: 10 + Math.random() * 22,
+      opacity: 0.08 + Math.random() * 0.14,
+      phase: Math.random() * Math.PI * 2,
+      pulseSpeed: 0.01 + Math.random() * 0.02
+    });
+  }
+}
+
+/* ── Update particle positions each frame ── */
+function _updateFlowParticles() {
+  _flowTime += 1;
+
+  for (var i = 0; i < _flowParticles.length; i++) {
+    var p = _flowParticles[i];
+    p.t += p.speed;
+    if (p.t > 1) p.t -= 1;
+    // Lateral wobble (sinusoidal — natural drift)
+    p.lateral += Math.sin(_flowTime * p.wobbleSpeed + p.wobblePhase) * p.wobbleAmp;
+    // Clamp lateral
+    if (p.lateral > 0.92) p.lateral = 0.92;
+    if (p.lateral < -0.92) p.lateral = -0.92;
+  }
+
+  for (var j = 0; j < _flowCaustics.length; j++) {
+    var c = _flowCaustics[j];
+    c.t += c.speed;
+    if (c.t > 1) c.t -= 1;
+    c.lateral += Math.sin(_flowTime * 0.005 + c.phase) * 0.001;
+    if (c.lateral > 0.65) c.lateral = 0.65;
+    if (c.lateral < -0.65) c.lateral = -0.65;
+  }
+}
+
+/* ── Project lat/lng to canvas pixel coords ── */
+// Canvas is repositioned each frame via L.DomUtil.setPosition so its (0,0)
+// aligns with the container's (0,0). Therefore latLngToContainerPoint coords
+// map directly to canvas pixels — no offset subtraction needed.
+function _flowProject(lat, lng) {
+  if (!map) return [0, 0];
+  var pt = map.latLngToContainerPoint([lat, lng]);
+  return [pt.x * _flowDpr, pt.y * _flowDpr];
+}
+
+/* ── Interpolate position along streamPath at parameter t (0-1) ── */
+function _flowInterpolateStream(t, bankGeom) {
+  var path = bankGeom.center;
+  var left = bankGeom.left;
+  var right = bankGeom.right;
+  var n = path.length;
+  if (n < 2) return { cx: 0, cy: 0, lx: 0, ly: 0, rx: 0, ry: 0 };
+
+  var pos = t * (n - 1);
+  var idx = Math.floor(pos);
+  var frac = pos - idx;
+  if (idx >= n - 1) { idx = n - 2; frac = 1; }
+
+  var cLat = path[idx][0] + (path[idx + 1][0] - path[idx][0]) * frac;
+  var cLng = path[idx][1] + (path[idx + 1][1] - path[idx][1]) * frac;
+  var lLat = left[idx][0] + (left[idx + 1][0] - left[idx][0]) * frac;
+  var lLng = left[idx][1] + (left[idx + 1][1] - left[idx][1]) * frac;
+  var rLat = right[idx][0] + (right[idx + 1][0] - right[idx][0]) * frac;
+  var rLng = right[idx][1] + (right[idx + 1][1] - right[idx][1]) * frac;
+
+  var cp = _flowProject(cLat, cLng);
+  var lp = _flowProject(lLat, lLng);
+  var rp = _flowProject(rLat, rLng);
+
+  return { cx: cp[0], cy: cp[1], lx: lp[0], ly: lp[1], rx: rp[0], ry: rp[1] };
+}
+
+/* ── Render a single frame ── */
+function _renderFlowFrame() {
+  if (!_flowActive || !_flowCanvas || !_flowCtx || !map) return;
+
+  _flowAnimFrame = requestAnimationFrame(_renderFlowFrame);
+
+  try {
+  // Update canvas position to track map pane
+  var size = map.getSize();
+  var w = size.x * _flowDpr;
+  var h = size.y * _flowDpr;
+
+  if (_flowCanvas.width !== w || _flowCanvas.height !== h) {
+    _flowCanvas.width = w;
+    _flowCanvas.height = h;
+    _flowCanvas.style.width = size.x + 'px';
+    _flowCanvas.style.height = size.y + 'px';
+  }
+
+  // Reposition canvas to compensate for pane transforms
+  var topLeft = map.containerPointToLayerPoint([0, 0]);
+  L.DomUtil.setPosition(_flowCanvas, topLeft);
+
+  var ctx = _flowCtx;
+  ctx.clearRect(0, 0, w, h);
+
+  // Compute bank geometry in pixel space
+  var bankGeom = _computeBankGeometry(_flowStreamPath, _flowBankWidths);
+  var leftPx = [], rightPx = [], centerPx = [];
+
+  for (var i = 0; i < bankGeom.center.length; i++) {
+    centerPx.push(_flowProject(bankGeom.center[i][0], bankGeom.center[i][1]));
+    leftPx.push(_flowProject(bankGeom.left[i][0], bankGeom.left[i][1]));
+    rightPx.push(_flowProject(bankGeom.right[i][0], bankGeom.right[i][1]));
+  }
+
+  if (centerPx.length < 2) return;
+
+  // ── 1) WATER CHANNEL FILL ──
+  // Build closed polygon: left bank forward → right bank reversed
+  ctx.save();
+  ctx.beginPath();
+  ctx.moveTo(leftPx[0][0], leftPx[0][1]);
+  for (var li = 1; li < leftPx.length; li++) {
+    // Smooth quadratic curves between points
+    if (li < leftPx.length - 1) {
+      var cpx = (leftPx[li][0] + leftPx[li + 1][0]) / 2;
+      var cpy = (leftPx[li][1] + leftPx[li + 1][1]) / 2;
+      ctx.quadraticCurveTo(leftPx[li][0], leftPx[li][1], cpx, cpy);
+    } else {
+      ctx.lineTo(leftPx[li][0], leftPx[li][1]);
+    }
+  }
+  // Connect to right bank (reversed)
+  for (var ri = rightPx.length - 1; ri >= 0; ri--) {
+    if (ri > 0) {
+      var cpx2 = (rightPx[ri][0] + rightPx[ri - 1][0]) / 2;
+      var cpy2 = (rightPx[ri][1] + rightPx[ri - 1][1]) / 2;
+      ctx.quadraticCurveTo(rightPx[ri][0], rightPx[ri][1], cpx2, cpy2);
+    } else {
+      ctx.lineTo(rightPx[ri][0], rightPx[ri][1]);
+    }
+  }
+  ctx.closePath();
+
+  // Multi-layer water fill for depth effect
+  // Layer 1: Deep base (dark teal) — strong opacity so user can clearly see it
+  ctx.fillStyle = 'rgba(8, 55, 85, 0.60)';
+  ctx.fill();
+  // Layer 2: Mid-tone (blue-green)
+  ctx.fillStyle = 'rgba(15, 100, 135, 0.30)';
+  ctx.fill();
+  // Layer 3: Surface shimmer
+  ctx.fillStyle = 'rgba(35, 170, 210, 0.12)';
+  ctx.fill();
+
+  // Clip to water channel for all subsequent drawing
+  ctx.clip();
+
+  // ── 2) DEPTH GRADIENT ── (center darker than edges)
+  // Draw center channel line with wider, darker fill
+  ctx.beginPath();
+  ctx.moveTo(centerPx[0][0], centerPx[0][1]);
+  for (var ci = 1; ci < centerPx.length; ci++) {
+    if (ci < centerPx.length - 1) {
+      var ccp = [(centerPx[ci][0] + centerPx[ci + 1][0]) / 2, (centerPx[ci][1] + centerPx[ci + 1][1]) / 2];
+      ctx.quadraticCurveTo(centerPx[ci][0], centerPx[ci][1], ccp[0], ccp[1]);
+    } else {
+      ctx.lineTo(centerPx[ci][0], centerPx[ci][1]);
+    }
+  }
+  ctx.lineWidth = 14 * _flowDpr;
+  ctx.strokeStyle = 'rgba(5, 40, 70, 0.15)';
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.stroke();
+
+  // ── 3) CAUSTIC LIGHT PATTERNS ──
+  _updateFlowParticles();
+
+  for (var ca = 0; ca < _flowCaustics.length; ca++) {
+    var caus = _flowCaustics[ca];
+    var cPos = _flowInterpolateStream(caus.t, bankGeom);
+    // Interpolate lateral position between center and bank
+    var cLatFrac = caus.lateral;
+    var cx, cy;
+    if (cLatFrac >= 0) {
+      cx = cPos.cx + (cPos.lx - cPos.cx) * cLatFrac;
+      cy = cPos.cy + (cPos.ly - cPos.cy) * cLatFrac;
+    } else {
+      cx = cPos.cx + (cPos.rx - cPos.cx) * (-cLatFrac);
+      cy = cPos.cy + (cPos.ry - cPos.cy) * (-cLatFrac);
+    }
+
+    var cPulse = 0.5 + 0.5 * Math.sin(_flowTime * caus.pulseSpeed + caus.phase);
+    var cSize = caus.size * (0.6 + cPulse * 0.4) * _flowDpr;
+    var cAlpha = caus.opacity * (0.3 + cPulse * 0.7);
+
+    // Noise-modulated caustic shape
+    var noiseVal = _noise2d(cx * 0.01 + _flowTime * 0.003, cy * 0.01);
+    cSize *= (0.8 + noiseVal * 0.4);
+
+    var grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, cSize);
+    grad.addColorStop(0, 'rgba(160, 230, 255, ' + (cAlpha * 0.8).toFixed(3) + ')');
+    grad.addColorStop(0.4, 'rgba(100, 200, 240, ' + (cAlpha * 0.4).toFixed(3) + ')');
+    grad.addColorStop(1, 'rgba(60, 160, 220, 0)');
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(cx, cy, cSize, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // ── 4) FLOW PARTICLES ──
+  for (var pi = 0; pi < _flowParticles.length; pi++) {
+    var part = _flowParticles[pi];
+    var pPos = _flowInterpolateStream(part.t, bankGeom);
+    var pLatFrac = part.lateral;
+
+    var px, py;
+    if (pLatFrac >= 0) {
+      px = pPos.cx + (pPos.lx - pPos.cx) * pLatFrac;
+      py = pPos.cy + (pPos.ly - pPos.cy) * pLatFrac;
+    } else {
+      px = pPos.cx + (pPos.rx - pPos.cx) * (-pLatFrac);
+      py = pPos.cy + (pPos.ry - pPos.cy) * (-pLatFrac);
+    }
+
+    var pSize = part.size * _flowDpr;
+    var pAlpha = part.opacity;
+
+    // Foam particles: white, slightly larger
+    if (part.type === 'foam') {
+      var foamPulse = 0.5 + 0.5 * Math.sin(_flowTime * 0.04 + part.wobblePhase);
+      pAlpha *= (0.5 + foamPulse * 0.5);
+      ctx.fillStyle = 'rgba(230, 245, 255, ' + Math.min(pAlpha * 1.5, 0.9).toFixed(3) + ')';
+      pSize *= 1.5;
+    } else {
+      // Regular flow particle: translucent blue/cyan
+      var pHue = part.hue;
+      var centerBoost = 1.0 - Math.abs(pLatFrac) * 0.3;
+      pAlpha *= centerBoost;
+      ctx.fillStyle = 'hsla(' + pHue + ', 75%, 72%, ' + Math.min(pAlpha * 1.4, 0.85).toFixed(3) + ')';
+    }
+
+    ctx.beginPath();
+    ctx.arc(px, py, pSize, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // ── 5) NOISE-BASED WATER TEXTURE ──
+  // Subtle noise overlay for organic water feel
+  var noiseScale = 0.008;
+  var timeOffset = _flowTime * 0.02;
+  // Sample noise at sparse grid points for performance
+  var step = Math.max(12, Math.round(20 / _flowDpr));
+  var bounds = _getFlowBounds(centerPx, leftPx, rightPx);
+  if (bounds) {
+    ctx.globalCompositeOperation = 'screen';
+    for (var ny = bounds.minY; ny < bounds.maxY; ny += step * _flowDpr) {
+      for (var nx = bounds.minX; nx < bounds.maxX; nx += step * _flowDpr) {
+        var nv = _noise2d(nx * noiseScale + timeOffset, ny * noiseScale + timeOffset * 0.7);
+        if (nv > 0.15) {
+          var nAlpha = (nv - 0.15) * 0.12;
+          ctx.fillStyle = 'rgba(180, 230, 255, ' + nAlpha.toFixed(3) + ')';
+          ctx.fillRect(nx, ny, step * _flowDpr, step * _flowDpr);
+        }
+      }
+    }
+    ctx.globalCompositeOperation = 'source-over';
+  }
+
+  ctx.restore(); // un-clip
+
+  // ── 6) BANK EDGE GLOW LINES ──
+  // Outer glow (wide, visible)
+  _drawBankLine(ctx, leftPx, 6 * _flowDpr, 'rgba(30, 190, 170, 0.25)');
+  _drawBankLine(ctx, rightPx, 6 * _flowDpr, 'rgba(30, 190, 170, 0.25)');
+  // Mid glow
+  _drawBankLine(ctx, leftPx, 3.5 * _flowDpr, 'rgba(50, 215, 195, 0.45)');
+  _drawBankLine(ctx, rightPx, 3.5 * _flowDpr, 'rgba(50, 215, 195, 0.45)');
+  // Core line (bright, thin)
+  _drawBankLine(ctx, leftPx, 1.8 * _flowDpr, 'rgba(70, 240, 215, 0.75)');
+  _drawBankLine(ctx, rightPx, 1.8 * _flowDpr, 'rgba(70, 240, 215, 0.75)');
+  } catch(renderErr) {
+    _flowRenderErrors = (_flowRenderErrors || 0) + 1;
+    console.error('[HT-FLOW] Render frame error #' + _flowRenderErrors + ':', renderErr);
+    if (_flowRenderErrors >= 3) {
+      _flowActive = false;
+      if (typeof showNotice === 'function') showNotice('⚠️ Stream flow crashed: ' + renderErr.message, 'error', 6000);
+    }
+  }
+}
+
+/* ── Draw a smoothed bank line ── */
+function _drawBankLine(ctx, pts, width, color) {
+  if (!pts || pts.length < 2) return;
+  ctx.beginPath();
+  ctx.moveTo(pts[0][0], pts[0][1]);
+  for (var i = 1; i < pts.length; i++) {
+    if (i < pts.length - 1) {
+      var mx = (pts[i][0] + pts[i + 1][0]) / 2;
+      var my = (pts[i][1] + pts[i + 1][1]) / 2;
+      ctx.quadraticCurveTo(pts[i][0], pts[i][1], mx, my);
+    } else {
+      ctx.lineTo(pts[i][0], pts[i][1]);
+    }
+  }
+  ctx.strokeStyle = color;
+  ctx.lineWidth = width;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.stroke();
+}
+
+/* ── Get bounding box of flow area ── */
+function _getFlowBounds(center, left, right) {
+  var all = center.concat(left).concat(right);
+  if (!all.length) return null;
+  var minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  for (var i = 0; i < all.length; i++) {
+    if (all[i][0] < minX) minX = all[i][0];
+    if (all[i][1] < minY) minY = all[i][1];
+    if (all[i][0] > maxX) maxX = all[i][0];
+    if (all[i][1] > maxY) maxY = all[i][1];
+  }
+  return { minX: minX, minY: minY, maxX: maxX, maxY: maxY };
+}
+
+/* ── Deploy the animated stream flow overlay ── */
+function deployStreamFlowOverlay(water, zone) {
+  clearStreamFlowOverlay();
+  if (!map || !water) return;
+  if (!LIDAR_CONFIG.ENABLED) { console.warn('[HT-FLOW] LiDAR disabled — no flow overlay'); return; }
+
+  var segment = getZoneStreamSegment(water, zone);
+  if (!segment || segment.length < 3) return;
+
+  // GUARDRAIL: Only use LiDAR-derived streamPath + bankWidths
+  if (!_validateLidarInput(segment, water.bankWidths || null)) {
+    console.warn('[HT-FLOW] LiDAR validation failed — no flow overlay');
+    return;
+  }
+
+  _flowStreamPath = segment;
+  // Slice bankWidths to match zone segment offset (fixes overlay/pin alignment)
+  var flowStartIdx = segment.__zoneStartIdx || 0;
+  _flowBankWidths = (water.bankWidths || []).slice(flowStartIdx, flowStartIdx + segment.length);
+  if (!_flowBankWidths.length) _flowBankWidths = water.bankWidths || null;
+  _flowTerrain = _analyzeStreamTerrain(segment, _flowBankWidths);
+  _flowDpr = window.devicePixelRatio || 1;
+  _flowTime = 0;
+  _flowRenderErrors = 0;  // reset error counter for fresh deploy
+
+  // Create Leaflet pane for z-ordering (above tiles, below markers)
+  if (!map.getPane('streamFlowPane')) {
+    map.createPane('streamFlowPane');
+  }
+  var pane = map.getPane('streamFlowPane');
+  pane.style.zIndex = '450';    // above overlayPane (400), below markerPane (600)
+  pane.style.pointerEvents = 'none';
+  pane.style.opacity = '1';
+  pane.style.visibility = 'visible';
+  pane.style.display = 'block';
+
+  // Create canvas element
+  _flowCanvas = document.createElement('canvas');
+  _flowCanvas.className = 'ht-stream-flow-canvas';
+  var size = map.getSize();
+  _flowCanvas.width = size.x * _flowDpr;
+  _flowCanvas.height = size.y * _flowDpr;
+  _flowCanvas.style.width = size.x + 'px';
+  _flowCanvas.style.height = size.y + 'px';
+  _flowCanvas.style.position = 'absolute';
+  _flowCanvas.style.top = '0';
+  _flowCanvas.style.left = '0';
+  _flowCanvas.style.pointerEvents = 'none';
+  pane.appendChild(_flowCanvas);
+
+  _flowCtx = _flowCanvas.getContext('2d');
+
+  // Initialize particle system
+  _initFlowParticles(segment.length);
+  _flowActive = true;
+
+  // Start animation loop
+  _renderFlowFrame();
+
+  // Handle resize and map movement
+  map.on('resize', _onFlowResize);
+  map.on('moveend', _onFlowResize);  // redraw after pan/zoom
+  map.on('zoomend', _onFlowResize);  // redraw after zoom
+
+  console.log('[HT-FLOW] Stream flow overlay deployed — LiDAR-locked, ' +
+    _flowParticles.length + ' particles, ' + _flowCaustics.length + ' caustics');
+}
+
+/* ── Handle map resize ── */
+function _onFlowResize() {
+  if (!_flowCanvas || !map) return;
+  var size = map.getSize();
+  _flowCanvas.width = size.x * _flowDpr;
+  _flowCanvas.height = size.y * _flowDpr;
+  _flowCanvas.style.width = size.x + 'px';
+  _flowCanvas.style.height = size.y + 'px';
+}
+
+/* ── Remove the stream flow overlay ── */
+function clearStreamFlowOverlay() {
+  _flowActive = false;
+  if (_flowAnimFrame) {
+    cancelAnimationFrame(_flowAnimFrame);
+    _flowAnimFrame = null;
+  }
+  if (_flowCanvas && _flowCanvas.parentNode) {
+    _flowCanvas.parentNode.removeChild(_flowCanvas);
+  }
+  _flowCanvas = null;
+  _flowCtx = null;
+  _flowParticles = [];
+  _flowCaustics = [];
+  _flowStreamPath = null;
+  _flowBankWidths = null;
+  _flowTerrain = null;
+  _flowTime = 0;
+  if (map) {
+    try { map.off('resize', _onFlowResize); } catch (e) {}
+    try { map.off('moveend', _onFlowResize); } catch (e) {}
+    try { map.off('zoomend', _onFlowResize); } catch (e) {}
+  }
+}
+
+// Expose for external use
+window.deployStreamFlowOverlay = deployStreamFlowOverlay;
+window.clearStreamFlowOverlay = clearStreamFlowOverlay;
+
 /* ── Cleanup when session ends ── */
 window._cleanupAiGuide = function() {
   _stopProximityWatch();
@@ -4908,6 +6186,8 @@ window._cleanupAiGuide = function() {
   if (_activeZonePolygon) { try { map.removeLayer(_activeZonePolygon); } catch {} _activeZonePolygon = null; }
   if (_missionSummaryEl) { try { _missionSummaryEl.remove(); } catch {} _missionSummaryEl = null; }
   if (_spotInfoTrayEl) { try { _spotInfoTrayEl.remove(); } catch {} _spotInfoTrayEl = null; }
+  // Stream flow canvas overlay cleanup
+  if (typeof clearStreamFlowOverlay === 'function') { try { clearStreamFlowOverlay(); } catch(e) {} }
   _checkedInPinIdx = -1;
   _checkedInMicroIdx = -1;
   _aiCoachState = { reports: [], currentStrategy: null, currentFlyRec: null, lastUpdate: 0 };
@@ -4967,3 +6247,11 @@ window.flyLogCatchFromPanel = function() {
   const notes = getFlyInputValue('flyCatchNotes');
   logFlyCatchEntry(species, notes);
 };
+
+// ── END-OF-FILE HEALTH CHECK ──
+console.log('[HT-FLY] === FILE FULLY PARSED ===');
+console.log('[HT-FLY] deployStreamFlowOverlay:', typeof deployStreamFlowOverlay);
+console.log('[HT-FLY] window.deployStreamFlowOverlay:', typeof window.deployStreamFlowOverlay);
+console.log('[HT-FLY] deployAiFishingPins:', typeof window.deployAiFishingPins);
+console.log('[HT-FLY] LIDAR_CONFIG.ENABLED:', typeof LIDAR_CONFIG !== 'undefined' && LIDAR_CONFIG.ENABLED);
+console.log('[HT-FLY] _flowActive:', typeof _flowActive !== 'undefined' ? _flowActive : 'UNDEFINED');

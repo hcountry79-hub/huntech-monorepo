@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -20,11 +20,20 @@
   <link rel="dns-prefetch" href="https://server.arcgisonline.com">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css" />
-  <link rel="stylesheet" href="app.css?v=20260223d">
+  <link rel="stylesheet" href="app.css?v=20260224u">
 
   <!-- AWS Backend Configuration -->
-  <script src="config.js?v=20260221g"></script>
-  <script src="api.js?v=20260221g"></script>
+  <script src="config.js?v=20260224j"></script>
+  <script src="api.js?v=20260224j"></script>
+
+  <!-- Force SW update on every page load -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then(function(regs) {
+        regs.forEach(function(r) { r.update(); });
+      });
+    }
+  </script>
 </head>
 <body class="module-fly">
   <header class="ht-topbar">
@@ -149,199 +158,52 @@
 
     <div class="ht-toolbar-content" id="toolbarContent">
 
-      <!-- ------ STREAM COMMAND HUB (default view) ------ -->
-      <div class="ht-sc-hub" id="streamCommandHub">
-        <button class="ht-sc-hub-pill" type="button" onclick="scHubNav('fishNowPanel')">
-          <span class="ht-sc-hub-icon">??</span>
-          <span class="ht-sc-hub-label">Check In / Fish Now</span>
-        </button>
-        <button class="ht-sc-hub-pill" type="button" onclick="scHubNav('tripPlannerPanel')">
-          <span class="ht-sc-hub-icon">???</span>
-          <span class="ht-sc-hub-label">Trip Planner</span>
-        </button>
-        <button class="ht-sc-hub-pill" type="button" onclick="scHubNav('mySpotsPanel')">
-          <span class="ht-sc-hub-icon">??</span>
-          <span class="ht-sc-hub-label">My Saved Spots</span>
-        </button>
-        <button class="ht-sc-hub-pill" type="button" onclick="scHubNav('myGearPanel')">
-          <span class="ht-sc-hub-icon">??</span>
-          <span class="ht-sc-hub-label">My Gear</span>
-        </button>
-        <button class="ht-sc-hub-pill" type="button" onclick="scHubNav('flyBoxPanel')">
-          <span class="ht-sc-hub-icon">??</span>
-          <span class="ht-sc-hub-label">My Fly Box</span>
-        </button>
+      <!-- ────── PILL NAVIGATION ────── -->
+      <div class="ht-stream-pills" id="streamPills">
+        <button class="ht-stream-pill ht-stream-pill--active ht-stream-pill--primary" data-panel="fishNowPanel" onclick="showStreamPanel('fishNowPanel')">FISH NOW</button>
+        <button class="ht-stream-pill" onclick="showMap()">MAP</button>
+        <button class="ht-stream-pill" data-panel="tripPlannerPanel" onclick="showStreamPanel('tripPlannerPanel')">PLANNER</button>
+        <button class="ht-stream-pill" data-panel="flyBoxPanel" onclick="showStreamPanel('flyBoxPanel')">FLY BOX</button>
       </div>
 
-      <!-- Back-to-hub pill (hidden by default, shown when inside a sub-panel) -->
-      <div class="ht-sc-back-row" id="scBackRow" style="display:none">
-        <button class="ht-sc-back-btn" type="button" onclick="scHubBack()">? Stream Command</button>
+      <!-- ────── FAVORITES QUICK ACCESS ────── -->
+      <div class="ht-stream-favorites" id="streamFavorites">
+        <div class="ht-favorites-label">My Saved Spots</div>
+        <div class="ht-favorites-grid" id="favoritesGrid">
+          <button class="ht-favorite-chip" onclick="loadFavoriteWater('montauk')">Montauk</button>
+          <button class="ht-favorite-chip" onclick="loadFavoriteWater('little-piney-blue')">Lane Springs</button>
+          <button class="ht-favorite-chip" onclick="loadFavoriteWater('roaring-river')">Cardiac Hill</button>
+          <button class="ht-favorite-chip" onclick="loadFavoriteWater('lake-taneycomo-z1')">Tan Vat</button>
+        </div>
       </div>
 
-      <!-- ------- FISH NOW PANEL � Multi-Step Workflow ------- -->
+      <!-- ═══════ FISH NOW PANEL — Simple Welcome ═══════ -->
       <div class="ht-stream-panel" id="fishNowPanel">
 
-        <!-- ---- Step 0: GPS Locating ---- -->
-        <div class="ht-fish-step" id="fishStep0_loading">
+        <!-- ──── Step 0: Welcome ──── -->
+        <div class="ht-fish-step" id="fishStep0_loading" style="display:none">
           <div class="ht-fish-locate-card">
-            <div class="ht-fish-locate-pulse">??</div>
-            <div class="ht-fish-locate-label">Finding your water�</div>
+            <div class="ht-fish-locate-pulse">📡</div>
+            <div class="ht-fish-locate-label">Finding your water…</div>
             <div class="ht-fish-locate-sub">Scanning for nearby trout waters</div>
           </div>
         </div>
 
-        <!-- ---- Step 1: Welcome / Area Detected ---- -->
-        <div class="ht-fish-step" id="fishStep1_areaAction" style="display:none">
+        <!-- ──── Step 1: Area Detected / Welcome ──── -->
+        <div class="ht-fish-step" id="fishStep1_areaAction">
           <div class="ht-fish-welcome-card">
-            <div class="ht-fish-welcome-ribbon" id="fishAreaRibbon">?? Trout Water</div>
-            <div class="ht-fish-welcome-name" id="fishAreaTitle">Welcome to the Water</div>
-            <div class="ht-fish-welcome-detail" id="fishAreaDesc">Locating nearest trout water?</div>
+            <div class="ht-fish-welcome-ribbon" id="fishAreaRibbon">🐟 Trout Water</div>
+            <div class="ht-fish-welcome-name" id="fishAreaTitle">Select a Water</div>
+            <div class="ht-fish-welcome-detail" id="fishAreaDesc">Tap one of your saved spots above to get started</div>
             <div style="margin-top:12px;text-align:center;">
-              <button class="ht-gold-btn ht-go-btn" type="button" onclick="fishStepCheckIn()" style="font-size:14px;padding:10px 22px;">? CHECK IN TO AREA</button>
-            </div>
-          </div>
-        </div>
-
-        <!-- ---- Step 2: Mission Setup ---- -->
-        <div class="ht-fish-step" id="fishStep2_strategy" style="display:none">
-          <div class="ht-accordion-header ht-accordion-header-center">
-            <span class="ht-define-title">?? MISSION SETUP</span>
-          </div>
-          <div class="ht-form-grid">
-            <!-- Fishing Method -->
-            <div class="ht-form-row">
-              <div class="ht-form-label">Fishing Method</div>
-              <div class="ht-method-row">
-                <button class="ht-method-btn ht-method-btn--active" data-fish-method="fly" onclick="pickFishMethod(this,'fly')">?? Fly</button>
-                <button class="ht-method-btn" data-fish-method="spin" onclick="pickFishMethod(this,'spin')">?? Lure</button>
-                <button class="ht-method-btn" data-fish-method="bait" onclick="pickFishMethod(this,'bait')">?? Bait</button>
-              </div>
-            </div>
-            <!-- Water Access -->
-            <div class="ht-form-row">
-              <div class="ht-form-label">Water Access</div>
-              <div class="ht-method-row">
-                <button class="ht-method-btn ht-method-btn--active" data-fish-wade="waders" onclick="pickFishWade(this,'waders')">?? Wading</button>
-                <button class="ht-method-btn" data-fish-wade="streamside" onclick="pickFishWade(this,'streamside')">??? Bank Fishing</button>
-              </div>
-            </div>
-            <!-- Skill Level -->
-            <div class="ht-form-row">
-              <div class="ht-form-label">Skill Level</div>
-              <div class="ht-method-row">
-                <button class="ht-method-btn" data-fish-exp="new" onclick="pickFishExp(this,'new')">?? New</button>
-                <button class="ht-method-btn ht-method-btn--active" data-fish-exp="learning" onclick="pickFishExp(this,'learning')">?? Learning</button>
-                <button class="ht-method-btn" data-fish-exp="confident" onclick="pickFishExp(this,'confident')">?? Confident</button>
-                <button class="ht-method-btn" data-fish-exp="advanced" onclick="pickFishExp(this,'advanced')">?? Advanced</button>
-              </div>
-            </div>
-            <!-- Expedition Type -->
-            <div class="ht-form-row">
-              <div class="ht-form-label">Expedition Type</div>
-              <div class="ht-method-row">
-                <button class="ht-method-btn ht-method-btn--active" data-fish-mode="standard" onclick="pickFishMode(this,'standard')">?? Road Ready</button>
-                <button class="ht-method-btn" data-fish-mode="backcountry" onclick="pickFishMode(this,'backcountry')">?? Off the Grid</button>
-              </div>
-            </div>
-            <!-- Deploy -->
-            <div class="ht-form-row">
-              <button class="ht-gold-btn ht-go-btn ht-lets-go-pulse" type="button" onclick="fishStepDeploy()">
-                ?? DEPLOY FISHING PINS
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <!-- ---- Step 3: Define Fishing Route ---- -->
-        <div class="ht-fish-step" id="fishStep2b_summary" style="display:none">
-          <div class="ht-accordion-header ht-accordion-header-center">
-            <span class="ht-define-title">??? DEFINE FISHING ROUTE</span>
-          </div>
-          <div class="ht-form-grid">
-            <div class="ht-form-row">
-              <div class="ht-method-row ht-method-row--stack">
-                <button class="ht-gold-btn ht-go-btn" type="button" onclick="fishRouteFromMyLocation()">?? Start From My Location</button>
-                <button class="ht-gold-btn ht-go-btn" type="button" onclick="fishRoutePickOnMap()">??? Pick Starting Point on Map</button>
-                <button class="ht-gold-btn ht-go-btn" type="button" onclick="fishRouteNone()">?? No Route</button>
-                <button class="ht-gold-btn ht-go-btn ht-go-btn--ghost" type="button" onclick="fishRouteGoBack()">? Go Back</button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- (fishStep3_route kept as hidden placeholder for step index alignment) -->
-        <div class="ht-fish-step" id="fishStep3_route" style="display:none"></div>
-
-        <!-- ---- Step 4: AI Briefing / Trout Summary ---- -->
-        <div class="ht-fish-step" id="fishStep4_briefing" style="display:none">
-          <div class="ht-accordion-header ht-accordion-header-center">
-            <span class="ht-define-title">?? Stream Intelligence</span>
-          </div>
-          <div class="ht-form-grid">
-            <div class="ht-form-row">
-              <div class="ht-briefing-card" id="fishBriefingCard">
-                <div class="ht-briefing-coach">
-                  <div class="ht-coach-avatar">??</div>
-                  <div class="ht-coach-intro" id="fishCoachIntro">Loading your AI stream guide�</div>
-                </div>
-                <div class="ht-briefing-body" id="fishBriefingBody"></div>
-              </div>
-            </div>
-            <div class="ht-form-row">
-              <button class="ht-gold-btn ht-go-btn" type="button" onclick="fishStartSession()">
-                ?? START FISHING
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <!-- ---- Step 5: Streamside Command (live session) ---- -->
-        <div class="ht-fish-step" id="fishStep5_live" style="display:none">
-          <div class="ht-accordion-header ht-accordion-header-center">
-            <span class="ht-define-title">?? Streamside Command</span>
-          </div>
-          <div class="ht-form-grid">
-            <!-- Live status bar -->
-            <div class="ht-form-row">
-              <div class="ht-live-session-bar">
-                <span class="ht-live-dot"></span>
-                <span class="ht-live-water-name" id="liveWaterName2">�</span>
-                <span class="ht-live-timer" id="liveTimer2">0:00</span>
-              </div>
-            </div>
-
-            <!-- Streamside action pills -->
-            <div class="ht-form-row">
-              <div class="ht-toolbar-btns ht-toolbar-btns-stack">
-                <div class="ht-pill-stack">
-                  <button class="ht-gold-btn" type="button" onclick="fishLogCatch()">?? Log Catch</button>
-                </div>
-                <div class="ht-pill-stack">
-                  <button class="ht-gold-btn" type="button" onclick="fishLogFlyData()">?? Log Fly Data</button>
-                </div>
-              </div>
-            </div>
-            <div class="ht-form-row">
-              <div class="ht-toolbar-btns ht-toolbar-btns-stack">
-                <div class="ht-pill-stack">
-                  <button class="ht-gold-btn" type="button" onclick="fishMyFlyBox()">?? My Fly Box</button>
-                </div>
-                <div class="ht-pill-stack">
-                  <button class="ht-gold-btn" type="button" onclick="fishAiRecommend()">?? AI Fly Coach</button>
-                </div>
-              </div>
-            </div>
-
-            <!-- End session -->
-            <div class="ht-form-row" style="margin-top:8px">
-              <button class="ht-gold-btn ht-go-btn ht-go-btn--ghost" type="button" onclick="fishEndSession()">? End Session</button>
+              <button class="ht-gold-btn ht-go-btn" type="button" onclick="fishStepCheckIn()" style="font-size:14px;padding:10px 22px;">✅ CHECK IN TO AREA</button>
             </div>
           </div>
         </div>
 
       </div>
 
-      <!-- ------- MY SPOTS PANEL ------- -->
+      <!-- ═══════ MY SPOTS PANEL ═══════ -->
       <div class="ht-stream-panel" id="mySpotsPanel" style="display:none">
         <div class="ht-accordion-header ht-accordion-header-center">
           <span class="ht-define-title">My Spots</span>
@@ -474,38 +336,10 @@
         </div>
       </div>
 
-      <!-- ------- MY GEAR PANEL ------- -->
-      <div class="ht-stream-panel" id="myGearPanel" style="display:none">
-        <div class="ht-accordion-header ht-accordion-header-center">
-          <span class="ht-define-title">My Gear</span>
-        </div>
-        <div class="ht-form-grid">
-          <div class="ht-form-row">
-            <div class="ht-fly-note">Your rods, reels, waders, and tackle</div>
-          </div>
-          <div class="ht-form-row">
-            <div id="myGearList" class="ht-saved-spots-list">
-              <div class="ht-fly-note" style="opacity:.5">No gear logged yet � add your setup below</div>
-            </div>
-          </div>
-          <div class="ht-form-row">
-            <div class="ht-toolbar-btns ht-toolbar-btns-stack">
-              <div class="ht-pill-stack">
-                <button class="ht-gold-btn" type="button" onclick="addGearItem()">? Add Gear</button>
-              </div>
-              <div class="ht-pill-stack">
-                <button class="ht-gold-btn" type="button" onclick="openGearCategory('rods')">?? Rods</button>
-              </div>
-              <div class="ht-pill-stack">
-                <button class="ht-gold-btn" type="button" onclick="openGearCategory('lines')">?? Lines</button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
     </div>
   </div>
+
+  <!-- ------- WATER DETAIL BAR (fly-in panel for selected water) ------- -->
   <div class="ht-fly-water-bar" id="waterDetailBar">
     <div class="ht-fly-water-bar-header">
       <span class="ht-fly-water-bar-title" id="waterDetailTitle">�</span>
@@ -567,62 +401,13 @@
     };
   </script>
 
-  <script src="regulations.js?v=20260223d"></script>
-  <script src="fly-fishing-data.js?v=20260223d"></script>
-  <script src="ht-fly-fishing.js?v=20260223d"></script>
-  <script src="main.js?v=20260223d"></script>
+  <script src="regulations.js?v=20260224u"></script>
+  <script src="fly-fishing-data.js?v=20260224u"></script>
+  <script src="ht-fly-fishing.js?v=20260224u"></script>
+  <script src="main.js?v=20260224u"></script>
 
-  <script>
-    // --- FAILSAFE fishStepCheckIn ---
-    // If main.js DOMContentLoaded didn't define it (due to init error),
-    // this standalone version still works.
-    (function() {
-      var existing = window.fishStepCheckIn;
-      if (typeof existing === 'function') {
-        console.log('HUNTECH: fishStepCheckIn defined by main.js OK');
-        return; // main.js already defined it during parse (unlikely, it's in DOMContentLoaded)
-      }
-      console.warn('HUNTECH: fishStepCheckIn NOT yet defined ? installing failsafe');
-      window.fishStepCheckIn = function(waterId) {
-        try {
-          console.log('HUNTECH FAILSAFE: fishStepCheckIn called', waterId);
-          var water = null;
-          if (window.TROUT_WATERS && window.TROUT_WATERS.length) {
-            if (waterId) water = window.TROUT_WATERS.find(function(w) { return w.id === waterId; });
-            if (!water) water = window.TROUT_WATERS.find(function(w) { return w.id === 'bennett-spring'; });
-          }
-          if (water) window._fishFlowArea = water;
-          // Show success toast directly (bypass showNotice in case it's broken)
-          var toast = document.createElement('div');
-          toast.style.cssText = 'position:fixed;top:70px;left:50%;transform:translateX(-50%);background:#22c55e;color:white;padding:12px 20px;border-radius:8px;z-index:50000;font-size:14px;font-weight:500;box-shadow:0 4px 12px rgba(0,0,0,0.15)';
-          toast.textContent = '\u2705 Checked in at ' + (water ? water.name : 'water');
-          document.body.appendChild(toast);
-          setTimeout(function() { toast.remove(); }, 2500);
-          // Close action bar
-          if (typeof window.closeFlyWaterActionBar === 'function') {
-            try { window.closeFlyWaterActionBar(); } catch(ex) {}
-          }
-          // Deploy access points
-          if (water && typeof window.addAccessPointsForWater === 'function') {
-            window.addAccessPointsForWater(water);
-          }
-          // Advance to step 2 via window.fishShowStep or direct DOM
-          if (typeof window.fishShowStep === 'function') {
-            window.fishShowStep(2);
-          } else {
-            // Direct DOM manipulation fallback
-            var ids = ['fishStep0_loading','fishStep1_areaAction','fishStep2_strategy','fishStep2b_summary','fishStep3_route','fishStep4_briefing','fishStep5_live'];
-            ids.forEach(function(id) {
-              var el = document.getElementById(id);
-              if (el) el.style.display = (id === 'fishStep2_strategy') ? '' : 'none';
-            });
-          }
-        } catch(e) {
-          console.error('HUNTECH FAILSAFE fishStepCheckIn error:', e);
-          alert('Check-in error: ' + e.message);
-        }
-      };
-    })();
-  </script>
 </body>
 </html>
+
+
+
