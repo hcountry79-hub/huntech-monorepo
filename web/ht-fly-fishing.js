@@ -4377,10 +4377,39 @@ var LIDAR_CONFIG = Object.freeze({
   VERSION: '2.0.0-lidar-locked'
 });
 
-// Global bankWidth scaling factor — raw data values are ~2× too wide for
-// the actual river channel.  0.5 brings the overlay, pins, cast arcs, and
+// Global bankWidth scaling factor — raw data values are ~3.5× too wide for
+// the actual river channel.  0.28 brings the overlay, pins, cast arcs, and
 // WADE HERE markers in line with the satellite-visible banks.
-var _BANK_WIDTH_SCALE = 0.5;
+var _BANK_WIDTH_SCALE = 0.28;
+
+// Habitat-based flow speed multipliers — realistic stream hydraulics.
+// Research: USGS Open-File Report 2005-1230 (Ozark stream velocity profiles),
+// Leopold & Maddock fluvial geomorphology, Rosgen stream classification.
+// Pool velocity ~0.1-0.3 m/s, run ~0.3-0.6 m/s, riffle ~0.6-1.2 m/s.
+var _HABITAT_FLOW_SPEED = {
+  pool:     0.20,   // deep, slow — fish resting, barely perceptible drift
+  undercut: 0.25,   // near-bank eddy, very slow recirculation
+  log:      0.30,   // debris slows flow, creates back-eddies
+  tailout:  0.50,   // pool tail accelerating, moderate increasing
+  run:      0.70,   // steady moderate current — bread-and-butter water
+  seam:     0.85,   // boundary layer — moderate with shear turbulence
+  boulder:  0.90,   // deflected/accelerated around structure
+  pocket:   1.10,   // funneled between rocks — moderately fast
+  riffle:   1.60    // shallow, fast, broken surface — highest velocity
+};
+
+// Habitat-based lateral wobble multipliers — turbulence character
+var _HABITAT_WOBBLE = {
+  pool:     0.3,    // minimal lateral movement — laminar
+  undercut: 0.5,    // slight recirculation
+  log:      1.5,    // irregular eddies around debris
+  tailout:  0.6,    // spreading, fanning flow
+  run:      0.8,    // light natural turbulence
+  seam:     1.8,    // high shear at velocity boundary
+  boulder:  2.0,    // chaotic deflection around rocks
+  pocket:   1.6,    // swirling pocket turbulence
+  riffle:   2.2     // broken, churning surface
+};
 
 /** Validate that terrain analysis input is LiDAR-derived only */
 function _validateLidarInput(segment, bankWidths) {
@@ -5718,65 +5747,102 @@ function _initFlowParticles(streamLen) {
   _flowParticles = [];
   _flowCaustics = [];
 
-  var PARTICLE_COUNT = Math.min(500, Math.max(200, streamLen * 8));
-  var CAUSTIC_COUNT = Math.min(60, Math.max(15, streamLen * 2));
+  // Particle density scaled to stream length — enough for visual coverage
+  // without GPU overload on mobile devices
+  var PARTICLE_COUNT = Math.min(600, Math.max(250, streamLen * 8));
+  var CAUSTIC_COUNT = Math.min(50, Math.max(12, streamLen * 1.5));
 
   for (var i = 0; i < PARTICLE_COUNT; i++) {
     var lateral = (Math.random() - 0.5) * 1.8; // -0.9 to 0.9 across channel
     var centerDist = Math.abs(lateral);
-    // Velocity profile: center = fast, banks = slow (parabolic)
-    var velocityMult = 1.0 - centerDist * centerDist * 0.7;
+    // Parabolic velocity profile: Prandtl boundary layer theory
+    // Center thalweg = fastest, banks approach zero (no-slip condition)
+    var velocityMult = 1.0 - centerDist * centerDist * 0.8;
 
+    // Base speed is SLOW — habitat multipliers accelerate contextually.
+    // 0.0003-0.0008 per frame gives gentle natural drift at pool speed;
+    // riffles at 1.6× still look believable, not frantic.
     _flowParticles.push({
-      t: Math.random(),                          // position along stream (0=upstream, 1=downstream)
-      lateral: lateral,                            // cross-stream position
-      speed: (0.001 + Math.random() * 0.002) * velocityMult,  // per frame advance (faster = more visible motion)
-      size: 2 + Math.random() * 4,               // pixel radius (larger)
-      opacity: 0.25 + Math.random() * 0.40,      // base opacity (brighter)
-      wobblePhase: Math.random() * Math.PI * 2,   // sine wobble offset
-      wobbleAmp: 0.002 + Math.random() * 0.006,   // wobble amplitude
-      wobbleSpeed: 0.02 + Math.random() * 0.03,   // wobble frequency
-      type: centerDist > 0.7 ? 'foam' : 'flow',   // foam near banks
-      hue: 190 + Math.random() * 30                // color variation (cyan-blue range)
+      t: Math.random(),                            // stream position 0→1
+      lateral: lateral,                             // cross-stream [-0.9, 0.9]
+      baseSpeed: (0.0003 + Math.random() * 0.0005) * velocityMult,
+      speed: 0,                                     // set per-frame by terrain
+      size: 1.5 + Math.random() * 3,               // pixel radius
+      opacity: 0.20 + Math.random() * 0.35,        // base opacity
+      wobblePhase: Math.random() * Math.PI * 2,
+      wobbleAmp: 0.001 + Math.random() * 0.004,    // base wobble (terrain scaled)
+      wobbleSpeed: 0.012 + Math.random() * 0.018,  // wobble frequency
+      type: centerDist > 0.75 ? 'foam' : 'flow',
+      hue: 195 + Math.random() * 25                // tighter cyan range
     });
   }
 
-  // Caustic light spots (larger, slower, brighter)
+  // Caustic light spots — sunlight refraction on streambed
   for (var c = 0; c < CAUSTIC_COUNT; c++) {
     _flowCaustics.push({
       t: Math.random(),
-      lateral: (Math.random() - 0.5) * 1.4,
-      speed: 0.0004 + Math.random() * 0.001,
-      size: 10 + Math.random() * 22,
-      opacity: 0.08 + Math.random() * 0.14,
+      lateral: (Math.random() - 0.5) * 1.2,
+      baseSpeed: 0.00015 + Math.random() * 0.0004,  // very slow drift
+      speed: 0,
+      size: 8 + Math.random() * 18,
+      opacity: 0.06 + Math.random() * 0.10,
       phase: Math.random() * Math.PI * 2,
-      pulseSpeed: 0.01 + Math.random() * 0.02
+      pulseSpeed: 0.006 + Math.random() * 0.012
     });
   }
 }
 
-/* ── Update particle positions each frame ── */
+/* ── Look up habitat at a stream position (t=0..1) ── */
+function _getHabitatAtT(t) {
+  if (!_flowTerrain || !_flowTerrain.length) return 'run';
+  var idx = Math.min(Math.floor(t * _flowTerrain.length), _flowTerrain.length - 1);
+  return (_flowTerrain[idx] && _flowTerrain[idx].habitat) || 'run';
+}
+
+/* ── Update particle positions each frame — terrain-aware ── */
 function _updateFlowParticles() {
   _flowTime += 1;
 
   for (var i = 0; i < _flowParticles.length; i++) {
     var p = _flowParticles[i];
+
+    // Look up habitat at this particle's current position
+    var hab = _getHabitatAtT(p.t);
+    var speedMult = _HABITAT_FLOW_SPEED[hab] || 0.7;
+    var wobbleMult = _HABITAT_WOBBLE[hab] || 0.8;
+
+    // Apply terrain-scaled speed
+    p.speed = p.baseSpeed * speedMult;
     p.t += p.speed;
     if (p.t > 1) p.t -= 1;
-    // Lateral wobble (sinusoidal — natural drift)
-    p.lateral += Math.sin(_flowTime * p.wobbleSpeed + p.wobblePhase) * p.wobbleAmp;
-    // Clamp lateral
+
+    // Lateral wobble scaled by turbulence character
+    p.lateral += Math.sin(_flowTime * p.wobbleSpeed + p.wobblePhase) * p.wobbleAmp * wobbleMult;
+
+    // Riffles + boulders: add micro-noise jitter for broken-surface realism
+    if (wobbleMult > 1.5) {
+      p.lateral += (Math.random() - 0.5) * 0.003 * wobbleMult;
+    }
+
+    // Clamp lateral to stay within channel
     if (p.lateral > 0.92) p.lateral = 0.92;
     if (p.lateral < -0.92) p.lateral = -0.92;
+
+    // Tag current habitat for rendering differentiation
+    p._hab = hab;
   }
 
   for (var j = 0; j < _flowCaustics.length; j++) {
     var c = _flowCaustics[j];
+    var cHab = _getHabitatAtT(c.t);
+    var cSpeedMult = _HABITAT_FLOW_SPEED[cHab] || 0.7;
+    c.speed = c.baseSpeed * cSpeedMult;
     c.t += c.speed;
     if (c.t > 1) c.t -= 1;
-    c.lateral += Math.sin(_flowTime * 0.005 + c.phase) * 0.001;
-    if (c.lateral > 0.65) c.lateral = 0.65;
-    if (c.lateral < -0.65) c.lateral = -0.65;
+    c.lateral += Math.sin(_flowTime * 0.003 + c.phase) * 0.0006;
+    if (c.lateral > 0.55) c.lateral = 0.55;
+    if (c.lateral < -0.55) c.lateral = -0.55;
+    c._hab = cHab;
   }
 }
 
@@ -5949,7 +6015,7 @@ function _renderFlowFrame() {
     ctx.fill();
   }
 
-  // ── 4) FLOW PARTICLES ──
+  // ── 4) FLOW PARTICLES — habitat-differentiated rendering ──
   for (var pi = 0; pi < _flowParticles.length; pi++) {
     var part = _flowParticles[pi];
     var pPos = _flowInterpolateStream(part.t, bankGeom);
@@ -5966,19 +6032,47 @@ function _renderFlowFrame() {
 
     var pSize = part.size * _flowDpr;
     var pAlpha = part.opacity;
+    var pHab = part._hab || 'run';
 
-    // Foam particles: white, slightly larger
-    if (part.type === 'foam') {
-      var foamPulse = 0.5 + 0.5 * Math.sin(_flowTime * 0.04 + part.wobblePhase);
-      pAlpha *= (0.5 + foamPulse * 0.5);
-      ctx.fillStyle = 'rgba(230, 245, 255, ' + Math.min(pAlpha * 1.5, 0.9).toFixed(3) + ')';
-      pSize *= 1.5;
+    // ── Habitat-aware particle appearance ──
+    if (pHab === 'riffle' || pHab === 'pocket') {
+      // RIFFLES: white-foam broken water — choppy, bright, fast dots
+      var riffPulse = 0.4 + 0.6 * Math.sin(_flowTime * 0.05 + part.wobblePhase);
+      pAlpha *= (0.6 + riffPulse * 0.4);
+      if (part.type === 'foam' || Math.random() < 0.3) {
+        ctx.fillStyle = 'rgba(235, 250, 255, ' + Math.min(pAlpha * 1.4, 0.75).toFixed(3) + ')';
+        pSize *= 0.8;
+      } else {
+        ctx.fillStyle = 'hsla(195, 60%, 78%, ' + Math.min(pAlpha * 1.2, 0.65).toFixed(3) + ')';
+      }
+    } else if (pHab === 'pool' || pHab === 'undercut') {
+      // POOLS: deep blue-green, larger softer particles, very subtle
+      var centerBoostP = 1.0 - Math.abs(pLatFrac) * 0.4;
+      pAlpha *= centerBoostP * 0.6;
+      pSize *= 1.3;
+      ctx.fillStyle = 'hsla(205, 55%, 55%, ' + Math.min(pAlpha, 0.45).toFixed(3) + ')';
+    } else if (pHab === 'boulder' || pHab === 'seam') {
+      // BOULDERS/SEAMS: mixed foam + darker water
+      var seamPulse = 0.5 + 0.5 * Math.sin(_flowTime * 0.035 + part.wobblePhase);
+      pAlpha *= (0.5 + seamPulse * 0.5);
+      if (part.type === 'foam') {
+        ctx.fillStyle = 'rgba(220, 240, 255, ' + Math.min(pAlpha * 1.3, 0.70).toFixed(3) + ')';
+        pSize *= 1.1;
+      } else {
+        ctx.fillStyle = 'hsla(200, 65%, 65%, ' + Math.min(pAlpha * 1.1, 0.60).toFixed(3) + ')';
+      }
     } else {
-      // Regular flow particle: translucent blue/cyan
-      var pHue = part.hue;
-      var centerBoost = 1.0 - Math.abs(pLatFrac) * 0.3;
-      pAlpha *= centerBoost;
-      ctx.fillStyle = 'hsla(' + pHue + ', 75%, 72%, ' + Math.min(pAlpha * 1.4, 0.85).toFixed(3) + ')';
+      // RUNS / TAILOUTS / DEFAULT: standard blue-cyan flow
+      if (part.type === 'foam') {
+        var foamPulse = 0.5 + 0.5 * Math.sin(_flowTime * 0.03 + part.wobblePhase);
+        pAlpha *= (0.5 + foamPulse * 0.5);
+        ctx.fillStyle = 'rgba(225, 242, 255, ' + Math.min(pAlpha * 1.3, 0.70).toFixed(3) + ')';
+        pSize *= 1.2;
+      } else {
+        var centerBoostR = 1.0 - Math.abs(pLatFrac) * 0.3;
+        pAlpha *= centerBoostR;
+        ctx.fillStyle = 'hsla(' + part.hue + ', 65%, 68%, ' + Math.min(pAlpha * 1.1, 0.60).toFixed(3) + ')';
+      }
     }
 
     ctx.beginPath();
@@ -5987,9 +6081,9 @@ function _renderFlowFrame() {
   }
 
   // ── 5) NOISE-BASED WATER TEXTURE ──
-  // Subtle noise overlay for organic water feel
+  // Subtle noise overlay for organic water feel — slow drift
   var noiseScale = 0.008;
-  var timeOffset = _flowTime * 0.02;
+  var timeOffset = _flowTime * 0.005;  // very slow texture drift
   // Sample noise at sparse grid points for performance
   var step = Math.max(12, Math.round(20 / _flowDpr));
   var bounds = _getFlowBounds(centerPx, leftPx, rightPx);
@@ -6010,16 +6104,7 @@ function _renderFlowFrame() {
 
   ctx.restore(); // un-clip
 
-  // ── 6) BANK EDGE GLOW LINES ──
-  // Outer glow (wide, subtle)
-  _drawBankLine(ctx, leftPx, 4 * _flowDpr, 'rgba(30, 190, 170, 0.15)');
-  _drawBankLine(ctx, rightPx, 4 * _flowDpr, 'rgba(30, 190, 170, 0.15)');
-  // Mid glow
-  _drawBankLine(ctx, leftPx, 2.5 * _flowDpr, 'rgba(50, 215, 195, 0.30)');
-  _drawBankLine(ctx, rightPx, 2.5 * _flowDpr, 'rgba(50, 215, 195, 0.30)');
-  // Core line (bright, thin)
-  _drawBankLine(ctx, leftPx, 1.2 * _flowDpr, 'rgba(70, 240, 215, 0.55)');
-  _drawBankLine(ctx, rightPx, 1.2 * _flowDpr, 'rgba(70, 240, 215, 0.55)');
+  // Bank edge glow lines REMOVED — user wants clean overlay without hard borders
   } catch(renderErr) {
     _flowRenderErrors = (_flowRenderErrors || 0) + 1;
     console.error('[HT-FLOW] Render frame error #' + _flowRenderErrors + ':', renderErr);
