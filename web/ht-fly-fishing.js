@@ -498,11 +498,11 @@ function showFlyCheckInForm(water) {
       if (m === 'bait') return '🪱';
       return '';
     }).join(' ');
-    const shortName = z.name.replace(/\s*—\s*.*$/, ''); // "Zone 1"
-    const methodLabel = z.name.replace(/^.*—\s*/, '');    // "Fly Only"
+    const shortName = z.name.replace(/^.*—\s*/, '').trim(); // "Park Boundary Headwaters"
+    const methodLabel = '';  // method icons shown separately
     zonePillsHtml += `<button class="ht-zone-select-pill${idx === 0 ? ' ht-zone-select-pill--active' : ''}" type="button" data-zone-idx="${idx}" onclick="pickFishZone(this,${idx})">
       <span class="ht-zone-select-name">${escapeHtml(shortName)}</span>
-      <span class="ht-zone-select-method">${methodIcons} ${escapeHtml(methodLabel)}</span>
+      <span class="ht-zone-select-method">${methodIcons}</span>
     </button>`;
   });
 
@@ -3914,8 +3914,9 @@ function _snapToStream(lat, lng, segment, bankWidths, avgWidth) {
   // Get bank width at this point
   var halfWidth = (avgWidth || 12) / 2;
   if (bankWidths && bankWidths.length > 0) {
-    // Map from dense interpolated index → raw bankWidths index
-    var bwIdx = Math.min(bestIdx, bankWidths.length - 1);
+    // Map from dense interpolated index → raw bankWidths index (proportional)
+    var bwIdx = Math.round(bestIdx / Math.max(segment.length - 1, 1) * (bankWidths.length - 1));
+    bwIdx = Math.min(bwIdx, bankWidths.length - 1);
     var bw = bankWidths[bwIdx];
     if (bw) {
       halfWidth = perpOffset >= 0 ? (bw[0] || halfWidth) : (bw[1] || halfWidth);
@@ -4043,9 +4044,9 @@ function _deployMicroCluster(opts) {
   var bw = null;
   var halfWidth = 5.5;
   var rawBW = opts.bankWidths || (opts.water && opts.water.bankWidths) || null;
-  // When zone-aligned bankWidths are passed, use the zone segment as reference
-  // (indices match). Otherwise fall back to the full raw streamPath for proximity lookup.
-  var rawSP = opts.bankWidths ? seg : ((opts.water && opts.water.streamPath) || null);
+  // Always use the raw streamPath for proximity lookup so _getDenseBankWidth
+  // can map dense segment indices back to raw bankWidths entries correctly.
+  var rawSP = (opts.water && opts.water.streamPath) || null;
   if (rawBW && rawSP) {
     bw = _getDenseBankWidth(rawBW, rawSP, seg, sIdx);
     if (bw) halfWidth = Math.max(bw[0] || 5.5, bw[1] || 5.5);
