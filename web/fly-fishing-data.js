@@ -68,6 +68,54 @@ window.TROUT_EDUCATION = {
       'Tailouts are often underrated by anglers who walk right through them to fish the pool. Fish them first.',
       'In spring, tailouts warm faster than deep pools — trout feed actively here on sunny afternoons.'
     ]
+  },
+  undercut: {
+    priority: 3,
+    title: 'Undercut Bank (HIGH PRIORITY)',
+    description: 'Undercut banks form where current erodes soil beneath overhanging banks, roots, and vegetation. These dark cavities are prime lies for large trout — especially browns — who tuck under the bank and ambush food carried past by the current. Missouri\'s limestone and clay banks create deep undercuts.',
+    tips: [
+      'Roll cast tight to the bank edge — your fly should land within 6 inches of the bank and drift under the overhang.',
+      'Undercuts hold the biggest fish in the stream. Approach from downstream and stay as far away as your casting allows.',
+      'Use a sidearm cast to get your fly under overhanging branches. Accuracy matters more than distance here.',
+      'Dead-drift a nymph along the bank edge, then give it a twitch as it passes the undercut. Trout strike on the movement.',
+      'In low light (dawn, dusk, overcast), big browns leave undercuts to patrol. This is prime streamer time.'
+    ]
+  },
+  log: {
+    priority: 3,
+    title: 'Fallen Log / Woody Debris (HIGH PRIORITY)',
+    description: 'Fallen trees, log jams, and submerged woody debris create complex current breaks that trout love. The wood provides overhead cover, creates eddies where food collects, and harbors aquatic insects in the bark. Multiple trout can hold around a single large log.',
+    tips: [
+      'Fish every angle around a log — the upstream cushion, both sides, the downstream eddy, and the gap beneath.',
+      'Streamers stripped past logs trigger reaction strikes from territorial fish hiding in the cover.',
+      'Dead-drift a nymph right along the wood — trout hold within inches of the structure and won\'t move far for food.',
+      'Log jams are crayfish hideouts. A #8 olive woolly bugger imitating a crayfish can pull out trophy brown trout.',
+      'Be ready for an immediate hookset — log fish grab fast and dive back into the wood. Keep your rod tip up.'
+    ]
+  },
+  seam: {
+    priority: 2,
+    title: 'Current Seam (HIGH PRIORITY)',
+    description: 'Current seams form where fast water meets slow water — at the edges of channels, beside boulders, along bank contours, and where currents merge. Trout sit in the slow side and pluck food tumbling down the fast side. Seams are the #1 place to find feeding trout.',
+    tips: [
+      'Cast your fly into the fast side and let it drift across the seam into the slow water. The moment it crosses is when strikes happen.',
+      'Look for foam lines on the surface — foam follows the same path as food, showing you where the seam delivers insects.',
+      'Position yourself so you can drift your fly parallel to the seam for maximum time in the strike zone.',
+      'Seams are where you should start on any new piece of water. If there\'s a visible seam, fish it first.',
+      'Multiple trout often line up along a long seam, staggered in position. Fish each one methodically from downstream up.'
+    ]
+  },
+  pocket: {
+    priority: 3,
+    title: 'Pocket Water (MEDIUM-HIGH PRIORITY)',
+    description: 'Pocket water is the turbulent, broken water among clusters of boulders and rocks. Each rock creates a small calm pocket behind it where trout hold. Pocket water is often overlooked by anglers but holds surprising numbers of fish — often one fish per pocket.',
+    tips: [
+      'Short casts and short drifts are the key to pocket water. Drop your fly into each pocket and let it drift 2-3 feet.',
+      'High-stick nymphing excels here — keep your rod tip up and maintain direct contact with your fly.',
+      'Trout in pockets are opportunistic and not as selective. Larger, more visible fly patterns work well.',
+      'Work through pocket water systematically — there\'s a fish behind almost every rock that breaks the current.',
+      'Pocket water fish fight hard because they\'re muscular from holding in fast current. Use slightly heavier tippet.'
+    ]
   }
 };
 
@@ -192,6 +240,102 @@ window.TROUT_HOTSPOT_FLAVOR = {
       'Unweighted #16 Pheasant Tail fished just subsurface. Tailout trout eat emergers more than fully hatched dries.',
       '#14 Elk Hair Caddis skated across the tailout at dusk. The commotion triggers explosive strikes.'
     ]
+  },
+  undercut: {
+    titles: ['Trophy Undercut Bank', 'Eroded Bank Lie', 'Hidden Bank Cavern', 'Root-Laced Undercut', 'Dark Bank Ambush'],
+    reasons: [
+      'Deep undercut beneath the bank provides concealment for trophy browns. Current delivers food right to the lie.',
+      'Eroded bank cavity with root structure creates a dark, safe holding lie — priority target for big fish.',
+      'Overhanging vegetation and undercut combine to create a shaded ambush point trout feel safe using all day.',
+      'Root system stabilizes the undercut and creates complex micro-eddies that trap food inside the cavity.',
+      'This bank contour forces the main current tight against the undercut — a natural food delivery system.'
+    ],
+    approach: [
+      'Stay well back and roll cast tight to the bank edge. Your fly should tick the bank on the way down.',
+      'Sidearm cast from downstream to slide your fly under overhanging brush. Accuracy over distance.',
+      'Approach from the opposite bank if wading depth allows. Minimize your profile against the skyline.',
+      'Kneel and use a bow-and-arrow cast for pinpoint delivery under overhanging structure.',
+      'Dead-drift first, then twitch as the fly passes the undercut opening. The movement triggers strikes.'
+    ],
+    flies: [
+      '#10 Woolly Bugger — black — stripped along the bank edge. Big browns in undercuts eat baitfish.',
+      '#14 BH Hares Ear dead-drifted tight to the bank. Let it swing under the overhang at the end.',
+      '#8 Sculpin pattern bounced along the bottom right against the bank. Match the resident forage.',
+      '#6 Muddler Minnow stripped past the undercut at dawn. The disturbance pulls fish out to investigate.',
+      'San Juan Worm drifted right along the bank seam. After rain, undercut fish gorge on washed-in worms.'
+    ]
+  },
+  log: {
+    titles: ['Submerged Log Lie', 'Woody Debris Complex', 'Fallen Timber Refuge', 'Log Jam Stronghold', 'Tangled Root Structure'],
+    reasons: [
+      'Submerged log creates a current break and overhead cover — trout hold in the shadow within inches of wood.',
+      'Woody debris complex harbors aquatic insects in the bark and creates multiple holding positions.',
+      'This fallen tree spans the current creating a long eddy line — multiple fish hold staggered along its length.',
+      'Log jam backs up flow and concentrates food. The jumble of wood provides escape cover from predators.',
+      'Tangled root ball creates a labyrinth of micro-eddies where trout can hold with almost zero energy.'
+    ],
+    approach: [
+      'Cast upstream of the log and drift your fly along both sides. Fish the gap under the log if there is one.',
+      'Roll cast parallel to the wood — your fly should drift within 3 inches of the bark. Closer is better.',
+      'Approach from downstream and target the eddy behind the log first. Work forward to the upstream cushion.',
+      'Keep tension on your line — log fish grab and immediately dive into the wood. You need a fast hookset.',
+      'Use heavier tippet (4X) near wood structure. You will lose fewer flies and land more fish.'
+    ],
+    flies: [
+      '#10 Olive Woolly Bugger — log structure harbors crayfish and sculpins. Match the resident forage.',
+      '#14 Prince Nymph high-sticked along the wood edge. The flashy peacock herl draws attention.',
+      '#8 black Zonker stripped past the downstream eddy. Aggressive fish will chase out of the wood.',
+      '#14 Copper John drifted through the gaps in the structure. Get it deep and right against the wood.',
+      '#16 BH Pheasant Tail on a short tight-line drift. Work every pocket and eddy around the wood.'
+    ]
+  },
+  seam: {
+    titles: ['Primary Current Seam', 'Foam Line Feeder', 'Converging Current Seam', 'Channel Edge Seam', 'Merging Flows'],
+    reasons: [
+      'This current seam concentrates drifting insects along a visible foam line — trout queue up to feed here.',
+      'Fast water meets slow water creating a defined feeding lane. Multiple trout hold staggered along this seam.',
+      'Two currents merge here creating a conveyor belt of food. Trout sit in the slow side and pick off the fast lane.',
+      'Channel edge creates a long, fishable seam line. This is where the most actively feeding trout in the section hold.',
+      'Foam line indicates the exact food delivery path. Put your fly in the foam and let it ride the seam.'
+    ],
+    approach: [
+      'Position downstream and cast into the fast side. Let your fly cross the seam into the slow water naturally.',
+      'Follow the foam line with your eyes — cast above the first fish you see rising and drift through the line.',
+      'Wade the slow side and cast into the fast. Mend upstream to prevent drag as your fly crosses the seam.',
+      'Stand at the tail of the seam and work upstream. Each cast covers 3-4 feet of the seam line.',
+      'Reach cast across the seam to extend your drag-free drift. The longer it rides the seam, the better.'
+    ],
+    flies: [
+      '#16 Parachute Adams drifted right in the foam line. Seam-feeding trout eat confidently — match their rhythm.',
+      'Dry-dropper: #14 Stimulator with a #18 PT dropper. Cover surface and subsurface in the seam simultaneously.',
+      '#16 CDC Emerger — let it drift awash in the film along the seam line. Trout key on emergers here.',
+      'Euro-nymph the seam with a #16 Perdigon. Keep contact and feel for the take as it crosses slow to fast.',
+      '#14 Soft Hackle swung across the seam at the end of the drift. The swing imitates an emerging insect perfectly.'
+    ]
+  },
+  pocket: {
+    titles: ['Boulder Pocket Zone', 'Rocky Pocket Run', 'Cascading Pocket Water', 'Scattered Rock Pockets', 'Turbulent Pocket Field'],
+    reasons: [
+      'Cluster of boulders creates dozens of small holding pockets — one fish per pocket, high density water.',
+      'Turbulent surface hides the angler and broken current delivers food into each calm pocket.',
+      'Cascading drops between rocks create oxygenated pockets trout love. High energy, high feeding activity.',
+      'Scattered rocks form a maze of current breaks. Fish are less pressured here because most anglers walk past.',
+      'Each pocket behind a rock is a miniature pool. Systematic fishing here can produce a fish on every other cast.'
+    ],
+    approach: [
+      'Short casts — 10 to 15 feet max. Drop your fly into each pocket and let it drift 2-3 feet. Move to the next.',
+      'High-stick nymph with your rod tip up. Maintain direct contact — pocket strikes are fast and subtle.',
+      'Work upstream through the pockets systematically. Hit every one — you will be surprised how many hold fish.',
+      'Dont false cast over pocket water — the spray and shadow will spook fish. One pickup, one cast, one drift.',
+      'Step on rocks, not into the pockets. Wading through pocket water puts fish down for 20 minutes.'
+    ],
+    flies: [
+      '#12 BH Pat Dorsey top secret — heavy enough to get down fast in short drifts. Perfect for pockets.',
+      '#14 BH Hares Ear — the workhorse. Gets down fast, imitates everything, visible to fish in turbulent water.',
+      '#10 Stonefly nymph — pocket water trout eat big food. Dont be afraid to go heavy.',
+      '#12 Rubber Legs — the movement in turbulent water triggers strikes from aggressive pocket fish.',
+      '#14 Copper John — sinks fast and flashes in the broken light. Ideal for quick-drop pocket fishing.'
+    ]
   }
 };
 
@@ -265,22 +409,37 @@ window.TROUT_WATERS = [
   // ── MONTAUK STATE PARK ─────────────────────────────────────────────────
   //  Stream: Current River flows S past spring (~1 mi of trout water)
   //  OSM spring: node 12542787262  (37.4605, -91.6834)
-  //  Zone 1 (C&R): Near spring on Current River — catch-and-release only, flies only
-  //  Zone 2 (Fly): Middle Current River section — fly fishing only
-  //  Zone 3 (All): Lower Current River section — all legal methods incl bait
+  //  Fly Only zone: 37.4600,-91.6832 → 37.4517,-91.6864  (user-verified 2026-02-24)
+  //  Catch & Release zone: 37.4594,-91.6841 → 37.4558,-91.6846  (user-verified 2026-02-24)
+  //  All Methods zone: between 37.4517,-91.6864 and 37.4556,-91.6845  (user-verified 2026-02-24)
   {
     id: 'montauk', name: 'Montauk State Park', category: 'trout-park', ribbon: 'Trout Park',
     region: 'eastern-ozarks', lat: 37.4605, lng: -91.6834, acres: null, streamMiles: 1.0, avgStreamWidth: 15,
     species: ['rainbow'], waterType: 'spring-creek', flowSource: 'Montauk Spring (53M gal/day)',
     usgsSiteId: null, generationWarning: false, troutStampRequired: true,
     seasonDates: { open: 'March 1', close: 'October 31', catchRelease: 'Nov 1 - Feb 28' },
-    regulations: { method: 'Zone 1 C&R flies only, Zone 2 fly only, Zone 3 all methods.', dailyLimit: 4, minSize: null, gearRestrictions: 'Zone 1: C&R flies only. Zone 2: fly fishing only. Zone 3: all legal methods.', specialRules: 'Daily tag required ($3). Winter C&R: flies/artificial lures only, entire stream.' },
+    regulations: { method: 'Fly Only zone, Catch & Release zone, All Methods zone.', dailyLimit: 4, minSize: null, gearRestrictions: 'Fly Only: flies only. C&R: catch-and-release, flies/artificial. All Methods: all legal methods.', specialRules: 'Daily tag required ($3). Winter C&R: flies/artificial lures only, entire stream.' },
     access: [
-      { name: 'Zone 1 — C&R Fly Only', lat: 37.4590, lng: -91.6816, type: 'zone', methods: ['fly'], notes: 'Catch-and-release only, flies only. Near spring pool on Current River — big resident trout. Most technical water.' },
-      { name: 'Zone 2 — Fly Only', lat: 37.4557, lng: -91.6821, type: 'zone', methods: ['fly'], notes: 'Fly fishing only. Middle Current River section. Good hatches in riffles and runs.' },
-      { name: 'Zone 3 — All Methods', lat: 37.4536, lng: -91.6848, type: 'zone', methods: ['fly', 'spin', 'bait'], notes: 'All legal methods including bait. Lower Current River section. Best for families.' },
+      // Zone boundaries user-verified 2026-02-24 from field GPS coordinates
+      // Fly Only: 37°27'36.07"N 91°40'59.50"W → 37°27'05.96"N 91°41'10.96"W
+      // C&R:     37°27'33.97"N 91°41'02.86"W → 37°27'20.74"N 91°41'04.61"W
+      // All Methods: between 37°27'05.96"N 91°41'10.96"W and 37°27'20.14"N 91°41'04.07"W
+      { name: 'Fly Only Zone', lat: 37.4559, lng: -91.6848, type: 'zone', methods: ['fly'], zoneBounds: [[37.4600, -91.6832], [37.4517, -91.6864]], habitat: 'pool-run', clarity: 'gin-clear', depth: 'deep', pressure: 'moderate', notes: 'Fly fishing ONLY. From 37°27\'36"N near spring pool downstream to 37°27\'06"N. Longest zone — covers most of the park stream. Crystal-clear spring-fed water, big resident trout. Dead-drift scuds and small nymphs.' },
+      { name: 'Catch & Release Zone', lat: 37.4576, lng: -91.6844, type: 'zone', methods: ['fly', 'spin'], zoneBounds: [[37.4594, -91.6841], [37.4558, -91.6846]], habitat: 'riffle-run', clarity: 'gin-clear', depth: 'medium-deep', pressure: 'moderate', notes: 'Catch-and-release only — flies and artificial lures. From 37°27\'34"N to 37°27\'21"N. Upper park section near spring. All fish must be released. Most technical water with biggest resident trout.' },
+      { name: 'All Methods Zone', lat: 37.4537, lng: -91.6855, type: 'zone', methods: ['fly', 'spin', 'bait'], zoneBounds: [[37.4517, -91.6864], [37.4556, -91.6845]], habitat: 'run-pool', clarity: 'clear', depth: 'medium-deep', pressure: 'low', notes: 'All legal methods including bait. Between 37°27\'06"N and 37°27\'20"N. Convergence zone of fly-only and C&R sections. Best for families and spin anglers.' },
       { name: 'Store / Tag Office', lat: 37.4522, lng: -91.6811, type: 'parking', verified: true, notes: 'Park store inside Dorman L. Steelman Lodge. Daily tags, tackle, supplies. (OSM node verified)' }
       // Lodge Parking and Hatchery/Mill removed — no OSM-verified coordinates
+    ],
+    // ── 7 General Hotspot Holding Areas (spread start-to-end) ──
+    // These appear on check-in. Micro fishing spots deploy when user taps a hotspot.
+    hotspots: [
+      { name: 'Spring Run Pool', lat: 37.4597, lng: -91.6817, habitat: 'pool', notes: 'Deep spring-fed pool at the headwaters. Cold, clear water year-round. Big resident trout stack up here.' },
+      { name: 'Upper Riffle', lat: 37.4579, lng: -91.6816, habitat: 'riffle', notes: 'Fast shallow water with gravel bottom. Active feeders during hatches. Best dry-fly water in the park.' },
+      { name: 'Bend Pool', lat: 37.4564, lng: -91.6815, habitat: 'pool', notes: 'Deep outside bend pool with undercut bank. Larger trout hold tight to the far bank structure.' },
+      { name: 'Mid-Run Seam', lat: 37.4553, lng: -91.6821, habitat: 'seam', notes: 'Current seam where fast water meets slow. Prime feeding lane — dead-drift nymphs along the seam edge.' },
+      { name: 'Deep Run', lat: 37.4543, lng: -91.6831, habitat: 'run', notes: 'Steady mid-depth run with mixed substrate. Good all-around water for nymphing and streamers.' },
+      { name: 'Lower Pool', lat: 37.4533, lng: -91.6855, habitat: 'pool', notes: 'Wide deep pool in the lower section. Less pressure than upper water. Scuds and sowbugs are deadly here.' },
+      { name: 'Tail-Out', lat: 37.4518, lng: -91.6864, habitat: 'tailout', notes: 'Shallow tail-out at the downstream end. Trout feed aggressively on emergers in the thin water.' }
     ],
     // OSM Way 162645228 — Current River (waterway=river), verified 2026-02-20
     streamPath: [
@@ -593,17 +752,32 @@ window.TROUT_WATERS = [
   //  MAJOR TROUT RIVERS
   // ═══════════════════════════════════════════════════════════════════════
   {
-    id: 'current-river', name: 'Current River', category: 'river', ribbon: 'White/Blue Mix',
-    region: 'eastern-ozarks', lat: 37.3059, lng: -91.4094, acres: null, streamMiles: 50,
+    id: 'current-river', name: 'Current River', category: 'river', ribbon: 'Blue Ribbon — Trophy Brown',
+    region: 'eastern-ozarks', lat: 37.3059, lng: -91.4094, acres: null, streamMiles: 50, avgStreamWidth: 15,
     species: ['rainbow', 'brown'], waterType: 'river', flowSource: 'Welch Spring, Cave Spring, Blue Spring, Pulltite + many',
     usgsSiteId: '07066000', generationWarning: false, troutStampRequired: true,
     seasonDates: { open: 'Year-round', close: null, catchRelease: null },
     regulations: { method: 'Varies by section. Check MDC for specific reach.', dailyLimit: 4, minSize: 'Varies', gearRestrictions: 'Some sections fly/artificial only. Others all methods.', specialRules: 'National Scenic Riverway. Federal + state regulations.' },
     access: [
-      { name: 'Montauk State Park', lat: 37.4549, lng: -91.6712, type: 'parking', notes: 'Upper Current begins here. Float downstream. Trout park — see Montauk listing.' },
-      { name: 'Tan Vat Access', lat: 37.4370, lng: -91.6500, type: 'entry', notes: 'Downstream of Montauk via CR 119. Named for old tanning vat. Gravel road. Wild trout in spring branches.' },
-      { name: 'Baptist Camp', lat: 37.4260, lng: -91.6380, type: 'entry', notes: 'Walk-in access downstream. Deeper pools, quieter water. Some private land — check signs.' },
-      { name: 'Cedar Grove', lat: 37.4130, lng: -91.6270, type: 'entry', notes: 'Remote downstream access. Excellent solitude and wild trout. Gravel bar camping.' },
+      // ── BLUE RIBBON REACH DEFINITIONS ──────────────────────────────────
+      // Boundaries user-verified 2026-02-24 from field GPS coordinates (DMS → decimal)
+      // zoneBounds: [[upstream lat,lng], [downstream lat,lng]]
+      // Park End / Blue Ribbon Start: 37°26'59.14"N 91°40'17.15"W = 37.44976, -91.67143
+      // Tan Vat boundary:             37°27'03.66"N 91°39'41.78"W = 37.45102, -91.66161
+      // Baptist Camp boundary:         37°26'07.42"N 91°39'25.70"W = 37.43539, -91.65714
+      // Cedar Grove boundary:          37°25'20.22"N 91°36'30.53"W = 37.42228, -91.60848
+      { name: 'Blue Ribbon — Park End → Tan Vat', lat: 37.45039, lng: -91.66652, type: 'zone', methods: ['fly', 'spin'], zoneBounds: [[37.44976, -91.67143], [37.45102, -91.66161]], habitat: 'riffle-run-pool', clarity: 'gin-clear', depth: 'medium-deep', pressure: 'moderate', notes: 'Park boundary to Tan Vat. Blue Ribbon water — flies and artificial lures only, 1 fish, 18" min. TROPHY BROWN TROUT WATER. Cold, gin-clear spring-fed flow holds both stocked rainbows drifting from Montauk Spring and wild brown trout that ambush from undercut banks and boulder shadows. Highest trout density on the Current. Dawn and dusk are prime for big browns.' },
+      { name: 'Blue Ribbon — Tan Vat → Baptist Camp', lat: 37.44321, lng: -91.65938, type: 'zone', methods: ['fly', 'spin'], zoneBounds: [[37.45102, -91.66161], [37.43539, -91.65714]], habitat: 'run-pool', clarity: 'clear', depth: 'medium', pressure: 'low', notes: 'Tan Vat to Baptist Camp. Blue Ribbon water. PREMIER TROPHY BROWN TROUT REACH. Wild browns hold in deep pools, spring seeps, and under log jams. Stocked rainbows migrate down from Montauk. Cold spring inflows create thermal refuges where big browns stack up year-round. Excellent solitude — remote gravel road access only. Best wild brown trout water on the main Current.' },
+      { name: 'Blue Ribbon — Baptist Camp → Cedar Grove', lat: 37.42884, lng: -91.63281, type: 'zone', methods: ['fly', 'spin'], zoneBounds: [[37.43539, -91.65714], [37.42228, -91.60848]], habitat: 'riffle-run', clarity: 'clear', depth: 'medium', pressure: 'low', notes: 'Baptist Camp to Cedar Grove. Blue Ribbon water. LONGEST BLUE RIBBON REACH — remote trophy brown trout country. Wild browns patrol deep runs and undercut ledges. Spring seeps along banks create cold-water sanctuaries. Sculpin and crayfish populations fuel trophy growth. Gravel bar camping. True backcountry solitude. Low pressure means big, educated browns.' },
+      { name: 'Reach 4 — Welch Spring Corridor (Cedar Grove → Akers)', lat: 37.3785, lng: -91.5620, type: 'zone', methods: ['fly', 'spin', 'bait'], zoneBounds: [[37.42228, -91.60848], [37.3440, -91.4960]], habitat: 'riffle-run', clarity: 'clear', depth: 'medium', pressure: 'low', notes: 'Cedar Grove to Akers Ferry. Welch Spring (121 cfs) enters mid-reach — its spring branch holds wild trout. Main river has mixed trout and smallmouth. Float-fishing territory. Remote and beautiful.' },
+      { name: 'Reach 5 — Middle Current (Akers → Round Spring)', lat: 37.3110, lng: -91.4385, type: 'zone', methods: ['fly', 'spin', 'bait'], zoneBounds: [[37.3440, -91.4960], [37.2780, -91.3810]], habitat: 'run-pool', clarity: 'clear', depth: 'medium-deep', pressure: 'moderate', notes: 'Akers Ferry to Round Spring. ~10 miles. Transition zone — trout near cold spring inputs, increasing smallmouth. Pulltite Spring branch holds trout. Heavy canoe traffic in summer. Fish early/late.' },
+      { name: 'Reach 6 — Blue Spring Section (Round Spring → Two Rivers)', lat: 37.2660, lng: -91.3725, type: 'zone', methods: ['fly', 'spin', 'bait'], zoneBounds: [[37.2780, -91.3810], [37.2540, -91.3640]], habitat: 'pool-run', clarity: 'clear', depth: 'deep', pressure: 'moderate', notes: 'Round Spring to Two Rivers confluence. ~5 miles. Blue Spring (Missouris deepest at 310ft) — spring branch holds trout year-round. Main river primarily smallmouth with seasonal trout near spring mouths. Jacks Fork enters at Two Rivers.' },
+
+      // ── ACCESS POINTS ─────────────────────────────────────────────────
+      { name: 'Montauk State Park (Park End)', lat: 37.44976, lng: -91.67143, type: 'parking', verified: true, notes: 'Park boundary / Blue Ribbon start. Upper Current begins here. Float downstream into Blue Ribbon water.' },
+      { name: 'Tan Vat Access', lat: 37.45102, lng: -91.66161, type: 'entry', verified: true, notes: 'Blue Ribbon boundary. Downstream of Montauk via CR 119. Named for old tanning vat. Gravel road. Wild trout in spring branches.' },
+      { name: 'Baptist Camp', lat: 37.43539, lng: -91.65714, type: 'entry', verified: true, notes: 'Blue Ribbon boundary. Walk-in access downstream. Deeper pools, quieter water. Some private land — check signs.' },
+      { name: 'Cedar Grove', lat: 37.42228, lng: -91.60848, type: 'entry', verified: true, notes: 'Blue Ribbon end / downstream boundary. Remote access. Excellent solitude and wild trout. Gravel bar camping.' },
       { name: 'Welch Spring', lat: 37.3700, lng: -91.5580, type: 'entry', notes: 'Major spring branch (121 cfs average). Wild trout. Walk-in 0.5mi from Hwy KK. Remote.' },
       { name: 'Akers Ferry', lat: 37.3440, lng: -91.4960, type: 'parking', notes: 'NPS campground and historic ferry crossing. Major float put-in/take-out. Canoe rental. Ranger station.' },
       { name: 'Pulltite Spring', lat: 37.3180, lng: -91.4180, type: 'parking', notes: 'NPS launch and campground. Good wade fishing near spring mouth. Float access.' },
@@ -613,14 +787,45 @@ window.TROUT_WATERS = [
       { name: 'Big Spring', lat: 36.9620, lng: -90.9880, type: 'parking', notes: 'One of Americas largest springs (277M gal/day). NPS campground, CCC structures. Lower Current River. Major access.' },
       { name: 'Van Buren Access', lat: 36.9910, lng: -91.0150, type: 'parking', notes: 'NPS headquarters town. Hwy 60 bridge. Float take-out. Canoe liveries. Services.' }
     ],
+    // ── 7 Hotspot Holding Areas — Blue Ribbon Trophy Brown Trout Zone ──
+    // Spread across all 3 Blue Ribbon reaches (Park End → Cedar Grove)
+    // Emphasize brown trout ambush points + rainbow feeding lanes
+    hotspots: [
+      { name: 'Park End Riffle', lat: 37.44985, lng: -91.67050, habitat: 'riffle', notes: 'Fast riffle water just below the park boundary. Brown trout ambush from behind boulders and ledge cuts at dawn and dusk. Rainbows feed in the faster current seams. Dead-drift nymphs or swing a sculpin pattern tight to structure.' },
+      { name: 'Spring Seep Bend', lat: 37.45025, lng: -91.66650, habitat: 'pool', notes: 'Deep bend pool fed by a cold spring seep on the right bank. Wild browns stack here year-round in the thermal break. The deepest water in Zone 1. Strip a Woolly Bugger along the far bank or dead-drift a scud in the seep current.' },
+      { name: 'Tan Vat Undercut', lat: 37.44950, lng: -91.66050, habitat: 'run', notes: 'Deep run with undercut limestone ledges below Tan Vat access. Trophy browns hold tight under overhanging rock. Low-light ambush water — fish it early and late. Swing streamers or bounce a weighted sculpin along the ledge face.' },
+      { name: 'Log Jam Pool', lat: 37.44500, lng: -91.65870, habitat: 'pool', notes: 'Large pool with downed timber and root wads. Structure-oriented browns prowl the shadows. Dead-drift a sculpin pattern along the log edges. Rainbows stack in the tailout. This is prime trophy brown water.' },
+      { name: 'Baptist Camp Riffle', lat: 37.43900, lng: -91.65760, habitat: 'riffle', notes: 'Long productive riffle above Baptist Camp. Both species feed aggressively during hatches. Browns hold in the deeper slots between gravel bars. Match the hatch with dries or swing soft hackles through the runs.' },
+      { name: 'Sculpin Ledge Run', lat: 37.43180, lng: -91.65000, habitat: 'run', notes: 'Deep bedrock ledge run with dark water. Browns hunt sculpin and crayfish along the ledge face — this is their dining room. Drift a weighted Muddler Minnow or Sculpin Zonker tight to the rock. Prime trophy water.' },
+      { name: 'Cedar Grove Tailout', lat: 37.42420, lng: -91.61800, habitat: 'tailout', notes: 'Shallow tailout near Cedar Grove access. Big browns push up from deep holding water at dusk to feed on emergers and baitfish. Evening dry fly and streamer action. Remote backcountry — you may have it to yourself.' }
+    ],
+    // ── Stream Path — Blue Ribbon Section (Park End → Cedar Grove) ──
+    // 20 waypoints tracing the Current River through all 3 Blue Ribbon zones
+    streamPath: [
+      [37.44976,-91.67143],[37.44990,-91.66950],[37.45010,-91.66750],
+      [37.45039,-91.66550],[37.45070,-91.66350],[37.45102,-91.66161],
+      [37.44950,-91.66050],[37.44750,-91.65950],[37.44500,-91.65870],
+      [37.44200,-91.65800],[37.43900,-91.65760],[37.43539,-91.65714],
+      [37.43350,-91.65400],[37.43180,-91.65000],[37.43000,-91.64500],
+      [37.42850,-91.63800],[37.42720,-91.63200],[37.42580,-91.62500],
+      [37.42420,-91.61800],[37.42228,-91.60848]
+    ],
+    // bankWidths: [leftMeters, rightMeters] — Upper Current River wider channel
+    bankWidths: [
+      [7.0,7.5],[7.0,7.0],[6.5,7.0],[6.5,6.5],
+      [6.5,7.0],[7.0,7.0],[7.5,7.0],[7.0,7.0],
+      [7.0,7.5],[7.5,7.5],[7.0,7.0],[7.0,7.5],
+      [7.5,7.5],[8.0,7.5],[7.5,7.5],[7.5,8.0],
+      [8.0,8.0],[8.0,7.5],[7.5,7.5],[7.0,7.0]
+    ],
     solitude: 'medium', difficulty: 'moderate', wadingRequired: false, familyFriendly: true,
     bestSeasons: ['spring', 'fall', 'winter'],
-    hatches: { spring: ['BWO', 'Caddis', 'Stoneflies', 'March Browns'], summer: ['Caddis', 'Terrestrials', 'Sulphurs'], fall: ['BWO', 'October Caddis', 'Midges'], winter: ['Midges', 'BWO'] },
-    topFlies: ['#14 Woolly Bugger', '#16 Pheasant Tail', '#14 Elk Hair Caddis', '#12 Clouser Minnow', '#10 Muddler Minnow'],
-    topLures: ['1/4oz Rooster Tail', 'Rapala Countdown CD-5 (rainbow trout)', 'Mepps spinner', 'Rebel Wee Craw (crawdad)', 'Small crankbait (shad)'],
+    hatches: { spring: ['BWO #16-20', 'Caddis #14-16', 'Stoneflies #8-12', 'March Browns #12-14', 'Sculpin activity (brown trout key forage)'], summer: ['Caddis #14-16', 'Terrestrials (hoppers, beetles, ants)', 'Sulphurs #16-18', 'Crayfish movement at dusk (trophy browns)'], fall: ['BWO #16-20', 'October Caddis #8-10', 'Midges #18-22', 'Brown trout spawn — handle with care, big fish on the move'], winter: ['Midges #20-24', 'BWO #18-22', 'Sculpin/streamer season — trophy browns feed aggressively in cold water'] },
+    topFlies: ['#6 Sculpin Streamer (brown trout killer)', '#8 Olive Zonker (trophy browns)', '#4 Articulated Streamer (big brown hunter)', '#10 Muddler Minnow (sculpin imitation)', '#8 Black Woolly Bugger (weighted — swing deep)', '#12 Crayfish Pattern (brown trout staple)', '#14 Pheasant Tail (bread and butter)', '#14 Elk Hair Caddis (hatch matcher)', '#16 Parachute Adams (all-purpose dry)', '#18 Zebra Midge (year-round producer)'],
+    topLures: ['1/4oz Rooster Tail', 'Rapala Countdown CD-5 (rainbow + brown)', 'Rapala Original F5 (trophy brown minnow)', 'Mepps Aglia #2 (brown trout gold)', 'Rebel Wee Craw (crayfish — browns love it)', 'Small crankbait (shad pattern)'],
     topBait: ['Nightcrawlers', 'Crawfish tails', 'Corn (where legal)'],
-    coachTips: ['The Current River is a national treasure. Float trips are classic.', 'Spring branches along the Current hold wild trout — the real gems.', 'Canoe traffic heavy in summer. Fish early morning or late evening.', 'Upper Current near Montauk has best trout water. Below Round Spring transitions to smallmouth.'],
-    description: 'Ozark National Scenic Riverway. One of Americas great spring-fed rivers. Wild trout in spring branches, stocked in main river. World-class float fishing.'
+    coachTips: ['TROPHY BROWN TROUT WATER — the Blue Ribbon zones hold wild browns that rival any in the Ozarks.', 'Dawn and dusk are your windows. Big browns are low-light predators — be on the water before sunrise.', 'Dead-drift a sculpin streamer tight to undercut banks and ledges. Trophy browns ambush from shadow.', 'Spring seeps create thermal refuges — look for temperature breaks where cold water enters. Browns stack there.', 'Fall is prime time — brown trout spawn Oct-Nov. Big fish are aggressive but handle spawners with care.', 'The Current River is a national treasure. Blue Ribbon regulations protect trophy fish — 1 trout, 18" minimum.', 'Canoe traffic heavy in summer. Fish early morning or late evening for solitude and active browns.', 'Rainbows from Montauk drift into Blue Ribbon water. You will catch both species — be ready for either.'],
+    description: 'Ozark National Scenic Riverway — Missouri\'s premier trophy brown trout river. Blue Ribbon zones from Park End to Cedar Grove hold wild brown trout in gin-clear, spring-fed water. Stocked rainbows from Montauk Spring add diversity. 18" minimum, 1 fish limit. Sculpin, crayfish, and classic Ozark hatches fuel trophy growth. Same check-in flow as Montauk — hotspot pins deploy across all 3 Blue Ribbon reaches.'
   },
   {
     id: 'eleven-point', name: 'Eleven Point River', category: 'river', ribbon: 'White/Blue Mix',
