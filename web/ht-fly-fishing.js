@@ -1860,12 +1860,12 @@ function _deployHotspotMicroSpots(idx) {
   }
 
   // Build micro spots within 50m of the hotspot center
-  var maxMicros = 6;
+  var maxMicros = 4;
   var wadeMode = 'waders';
-  var microTypes = ['primary-lie', 'seam-edge', 'pocket-water', 'feeding-lane', 'tail-drift', 'bank-lie'];
+  var microTypes = ['primary-lie', 'seam-edge', 'pocket-water'];
   var MAX_DIST = 60;
-  var MIN_FROM_MAIN = 8;
-  var MIN_BETWEEN = 15;   // 15m between micro spots — fills the area better
+  var MIN_FROM_MAIN = 12;
+  var MIN_BETWEEN = 25;   // 25m between micro spots — prevents icon overlap
   var candidates = [];
 
   for (var sIdx = 0; sIdx < denseSeg.length; sIdx++) {
@@ -4135,8 +4135,8 @@ function _deployMicroCluster(opts) {
   // Standing position: normally downstream of fish (angler behind fish)
   // BUT if fish is near the downstream end of the zone, flip to upstream
   // to avoid placing angler past zone boundary / waterfalls / obstacles
-  var standDistDense = 2; // 2 dense steps × 5m = ~10m — realistic casting distance
-  var EDGE_BUFFER = 3;   // stay at least 3 indices from zone boundary
+  var standDistDense = 4; // 4 dense steps × 5m = ~20m
+  var EDGE_BUFFER = 5;   // stay at least 5 indices from zone boundary
   var standSIdx;
   if (fishSIdx + standDistDense > seg.length - 1 - EDGE_BUFFER) {
     // Near downstream end — place angler UPSTREAM of fish instead
