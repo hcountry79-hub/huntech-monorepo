@@ -752,32 +752,32 @@ window.TROUT_WATERS = [
   //  MAJOR TROUT RIVERS
   // ═══════════════════════════════════════════════════════════════════════
   {
-    id: 'current-river', name: 'Current River', category: 'river', ribbon: 'White/Blue Mix',
-    region: 'eastern-ozarks', lat: 37.3059, lng: -91.4094, acres: null, streamMiles: 50,
+    id: 'current-river', name: 'Current River', category: 'river', ribbon: 'Blue Ribbon — Trophy Brown',
+    region: 'eastern-ozarks', lat: 37.3059, lng: -91.4094, acres: null, streamMiles: 50, avgStreamWidth: 15,
     species: ['rainbow', 'brown'], waterType: 'river', flowSource: 'Welch Spring, Cave Spring, Blue Spring, Pulltite + many',
     usgsSiteId: '07066000', generationWarning: false, troutStampRequired: true,
     seasonDates: { open: 'Year-round', close: null, catchRelease: null },
     regulations: { method: 'Varies by section. Check MDC for specific reach.', dailyLimit: 4, minSize: 'Varies', gearRestrictions: 'Some sections fly/artificial only. Others all methods.', specialRules: 'National Scenic Riverway. Federal + state regulations.' },
     access: [
       // ── BLUE RIBBON REACH DEFINITIONS ──────────────────────────────────
-      // Boundaries user-verified 2026-02-24 from field GPS coordinates
+      // Boundaries user-verified 2026-02-24 from field GPS coordinates (DMS → decimal)
       // zoneBounds: [[upstream lat,lng], [downstream lat,lng]]
-      // Park End / Blue Ribbon Start: 37°26'59.14"N 91°40'17.15"W = 37.4498, -91.6714
-      // Tan Vat boundary:             37°27'03.66"N 91°39'41.78"W = 37.4510, -91.6616
-      // Baptist Camp boundary:         37°26'07.42"N 91°39'25.70"W = 37.4354, -91.6571
-      // Cedar Grove boundary:          37°25'20.22"N 91°36'30.53"W = 37.4223, -91.6085
-      { name: 'Blue Ribbon — Park End → Tan Vat', lat: 37.4504, lng: -91.6665, type: 'zone', methods: ['fly', 'spin'], zoneBounds: [[37.4498, -91.6714], [37.4510, -91.6616]], habitat: 'riffle-run-pool', clarity: 'gin-clear', depth: 'medium-deep', pressure: 'moderate', notes: 'Park boundary to Tan Vat. Blue Ribbon water — flies and artificial lures only, 1 fish, 18" min. First Blue Ribbon reach below Montauk. Highest trout density on the Current — stocked rainbows from Montauk Spring drift downstream. Cold, clear spring-fed water.' },
-      { name: 'Blue Ribbon — Tan Vat → Baptist Camp', lat: 37.4432, lng: -91.6594, type: 'zone', methods: ['fly', 'spin'], zoneBounds: [[37.4510, -91.6616], [37.4354, -91.6571]], habitat: 'run-pool', clarity: 'clear', depth: 'medium', pressure: 'low', notes: 'Tan Vat to Baptist Camp. Blue Ribbon water. Wild trout in spring seeps and deep pools. Stocked fish migrate down from Montauk. Excellent solitude — remote gravel road access only. Best wild trout reach on the main Current.' },
-      { name: 'Blue Ribbon — Baptist Camp → Cedar Grove', lat: 37.4289, lng: -91.6328, type: 'zone', methods: ['fly', 'spin'], zoneBounds: [[37.4354, -91.6571], [37.4223, -91.6085]], habitat: 'riffle-run', clarity: 'clear', depth: 'medium', pressure: 'low', notes: 'Baptist Camp to Cedar Grove. Blue Ribbon water. Longest Blue Ribbon reach — remote and beautiful. Wild trout hold near spring seeps along banks. Gravel bar camping. True backcountry solitude.' },
-      { name: 'Reach 4 — Welch Spring Corridor (Cedar Grove → Akers)', lat: 37.3785, lng: -91.5620, type: 'zone', methods: ['fly', 'spin', 'bait'], zoneBounds: [[37.4223, -91.6085], [37.3440, -91.4960]], habitat: 'riffle-run', clarity: 'clear', depth: 'medium', pressure: 'low', notes: 'Cedar Grove to Akers Ferry. Welch Spring (121 cfs) enters mid-reach — its spring branch holds wild trout. Main river has mixed trout and smallmouth. Float-fishing territory. Remote and beautiful.' },
+      // Park End / Blue Ribbon Start: 37°26'59.14"N 91°40'17.15"W = 37.44976, -91.67143
+      // Tan Vat boundary:             37°27'03.66"N 91°39'41.78"W = 37.45102, -91.66161
+      // Baptist Camp boundary:         37°26'07.42"N 91°39'25.70"W = 37.43539, -91.65714
+      // Cedar Grove boundary:          37°25'20.22"N 91°36'30.53"W = 37.42228, -91.60848
+      { name: 'Blue Ribbon — Park End → Tan Vat', lat: 37.45039, lng: -91.66652, type: 'zone', methods: ['fly', 'spin'], zoneBounds: [[37.44976, -91.67143], [37.45102, -91.66161]], habitat: 'riffle-run-pool', clarity: 'gin-clear', depth: 'medium-deep', pressure: 'moderate', notes: 'Park boundary to Tan Vat. Blue Ribbon water — flies and artificial lures only, 1 fish, 18" min. TROPHY BROWN TROUT WATER. Cold, gin-clear spring-fed flow holds both stocked rainbows drifting from Montauk Spring and wild brown trout that ambush from undercut banks and boulder shadows. Highest trout density on the Current. Dawn and dusk are prime for big browns.' },
+      { name: 'Blue Ribbon — Tan Vat → Baptist Camp', lat: 37.44321, lng: -91.65938, type: 'zone', methods: ['fly', 'spin'], zoneBounds: [[37.45102, -91.66161], [37.43539, -91.65714]], habitat: 'run-pool', clarity: 'clear', depth: 'medium', pressure: 'low', notes: 'Tan Vat to Baptist Camp. Blue Ribbon water. PREMIER TROPHY BROWN TROUT REACH. Wild browns hold in deep pools, spring seeps, and under log jams. Stocked rainbows migrate down from Montauk. Cold spring inflows create thermal refuges where big browns stack up year-round. Excellent solitude — remote gravel road access only. Best wild brown trout water on the main Current.' },
+      { name: 'Blue Ribbon — Baptist Camp → Cedar Grove', lat: 37.42884, lng: -91.63281, type: 'zone', methods: ['fly', 'spin'], zoneBounds: [[37.43539, -91.65714], [37.42228, -91.60848]], habitat: 'riffle-run', clarity: 'clear', depth: 'medium', pressure: 'low', notes: 'Baptist Camp to Cedar Grove. Blue Ribbon water. LONGEST BLUE RIBBON REACH — remote trophy brown trout country. Wild browns patrol deep runs and undercut ledges. Spring seeps along banks create cold-water sanctuaries. Sculpin and crayfish populations fuel trophy growth. Gravel bar camping. True backcountry solitude. Low pressure means big, educated browns.' },
+      { name: 'Reach 4 — Welch Spring Corridor (Cedar Grove → Akers)', lat: 37.3785, lng: -91.5620, type: 'zone', methods: ['fly', 'spin', 'bait'], zoneBounds: [[37.42228, -91.60848], [37.3440, -91.4960]], habitat: 'riffle-run', clarity: 'clear', depth: 'medium', pressure: 'low', notes: 'Cedar Grove to Akers Ferry. Welch Spring (121 cfs) enters mid-reach — its spring branch holds wild trout. Main river has mixed trout and smallmouth. Float-fishing territory. Remote and beautiful.' },
       { name: 'Reach 5 — Middle Current (Akers → Round Spring)', lat: 37.3110, lng: -91.4385, type: 'zone', methods: ['fly', 'spin', 'bait'], zoneBounds: [[37.3440, -91.4960], [37.2780, -91.3810]], habitat: 'run-pool', clarity: 'clear', depth: 'medium-deep', pressure: 'moderate', notes: 'Akers Ferry to Round Spring. ~10 miles. Transition zone — trout near cold spring inputs, increasing smallmouth. Pulltite Spring branch holds trout. Heavy canoe traffic in summer. Fish early/late.' },
       { name: 'Reach 6 — Blue Spring Section (Round Spring → Two Rivers)', lat: 37.2660, lng: -91.3725, type: 'zone', methods: ['fly', 'spin', 'bait'], zoneBounds: [[37.2780, -91.3810], [37.2540, -91.3640]], habitat: 'pool-run', clarity: 'clear', depth: 'deep', pressure: 'moderate', notes: 'Round Spring to Two Rivers confluence. ~5 miles. Blue Spring (Missouris deepest at 310ft) — spring branch holds trout year-round. Main river primarily smallmouth with seasonal trout near spring mouths. Jacks Fork enters at Two Rivers.' },
 
       // ── ACCESS POINTS ─────────────────────────────────────────────────
-      { name: 'Montauk State Park (Park End)', lat: 37.4498, lng: -91.6714, type: 'parking', notes: 'Park boundary / Blue Ribbon start. Upper Current begins here. Float downstream into Blue Ribbon water.' },
-      { name: 'Tan Vat Access', lat: 37.4510, lng: -91.6616, type: 'entry', notes: 'Blue Ribbon boundary. Downstream of Montauk via CR 119. Named for old tanning vat. Gravel road. Wild trout in spring branches.' },
-      { name: 'Baptist Camp', lat: 37.4354, lng: -91.6571, type: 'entry', notes: 'Blue Ribbon boundary. Walk-in access downstream. Deeper pools, quieter water. Some private land — check signs.' },
-      { name: 'Cedar Grove', lat: 37.4223, lng: -91.6085, type: 'entry', notes: 'Blue Ribbon end / downstream boundary. Remote access. Excellent solitude and wild trout. Gravel bar camping.' },
+      { name: 'Montauk State Park (Park End)', lat: 37.44976, lng: -91.67143, type: 'parking', verified: true, notes: 'Park boundary / Blue Ribbon start. Upper Current begins here. Float downstream into Blue Ribbon water.' },
+      { name: 'Tan Vat Access', lat: 37.45102, lng: -91.66161, type: 'entry', verified: true, notes: 'Blue Ribbon boundary. Downstream of Montauk via CR 119. Named for old tanning vat. Gravel road. Wild trout in spring branches.' },
+      { name: 'Baptist Camp', lat: 37.43539, lng: -91.65714, type: 'entry', verified: true, notes: 'Blue Ribbon boundary. Walk-in access downstream. Deeper pools, quieter water. Some private land — check signs.' },
+      { name: 'Cedar Grove', lat: 37.42228, lng: -91.60848, type: 'entry', verified: true, notes: 'Blue Ribbon end / downstream boundary. Remote access. Excellent solitude and wild trout. Gravel bar camping.' },
       { name: 'Welch Spring', lat: 37.3700, lng: -91.5580, type: 'entry', notes: 'Major spring branch (121 cfs average). Wild trout. Walk-in 0.5mi from Hwy KK. Remote.' },
       { name: 'Akers Ferry', lat: 37.3440, lng: -91.4960, type: 'parking', notes: 'NPS campground and historic ferry crossing. Major float put-in/take-out. Canoe rental. Ranger station.' },
       { name: 'Pulltite Spring', lat: 37.3180, lng: -91.4180, type: 'parking', notes: 'NPS launch and campground. Good wade fishing near spring mouth. Float access.' },
@@ -787,14 +787,45 @@ window.TROUT_WATERS = [
       { name: 'Big Spring', lat: 36.9620, lng: -90.9880, type: 'parking', notes: 'One of Americas largest springs (277M gal/day). NPS campground, CCC structures. Lower Current River. Major access.' },
       { name: 'Van Buren Access', lat: 36.9910, lng: -91.0150, type: 'parking', notes: 'NPS headquarters town. Hwy 60 bridge. Float take-out. Canoe liveries. Services.' }
     ],
+    // ── 7 Hotspot Holding Areas — Blue Ribbon Trophy Brown Trout Zone ──
+    // Spread across all 3 Blue Ribbon reaches (Park End → Cedar Grove)
+    // Emphasize brown trout ambush points + rainbow feeding lanes
+    hotspots: [
+      { name: 'Park End Riffle', lat: 37.44985, lng: -91.67050, habitat: 'riffle', notes: 'Fast riffle water just below the park boundary. Brown trout ambush from behind boulders and ledge cuts at dawn and dusk. Rainbows feed in the faster current seams. Dead-drift nymphs or swing a sculpin pattern tight to structure.' },
+      { name: 'Spring Seep Bend', lat: 37.45025, lng: -91.66650, habitat: 'pool', notes: 'Deep bend pool fed by a cold spring seep on the right bank. Wild browns stack here year-round in the thermal break. The deepest water in Zone 1. Strip a Woolly Bugger along the far bank or dead-drift a scud in the seep current.' },
+      { name: 'Tan Vat Undercut', lat: 37.44950, lng: -91.66050, habitat: 'run', notes: 'Deep run with undercut limestone ledges below Tan Vat access. Trophy browns hold tight under overhanging rock. Low-light ambush water — fish it early and late. Swing streamers or bounce a weighted sculpin along the ledge face.' },
+      { name: 'Log Jam Pool', lat: 37.44500, lng: -91.65870, habitat: 'pool', notes: 'Large pool with downed timber and root wads. Structure-oriented browns prowl the shadows. Dead-drift a sculpin pattern along the log edges. Rainbows stack in the tailout. This is prime trophy brown water.' },
+      { name: 'Baptist Camp Riffle', lat: 37.43900, lng: -91.65760, habitat: 'riffle', notes: 'Long productive riffle above Baptist Camp. Both species feed aggressively during hatches. Browns hold in the deeper slots between gravel bars. Match the hatch with dries or swing soft hackles through the runs.' },
+      { name: 'Sculpin Ledge Run', lat: 37.43180, lng: -91.65000, habitat: 'run', notes: 'Deep bedrock ledge run with dark water. Browns hunt sculpin and crayfish along the ledge face — this is their dining room. Drift a weighted Muddler Minnow or Sculpin Zonker tight to the rock. Prime trophy water.' },
+      { name: 'Cedar Grove Tailout', lat: 37.42420, lng: -91.61800, habitat: 'tailout', notes: 'Shallow tailout near Cedar Grove access. Big browns push up from deep holding water at dusk to feed on emergers and baitfish. Evening dry fly and streamer action. Remote backcountry — you may have it to yourself.' }
+    ],
+    // ── Stream Path — Blue Ribbon Section (Park End → Cedar Grove) ──
+    // 20 waypoints tracing the Current River through all 3 Blue Ribbon zones
+    streamPath: [
+      [37.44976,-91.67143],[37.44990,-91.66950],[37.45010,-91.66750],
+      [37.45039,-91.66550],[37.45070,-91.66350],[37.45102,-91.66161],
+      [37.44950,-91.66050],[37.44750,-91.65950],[37.44500,-91.65870],
+      [37.44200,-91.65800],[37.43900,-91.65760],[37.43539,-91.65714],
+      [37.43350,-91.65400],[37.43180,-91.65000],[37.43000,-91.64500],
+      [37.42850,-91.63800],[37.42720,-91.63200],[37.42580,-91.62500],
+      [37.42420,-91.61800],[37.42228,-91.60848]
+    ],
+    // bankWidths: [leftMeters, rightMeters] — Upper Current River wider channel
+    bankWidths: [
+      [7.0,7.5],[7.0,7.0],[6.5,7.0],[6.5,6.5],
+      [6.5,7.0],[7.0,7.0],[7.5,7.0],[7.0,7.0],
+      [7.0,7.5],[7.5,7.5],[7.0,7.0],[7.0,7.5],
+      [7.5,7.5],[8.0,7.5],[7.5,7.5],[7.5,8.0],
+      [8.0,8.0],[8.0,7.5],[7.5,7.5],[7.0,7.0]
+    ],
     solitude: 'medium', difficulty: 'moderate', wadingRequired: false, familyFriendly: true,
     bestSeasons: ['spring', 'fall', 'winter'],
-    hatches: { spring: ['BWO', 'Caddis', 'Stoneflies', 'March Browns'], summer: ['Caddis', 'Terrestrials', 'Sulphurs'], fall: ['BWO', 'October Caddis', 'Midges'], winter: ['Midges', 'BWO'] },
-    topFlies: ['#14 Woolly Bugger', '#16 Pheasant Tail', '#14 Elk Hair Caddis', '#12 Clouser Minnow', '#10 Muddler Minnow'],
-    topLures: ['1/4oz Rooster Tail', 'Rapala Countdown CD-5 (rainbow trout)', 'Mepps spinner', 'Rebel Wee Craw (crawdad)', 'Small crankbait (shad)'],
+    hatches: { spring: ['BWO #16-20', 'Caddis #14-16', 'Stoneflies #8-12', 'March Browns #12-14', 'Sculpin activity (brown trout key forage)'], summer: ['Caddis #14-16', 'Terrestrials (hoppers, beetles, ants)', 'Sulphurs #16-18', 'Crayfish movement at dusk (trophy browns)'], fall: ['BWO #16-20', 'October Caddis #8-10', 'Midges #18-22', 'Brown trout spawn — handle with care, big fish on the move'], winter: ['Midges #20-24', 'BWO #18-22', 'Sculpin/streamer season — trophy browns feed aggressively in cold water'] },
+    topFlies: ['#6 Sculpin Streamer (brown trout killer)', '#8 Olive Zonker (trophy browns)', '#4 Articulated Streamer (big brown hunter)', '#10 Muddler Minnow (sculpin imitation)', '#8 Black Woolly Bugger (weighted — swing deep)', '#12 Crayfish Pattern (brown trout staple)', '#14 Pheasant Tail (bread and butter)', '#14 Elk Hair Caddis (hatch matcher)', '#16 Parachute Adams (all-purpose dry)', '#18 Zebra Midge (year-round producer)'],
+    topLures: ['1/4oz Rooster Tail', 'Rapala Countdown CD-5 (rainbow + brown)', 'Rapala Original F5 (trophy brown minnow)', 'Mepps Aglia #2 (brown trout gold)', 'Rebel Wee Craw (crayfish — browns love it)', 'Small crankbait (shad pattern)'],
     topBait: ['Nightcrawlers', 'Crawfish tails', 'Corn (where legal)'],
-    coachTips: ['The Current River is a national treasure. Float trips are classic.', 'Spring branches along the Current hold wild trout — the real gems.', 'Canoe traffic heavy in summer. Fish early morning or late evening.', 'Upper Current near Montauk has best trout water. Below Round Spring transitions to smallmouth.'],
-    description: 'Ozark National Scenic Riverway. One of Americas great spring-fed rivers. Wild trout in spring branches, stocked in main river. World-class float fishing.'
+    coachTips: ['TROPHY BROWN TROUT WATER — the Blue Ribbon zones hold wild browns that rival any in the Ozarks.', 'Dawn and dusk are your windows. Big browns are low-light predators — be on the water before sunrise.', 'Dead-drift a sculpin streamer tight to undercut banks and ledges. Trophy browns ambush from shadow.', 'Spring seeps create thermal refuges — look for temperature breaks where cold water enters. Browns stack there.', 'Fall is prime time — brown trout spawn Oct-Nov. Big fish are aggressive but handle spawners with care.', 'The Current River is a national treasure. Blue Ribbon regulations protect trophy fish — 1 trout, 18" minimum.', 'Canoe traffic heavy in summer. Fish early morning or late evening for solitude and active browns.', 'Rainbows from Montauk drift into Blue Ribbon water. You will catch both species — be ready for either.'],
+    description: 'Ozark National Scenic Riverway — Missouri\'s premier trophy brown trout river. Blue Ribbon zones from Park End to Cedar Grove hold wild brown trout in gin-clear, spring-fed water. Stocked rainbows from Montauk Spring add diversity. 18" minimum, 1 fish limit. Sculpin, crayfish, and classic Ozark hatches fuel trophy growth. Same check-in flow as Montauk — hotspot pins deploy across all 3 Blue Ribbon reaches.'
   },
   {
     id: 'eleven-point', name: 'Eleven Point River', category: 'river', ribbon: 'White/Blue Mix',
