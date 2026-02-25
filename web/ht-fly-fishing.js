@@ -1642,6 +1642,18 @@ window.deployHotspotAreaPins = function(water) {
     }
   }
 
+  // ── Zone-specific filtering: only deploy hotspots for the checked-in zone ──
+  var selectedZone = window._fishFlow && window._fishFlow.selectedZone;
+  if (selectedZone && selectedZone.zoneId) {
+    hotspots = hotspots.filter(function(hs) { return hs.zoneId === selectedZone.zoneId; });
+    if (!hotspots.length) {
+      console.log('HUNTECH: No hotspots for zone "' + selectedZone.zoneId + '" — showing zone boundary only');
+      _hotspotData = [];
+      _hotspotWater = water;
+      return;
+    }
+  }
+
   _hotspotData = hotspots;
   _hotspotWater = water;
   _activeHotspotIdx = -1;
