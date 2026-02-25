@@ -765,12 +765,12 @@ window.TROUT_WATERS = [
       // Park End / Blue Ribbon Start: 37°26'59.33"N 91°40'16.92"W = 37.44981, -91.67137
       // Tan Vat boundary:             37°27'02.31"N 91°39'41.87"W = 37.45064, -91.66163
       // Baptist Camp boundary:         37°26'07.42"N 91°39'25.70"W = 37.43539, -91.65714
-      // Cedar Grove boundary:          37°25'20.22"N 91°36'30.53"W = 37.42228, -91.60848
+      // Cedar Grove boundary (lower):  37°24'51.42"N 91°36'23.40"W = 37.4143, -91.6064
       { name: 'Blue Ribbon — Park Boundary Headwaters', lat: 37.44981, lng: -91.67137, type: 'zone', zoneId: 'park-boundary', methods: ['fly', 'spin'], zoneBounds: [[37.44981, -91.67137], [37.45064, -91.66163]], habitat: 'riffle-run-pool', clarity: 'gin-clear', depth: 'medium-deep', pressure: 'moderate', notes: 'Park boundary headwaters to Tan Vat. Blue Ribbon water — flies and artificial lures only, 1 fish, 18" min. TROPHY BROWN TROUT WATER. Cold, gin-clear spring-fed flow holds both stocked rainbows drifting from Montauk Spring and wild brown trout that ambush from undercut banks and boulder shadows. Highest trout density on the Current. Dawn and dusk are prime for big browns.' },
       { name: 'Blue Ribbon — Tan Vat', lat: 37.45064, lng: -91.66163, type: 'zone', zoneId: 'tan-vat', methods: ['fly', 'spin'], zoneBounds: [[37.45064, -91.66163], [37.43539, -91.65714]], habitat: 'run-pool', clarity: 'clear', depth: 'medium', pressure: 'low', notes: 'Tan Vat to Baptist Camp. Blue Ribbon water. PREMIER TROPHY BROWN TROUT REACH. Wild browns hold in deep pools, spring seeps, and under log jams. Stocked rainbows migrate down from Montauk. Cold spring inflows create thermal refuges where big browns stack up year-round. Excellent solitude — remote gravel road access only. Best wild brown trout water on the main Current.' },
       { name: 'Blue Ribbon — Baptist Camp', lat: 37.43539, lng: -91.65714, type: 'zone', zoneId: 'baptist-camp', methods: ['fly', 'spin'], zoneBounds: [[37.43539, -91.65714], [37.42808, -91.63813]], habitat: 'riffle-run', clarity: 'clear', depth: 'medium', pressure: 'low', notes: 'Baptist Camp to Cedar Grove upper. Blue Ribbon water. Trophy brown trout country. Wild browns patrol deep runs and undercut ledges. Spring seeps along banks create cold-water sanctuaries. Sculpin and crayfish populations fuel trophy growth.' },
-      { name: 'Blue Ribbon — Cedar Grove', lat: 37.42228, lng: -91.60848, type: 'zone', zoneId: 'cedar-grove', methods: ['fly', 'spin'], zoneBounds: [[37.42808, -91.63813], [37.42228, -91.60848]], habitat: 'riffle-run', clarity: 'clear', depth: 'medium', pressure: 'low', notes: 'Cedar Grove lower reach. Blue Ribbon water. REMOTE trophy brown trout country. Wild browns patrol deep runs and undercut ledges. Gravel bar camping. True backcountry solitude. Low pressure means big, educated browns.' },
-      { name: 'Reach 4 — Welch Spring Corridor (Cedar Grove → Akers)', lat: 37.3785, lng: -91.5620, type: 'zone', methods: ['fly', 'spin', 'bait'], zoneBounds: [[37.42228, -91.60848], [37.3440, -91.4960]], habitat: 'riffle-run', clarity: 'clear', depth: 'medium', pressure: 'low', notes: 'Cedar Grove to Akers Ferry. Welch Spring (121 cfs) enters mid-reach — its spring branch holds wild trout. Main river has mixed trout and smallmouth. Float-fishing territory. Remote and beautiful.' },
+      { name: 'Blue Ribbon — Cedar Grove', lat: 37.42228, lng: -91.60848, type: 'zone', zoneId: 'cedar-grove', methods: ['fly', 'spin'], zoneBounds: [[37.42808, -91.63813], [37.4143, -91.6064]], habitat: 'riffle-run', clarity: 'clear', depth: 'medium', pressure: 'low', notes: 'Cedar Grove extended reach — Park to Cedar Grove endpoint. Blue Ribbon water. REMOTE trophy brown trout country. Wild browns patrol deep runs and undercut ledges. Gravel bar camping. True backcountry solitude. Low pressure means big, educated browns.' },
+      { name: 'Reach 4 — Welch Spring Corridor (Cedar Grove → Akers)', lat: 37.3785, lng: -91.5620, type: 'zone', methods: ['fly', 'spin', 'bait'], zoneBounds: [[37.4143, -91.6064], [37.3440, -91.4960]], habitat: 'riffle-run', clarity: 'clear', depth: 'medium', pressure: 'low', notes: 'Cedar Grove to Akers Ferry. Welch Spring (121 cfs) enters mid-reach — its spring branch holds wild trout. Main river has mixed trout and smallmouth. Float-fishing territory. Remote and beautiful.' },
       { name: 'Reach 5 — Middle Current (Akers → Round Spring)', lat: 37.3110, lng: -91.4385, type: 'zone', methods: ['fly', 'spin', 'bait'], zoneBounds: [[37.3440, -91.4960], [37.2780, -91.3810]], habitat: 'run-pool', clarity: 'clear', depth: 'medium-deep', pressure: 'moderate', notes: 'Akers Ferry to Round Spring. ~10 miles. Transition zone — trout near cold spring inputs, increasing smallmouth. Pulltite Spring branch holds trout. Heavy canoe traffic in summer. Fish early/late.' },
       { name: 'Reach 6 — Blue Spring Section (Round Spring → Two Rivers)', lat: 37.2660, lng: -91.3725, type: 'zone', methods: ['fly', 'spin', 'bait'], zoneBounds: [[37.2780, -91.3810], [37.2540, -91.3640]], habitat: 'pool-run', clarity: 'clear', depth: 'deep', pressure: 'moderate', notes: 'Round Spring to Two Rivers confluence. ~5 miles. Blue Spring (Missouris deepest at 310ft) — spring branch holds trout year-round. Main river primarily smallmouth with seasonal trout near spring mouths. Jacks Fork enters at Two Rivers.' },
 
@@ -801,8 +801,9 @@ window.TROUT_WATERS = [
       { name: 'Cedar Grove Tailout', lat: 37.42689, lng: -91.61539, habitat: 'tailout', zoneId: 'cedar-grove', notes: 'Broad tailout approaching Cedar Grove access (OSM node[360], 12822m). Big browns push up from deep holding water at dusk to feed on emergers and baitfish. Evening dry fly and streamer action. Remote backcountry.' }
     ],
     // ── Stream Path — Blue Ribbon Section (Park End → Cedar Grove) ──
-    // OSM Way 162645228 — Current River (waterway=river), ALL 387 nodes (no subsampling)
-    // ~36m avg spacing, total 13,956m (8.67 mi). Dense enough to follow every river meander.
+    // OSM Way 162645228 — Current River (waterway=river), ALL 419 nodes (no subsampling)
+    // ~36m avg spacing, total 15,347m (9.54 mi). Dense enough to follow every river meander.
+    // Extended 2026-02-25: +32 nodes downstream to Cedar Grove endpoint (37.4143, -91.6064)
     // Verified 2026-02-25 — real OSM centerline, not interpolated
     streamPath: [
       [37.4497106,-91.6714732],[37.4490632,-91.6712739],[37.4488494,-91.6710931],[37.4486766,-91.6710673],
@@ -901,10 +902,18 @@ window.TROUT_WATERS = [
       [37.4219895,-91.6140293],[37.4217375,-91.6138337],[37.4215939,-91.6135459],[37.4215939,-91.6130293],
       [37.4216672,-91.6126677],[37.4217613,-91.6125075],[37.4217756,-91.6117821],[37.4218811,-91.6112323],
       [37.4218782,-91.6108228],[37.4218225,-91.6103172],[37.4218371,-91.6096272],[37.4218896,-91.6092091],
-      [37.4219163,-91.6089962],[37.422095,-91.6086125],[37.4222591,-91.6083173]
+      [37.4219163,-91.6089962],[37.422095,-91.6086125],[37.4222591,-91.6083173],
+      [37.4222943,-91.607952],[37.4223851,-91.6075129],[37.4224555,-91.6072546],[37.4225727,-91.6070701],
+      [37.4227339,-91.6069557],[37.4227749,-91.6067602],[37.4226928,-91.6064539],[37.4225141,-91.6059853],
+      [37.4223031,-91.6056237],[37.4219426,-91.6051993],[37.4213214,-91.6044208],[37.4209463,-91.6038451],
+      [37.4205682,-91.6033618],[37.4204188,-91.6031441],[37.4203924,-91.6029448],[37.4202312,-91.6027972],
+      [37.4199265,-91.6026754],[37.4197477,-91.6026459],[37.4191997,-91.602764],[37.4186692,-91.6030223],
+      [37.4184407,-91.603299],[37.4183318,-91.6034997],[37.4181183,-91.6038931],[37.4177285,-91.6041846],
+      [37.4172831,-91.6047344],[37.4168042,-91.6052817],[37.4163353,-91.6056949],[37.4160305,-91.6060676],
+      [37.4154473,-91.6064145],[37.4150693,-91.6064218],[37.4146941,-91.6064255],[37.4143398,-91.6063569]
     ],
     // bankWidths: [leftMeters, rightMeters] — Current River Blue Ribbon, widens downstream
-    // 387 entries matching streamPath. Linear gradient upstream (14.5m) → downstream (19.5m).
+    // 419 entries matching streamPath. Linear gradient upstream (14.5m) → downstream (20.0m).
     bankWidths: [
       [7.3,7.3],[7.3,7.3],[7.3,7.3],[7.3,7.3],[7.3,7.3],[7.3,7.3],[7.3,7.3],[7.3,7.3],
       [7.3,7.3],[7.3,7.3],[7.3,7.3],[7.3,7.3],[7.3,7.3],[7.3,7.3],[7.3,7.3],[7.3,7.3],
@@ -954,7 +963,11 @@ window.TROUT_WATERS = [
       [9.6,9.6],[9.6,9.6],[9.6,9.6],[9.6,9.6],[9.6,9.6],[9.6,9.6],[9.6,9.6],[9.6,9.6],
       [9.6,9.6],[9.6,9.6],[9.6,9.6],[9.7,9.7],[9.7,9.7],[9.7,9.7],[9.7,9.7],[9.7,9.7],
       [9.7,9.7],[9.7,9.7],[9.7,9.7],[9.7,9.7],[9.7,9.7],[9.7,9.7],[9.7,9.7],[9.7,9.7],
-      [9.7,9.7],[9.7,9.7],[9.8,9.8]
+      [9.7,9.7],[9.7,9.7],[9.8,9.8],
+      [9.8,9.8],[9.8,9.8],[9.8,9.8],[9.8,9.8],[9.8,9.8],[9.8,9.8],[9.8,9.8],[9.8,9.8],
+      [9.8,9.8],[9.8,9.8],[9.8,9.8],[9.8,9.8],[9.8,9.8],[9.8,9.8],[9.9,9.9],[9.9,9.9],
+      [9.9,9.9],[9.9,9.9],[9.9,9.9],[9.9,9.9],[9.9,9.9],[9.9,9.9],[9.9,9.9],[9.9,9.9],
+      [9.9,9.9],[9.9,9.9],[9.9,9.9],[9.9,9.9],[9.9,9.9],[9.9,9.9],[10.0,10.0],[10.0,10.0]
     ],
     solitude: 'medium', difficulty: 'moderate', wadingRequired: false, familyFriendly: true,
     bestSeasons: ['spring', 'fall', 'winter'],

@@ -577,12 +577,16 @@ window.fishLetsGo = function() {
   // 2) Clear clutter
   clearFlyWaterLayer();
 
-  // 3) Deploy hotspot area pins along the stream
+  // 3) Deploy pins — AI terrain analysis for LiDAR-capable waters, legacy for others
   setTimeout(function() {
-    if (typeof window.deployHotspotAreaPins === 'function') {
+    if (water.streamPath && water.bankWidths && typeof window.deployAiFishingPins === 'function') {
+      // AI path: full LiDAR terrain analysis → algorithmic pin placement
+      window.deployAiFishingPins(water, zone, fishFlow);
+    } else if (typeof window.deployHotspotAreaPins === 'function') {
+      // Legacy path: hardcoded hotspot coordinates
       window.deployHotspotAreaPins(water);
+      showNotice('Hotspots deployed — tap a pin to fish!', 'success', 3500);
     }
-    showNotice('Hotspots deployed — tap a pin to fish!', 'success', 3500);
   }, 400);
 };
 
@@ -2065,10 +2069,33 @@ function getAnglerPinIcon() {
 function getZoneStreamSegment(water, zone) {
   if (!water || !water.streamPath || water.streamPath.length < 2) return null;
   var path = water.streamPath;
+
+  // ── PRECISION PATH: use explicit zoneBounds for exact clipping ──
+  if (zone && zone.zoneBounds && zone.zoneBounds.length === 2) {
+    var startBound = zone.zoneBounds[0]; // [lat, lng]
+    var stopBound  = zone.zoneBounds[1]; // [lat, lng]
+    var startIdx = 0, stopIdx = path.length - 1;
+    var bestStartDist = Infinity, bestStopDist = Infinity;
+
+    for (var i = 0; i < path.length; i++) {
+      var ds = Math.pow(path[i][0] - startBound[0], 2) + Math.pow(path[i][1] - startBound[1], 2);
+      var de = Math.pow(path[i][0] - stopBound[0], 2) + Math.pow(path[i][1] - stopBound[1], 2);
+      if (ds < bestStartDist) { bestStartDist = ds; startIdx = i; }
+      if (de < bestStopDist)  { bestStopDist = de;  stopIdx = i; }
+    }
+
+    // Ensure start < stop (upstream before downstream)
+    if (startIdx > stopIdx) { var tmp = startIdx; startIdx = stopIdx; stopIdx = tmp; }
+
+    var result = path.slice(startIdx, stopIdx + 1);
+    result.__zoneStartIdx = startIdx;
+    return result;
+  }
+
+  // ── FALLBACK: midpoint-based slicing for zones without zoneBounds ──
   var zones = (water.access || []).filter(function(a) { return a.type === 'zone'; });
   if (zones.length < 2) return path;
 
-  // Find each zone's nearest point index on the stream path
   var zoneIndexes = zones.map(function(z) {
     var best = 0, bestDist = Infinity;
     for (var i = 0; i < path.length; i++) {
@@ -2079,19 +2106,17 @@ function getZoneStreamSegment(water, zone) {
   });
   zoneIndexes.sort(function(a, b) { return a.idx - b.idx; });
 
-  // Find this zone's position
   var myPos = -1;
   for (var i = 0; i < zoneIndexes.length; i++) {
     if (zoneIndexes[i].zone === zone) { myPos = i; break; }
   }
   if (myPos === -1) return path;
 
-  // Slice path: from midpoint between prev zone to midpoint with next zone
   var startIdx = 0, endIdx = path.length - 1;
   if (myPos > 0) startIdx = Math.round((zoneIndexes[myPos - 1].idx + zoneIndexes[myPos].idx) / 2);
   if (myPos < zoneIndexes.length - 1) endIdx = Math.round((zoneIndexes[myPos].idx + zoneIndexes[myPos + 1].idx) / 2);
   var result = path.slice(startIdx, endIdx + 1);
-  result.__zoneStartIdx = startIdx; // preserve raw streamPath offset for bankWidths alignment
+  result.__zoneStartIdx = startIdx;
   return result;
 }
 
@@ -4595,10 +4620,10 @@ window.deployAiFishingPins = function(water, zone, fishFlow) {
 
   // Sort candidates by interest score, then pick top N with spacing enforcement
   hotspotCandidates.sort(function(a, b) { return b.interestScore - a.interestScore; });
-  // Deploy pins on ALL detected micro-features — boulders, logs, undercuts, seams, pockets
-  var maxPins = Math.min(15, Math.max(4, segment.length));
+  // Deploy pins on ALL detected habitat features — no artificial cap, spacing-only deconfliction
+  var maxPins = hotspotCandidates.length;
   var selectedSpots = [];
-  var MIN_PIN_SPACING_M = 15; // tighter spacing to catch every micro-feature
+  var MIN_PIN_SPACING_M = 15; // minimum spacing to prevent visual overlap
 
   for (var sc = 0; sc < hotspotCandidates.length && selectedSpots.length < maxPins; sc++) {
     var cand = hotspotCandidates[sc];
