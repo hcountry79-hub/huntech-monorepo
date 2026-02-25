@@ -4377,10 +4377,11 @@ var LIDAR_CONFIG = Object.freeze({
   VERSION: '2.0.0-lidar-locked'
 });
 
-// Global bankWidth scaling factor — raw data values are ~3.5× too wide for
-// the actual river channel.  0.28 brings the overlay, pins, cast arcs, and
-// WADE HERE markers in line with the satellite-visible banks.
-var _BANK_WIDTH_SCALE = 0.28;
+// Global bankWidth scaling factor — raw data values are too wide for
+// the actual river channel.  0.50 with bank glow lines removed matches
+// the satellite-visible banks.  This value drives overlay width AND
+// pin/cast/wade placement — too small breaks all geometry.
+var _BANK_WIDTH_SCALE = 0.50;
 
 // Habitat-based flow speed multipliers — realistic stream hydraulics.
 // Research: USGS Open-File Report 2005-1230 (Ozark stream velocity profiles),
