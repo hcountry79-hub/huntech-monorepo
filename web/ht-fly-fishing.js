@@ -310,6 +310,29 @@ function getFlyExploreRadiusMiles(zoom) {
   return 9999;
 }
 
+/* Add zone area pills for river-category waters so each zone gets its own
+   clickable pill on the map. Click routes to the parent water's action bar. */
+function _addZoneAreaPins(water, center, radiusMeters) {
+  if (!water || !water.access || water.category !== 'river') return;
+  water.access.forEach(function(ap) {
+    if (ap.type !== 'zone' || !Number.isFinite(ap.lat) || !Number.isFinite(ap.lng)) return;
+    // Distance check when center/radius provided
+    if (center && Number.isFinite(radiusMeters)) {
+      var d = center.distanceTo(L.latLng(ap.lat, ap.lng));
+      if (d > radiusMeters) return;
+    }
+    // Build short label from zone name
+    var label = String(ap.name || '')
+      .replace(/^Blue Ribbon\s*[\u2014\u2013\-]\s*/i, '')
+      .replace(/^Reach \d+\s*[\u2014\u2013\-]\s*/i, '')
+      .trim();
+    if (!label) label = ap.name || water.name;
+    // Create proxy water at zone coordinates (keeps parent id for click routing)
+    var zoneProxy = { id: water.id, name: water.name, lat: ap.lat, lng: ap.lng };
+    addFlyWaterMarker(zoneProxy, label);
+  });
+}
+
 function showFlyWaterMarkersByDistance(center, radiusMiles) {
   if (!center || !Number.isFinite(radiusMiles)) return;
   clearFlyWaterLayer();
@@ -321,8 +344,9 @@ function showFlyWaterMarkersByDistance(center, radiusMiles) {
     if (distance <= radiusMeters) {
       if (water.id) seen.add(water.id);
       addFlyWaterMarker(water);
-      // Access/zone pins hidden — deployed only on check-in
     }
+    // Zone area pills — each zone gets its own pill with independent distance check
+    _addZoneAreaPins(water, center, radiusMeters);
   });
   getFlyCustomWaters().forEach((water, idx) => {
     if (!water || !Number.isFinite(water.lat) || !Number.isFinite(water.lng)) return;
@@ -749,7 +773,8 @@ function showFlyWaterMarkers() {
     if (!water || !water.id) return;
     seen.add(water.id);
     addFlyWaterMarker(water);
-    // Access/zone pins hidden by default — deployed only on check-in
+    // Zone area pills for river-category waters
+    _addZoneAreaPins(water);
   });
   getFlyCustomWaters().forEach((water, idx) => {
     const id = water.id || `custom_${idx}`;
@@ -1727,6 +1752,9 @@ var _streamCommandTrayEl = null;
 
 function _showStreamCommandTray(hs) {
   _dismissStreamCommandTray();
+  // Hide the background toolbar so it doesn't show behind the 6-button tray
+  var _tb = document.getElementById('toolbar');
+  if (_tb) _tb.style.display = 'none';
   var tray = document.createElement('div');
   tray.className = 'ht-stream-command-tray';
   tray.innerHTML =
@@ -1752,6 +1780,9 @@ function _dismissStreamCommandTray() {
     try { _streamCommandTrayEl.remove(); } catch(e) {}
     _streamCommandTrayEl = null;
   }
+  // Restore the background toolbar
+  var _tb = document.getElementById('toolbar');
+  if (_tb) _tb.style.display = '';
 }
 window._dismissStreamCommandTray = _dismissStreamCommandTray;
 
