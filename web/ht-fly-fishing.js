@@ -310,29 +310,6 @@ function getFlyExploreRadiusMiles(zoom) {
   return 9999;
 }
 
-/* Add zone area pills for river-category waters so each zone gets its own
-   clickable pill on the map. Click routes to the parent water's action bar. */
-function _addZoneAreaPins(water, center, radiusMeters) {
-  if (!water || !water.access || water.category !== 'river') return;
-  water.access.forEach(function(ap) {
-    if (ap.type !== 'zone' || !Number.isFinite(ap.lat) || !Number.isFinite(ap.lng)) return;
-    // Distance check when center/radius provided
-    if (center && Number.isFinite(radiusMeters)) {
-      var d = center.distanceTo(L.latLng(ap.lat, ap.lng));
-      if (d > radiusMeters) return;
-    }
-    // Build short label from zone name
-    var label = String(ap.name || '')
-      .replace(/^Blue Ribbon\s*[\u2014\u2013\-]\s*/i, '')
-      .replace(/^Reach \d+\s*[\u2014\u2013\-]\s*/i, '')
-      .trim();
-    if (!label) label = ap.name || water.name;
-    // Create proxy water at zone coordinates (keeps parent id for click routing)
-    var zoneProxy = { id: water.id, name: water.name, lat: ap.lat, lng: ap.lng };
-    addFlyWaterMarker(zoneProxy, label);
-  });
-}
-
 function showFlyWaterMarkersByDistance(center, radiusMiles) {
   if (!center || !Number.isFinite(radiusMiles)) return;
   clearFlyWaterLayer();
@@ -344,9 +321,8 @@ function showFlyWaterMarkersByDistance(center, radiusMiles) {
     if (distance <= radiusMeters) {
       if (water.id) seen.add(water.id);
       addFlyWaterMarker(water);
+      // Access/zone pins hidden — deployed only on check-in
     }
-    // Zone area pills — each zone gets its own pill with independent distance check
-    _addZoneAreaPins(water, center, radiusMeters);
   });
   getFlyCustomWaters().forEach((water, idx) => {
     if (!water || !Number.isFinite(water.lat) || !Number.isFinite(water.lng)) return;
@@ -498,11 +474,11 @@ function showFlyCheckInForm(water) {
       if (m === 'bait') return '🪱';
       return '';
     }).join(' ');
-    const shortName = z.name.replace(/^.*—\s*/, '').trim(); // "Park Boundary Headwaters"
-    const methodLabel = '';  // method icons shown separately
+    const shortName = z.name.replace(/\s*—\s*.*$/, ''); // "Zone 1"
+    const methodLabel = z.name.replace(/^.*—\s*/, '');    // "Fly Only"
     zonePillsHtml += `<button class="ht-zone-select-pill${idx === 0 ? ' ht-zone-select-pill--active' : ''}" type="button" data-zone-idx="${idx}" onclick="pickFishZone(this,${idx})">
       <span class="ht-zone-select-name">${escapeHtml(shortName)}</span>
-      <span class="ht-zone-select-method">${methodIcons}</span>
+      <span class="ht-zone-select-method">${methodIcons} ${escapeHtml(methodLabel)}</span>
     </button>`;
   });
 
@@ -577,16 +553,12 @@ window.fishLetsGo = function() {
   // 2) Clear clutter
   clearFlyWaterLayer();
 
-  // 3) Deploy pins — AI terrain analysis for LiDAR-capable waters, legacy for others
+  // 3) Deploy hotspot area pins along the stream
   setTimeout(function() {
-    if (water.streamPath && water.bankWidths && typeof window.deployAiFishingPins === 'function') {
-      // AI path: full LiDAR terrain analysis → algorithmic pin placement
-      window.deployAiFishingPins(water, zone, fishFlow);
-    } else if (typeof window.deployHotspotAreaPins === 'function') {
-      // Legacy path: hardcoded hotspot coordinates
+    if (typeof window.deployHotspotAreaPins === 'function') {
       window.deployHotspotAreaPins(water);
-      showNotice('Hotspots deployed — tap a pin to fish!', 'success', 3500);
     }
+    showNotice('Hotspots deployed — tap a pin to fish!', 'success', 3500);
   }, 400);
 };
 
@@ -777,8 +749,7 @@ function showFlyWaterMarkers() {
     if (!water || !water.id) return;
     seen.add(water.id);
     addFlyWaterMarker(water);
-    // Zone area pills for river-category waters
-    _addZoneAreaPins(water);
+    // Access/zone pins hidden by default — deployed only on check-in
   });
   getFlyCustomWaters().forEach((water, idx) => {
     const id = water.id || `custom_${idx}`;
@@ -1646,18 +1617,6 @@ window.deployHotspotAreaPins = function(water) {
     }
   }
 
-  // ── Zone-specific filtering: only deploy hotspots for the checked-in zone ──
-  var selectedZone = window._fishFlow && window._fishFlow.selectedZone;
-  if (selectedZone && selectedZone.zoneId) {
-    hotspots = hotspots.filter(function(hs) { return hs.zoneId === selectedZone.zoneId; });
-    if (!hotspots.length) {
-      console.log('HUNTECH: No hotspots for zone "' + selectedZone.zoneId + '" — showing zone boundary only');
-      _hotspotData = [];
-      _hotspotWater = water;
-      return;
-    }
-  }
-
   _hotspotData = hotspots;
   _hotspotWater = water;
   _activeHotspotIdx = -1;
@@ -1768,9 +1727,6 @@ var _streamCommandTrayEl = null;
 
 function _showStreamCommandTray(hs) {
   _dismissStreamCommandTray();
-  // Hide the background toolbar so it doesn't show behind the 6-button tray
-  var _tb = document.getElementById('toolbar');
-  if (_tb) _tb.style.display = 'none';
   var tray = document.createElement('div');
   tray.className = 'ht-stream-command-tray';
   tray.innerHTML =
@@ -1796,9 +1752,6 @@ function _dismissStreamCommandTray() {
     try { _streamCommandTrayEl.remove(); } catch(e) {}
     _streamCommandTrayEl = null;
   }
-  // Restore the background toolbar
-  var _tb = document.getElementById('toolbar');
-  if (_tb) _tb.style.display = '';
 }
 window._dismissStreamCommandTray = _dismissStreamCommandTray;
 
@@ -2069,33 +2022,10 @@ function getAnglerPinIcon() {
 function getZoneStreamSegment(water, zone) {
   if (!water || !water.streamPath || water.streamPath.length < 2) return null;
   var path = water.streamPath;
-
-  // ── PRECISION PATH: use explicit zoneBounds for exact clipping ──
-  if (zone && zone.zoneBounds && zone.zoneBounds.length === 2) {
-    var startBound = zone.zoneBounds[0]; // [lat, lng]
-    var stopBound  = zone.zoneBounds[1]; // [lat, lng]
-    var startIdx = 0, stopIdx = path.length - 1;
-    var bestStartDist = Infinity, bestStopDist = Infinity;
-
-    for (var i = 0; i < path.length; i++) {
-      var ds = Math.pow(path[i][0] - startBound[0], 2) + Math.pow(path[i][1] - startBound[1], 2);
-      var de = Math.pow(path[i][0] - stopBound[0], 2) + Math.pow(path[i][1] - stopBound[1], 2);
-      if (ds < bestStartDist) { bestStartDist = ds; startIdx = i; }
-      if (de < bestStopDist)  { bestStopDist = de;  stopIdx = i; }
-    }
-
-    // Ensure start < stop (upstream before downstream)
-    if (startIdx > stopIdx) { var tmp = startIdx; startIdx = stopIdx; stopIdx = tmp; }
-
-    var result = path.slice(startIdx, stopIdx + 1);
-    result.__zoneStartIdx = startIdx;
-    return result;
-  }
-
-  // ── FALLBACK: midpoint-based slicing for zones without zoneBounds ──
   var zones = (water.access || []).filter(function(a) { return a.type === 'zone'; });
   if (zones.length < 2) return path;
 
+  // Find each zone's nearest point index on the stream path
   var zoneIndexes = zones.map(function(z) {
     var best = 0, bestDist = Infinity;
     for (var i = 0; i < path.length; i++) {
@@ -2106,17 +2036,19 @@ function getZoneStreamSegment(water, zone) {
   });
   zoneIndexes.sort(function(a, b) { return a.idx - b.idx; });
 
+  // Find this zone's position
   var myPos = -1;
   for (var i = 0; i < zoneIndexes.length; i++) {
     if (zoneIndexes[i].zone === zone) { myPos = i; break; }
   }
   if (myPos === -1) return path;
 
+  // Slice path: from midpoint between prev zone to midpoint with next zone
   var startIdx = 0, endIdx = path.length - 1;
   if (myPos > 0) startIdx = Math.round((zoneIndexes[myPos - 1].idx + zoneIndexes[myPos].idx) / 2);
   if (myPos < zoneIndexes.length - 1) endIdx = Math.round((zoneIndexes[myPos].idx + zoneIndexes[myPos + 1].idx) / 2);
   var result = path.slice(startIdx, endIdx + 1);
-  result.__zoneStartIdx = startIdx;
+  result.__zoneStartIdx = startIdx; // preserve raw streamPath offset for bankWidths alignment
   return result;
 }
 
@@ -3939,9 +3871,8 @@ function _snapToStream(lat, lng, segment, bankWidths, avgWidth) {
   // Get bank width at this point
   var halfWidth = (avgWidth || 12) / 2;
   if (bankWidths && bankWidths.length > 0) {
-    // Map from dense interpolated index → raw bankWidths index (proportional)
-    var bwIdx = Math.round(bestIdx / Math.max(segment.length - 1, 1) * (bankWidths.length - 1));
-    bwIdx = Math.min(bwIdx, bankWidths.length - 1);
+    // Map from dense interpolated index → raw bankWidths index
+    var bwIdx = Math.min(bestIdx, bankWidths.length - 1);
     var bw = bankWidths[bwIdx];
     if (bw) {
       halfWidth = perpOffset >= 0 ? (bw[0] || halfWidth) : (bw[1] || halfWidth);
@@ -4069,9 +4000,9 @@ function _deployMicroCluster(opts) {
   var bw = null;
   var halfWidth = 5.5;
   var rawBW = opts.bankWidths || (opts.water && opts.water.bankWidths) || null;
-  // Always use the raw streamPath for proximity lookup so _getDenseBankWidth
-  // can map dense segment indices back to raw bankWidths entries correctly.
-  var rawSP = (opts.water && opts.water.streamPath) || null;
+  // When zone-aligned bankWidths are passed, use the zone segment as reference
+  // (indices match). Otherwise fall back to the full raw streamPath for proximity lookup.
+  var rawSP = opts.bankWidths ? seg : ((opts.water && opts.water.streamPath) || null);
   if (rawBW && rawSP) {
     bw = _getDenseBankWidth(rawBW, rawSP, seg, sIdx);
     if (bw) halfWidth = Math.max(bw[0] || 5.5, bw[1] || 5.5);
@@ -4789,6 +4720,20 @@ window.deployAiFishingPins = function(water, zone, fishFlow) {
       if (el) el.style.display = 'none';
     } catch(e) {}
   });
+
+  // ── Deploy animated stream flow overlay (LiDAR-derived) ──
+  try {
+    deployStreamFlowOverlay(water, zone);
+    if (_flowActive && _flowCanvas) {
+      showNotice('🌊 Stream flow overlay active', 'success', 2500);
+    } else {
+      showNotice('⚠️ Stream flow overlay did not activate — check console', 'warning', 4000);
+      console.warn('[HT-FLOW] deploy returned but _flowActive=' + _flowActive + ', _flowCanvas=' + !!_flowCanvas);
+    }
+  } catch(flowErr) {
+    showNotice('⚠️ Stream flow failed: ' + flowErr.message, 'error', 5000);
+    console.error('[HT-FLOW] Stream flow overlay failed:', flowErr);
+  }
 
   // Start proximity watch
   _startProximityWatch();
