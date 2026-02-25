@@ -3938,13 +3938,14 @@ function _snapToStream(lat, lng, segment, bankWidths, avgWidth) {
 
   // Get bank width at this point
   var halfWidth = (avgWidth || 12) / 2;
+  var bwScale = (typeof _BANK_WIDTH_SCALE === 'number') ? _BANK_WIDTH_SCALE : 1;
   if (bankWidths && bankWidths.length > 0) {
     // Map from dense interpolated index → raw bankWidths index (proportional)
     var bwIdx = Math.round(bestIdx / Math.max(segment.length - 1, 1) * (bankWidths.length - 1));
     bwIdx = Math.min(bwIdx, bankWidths.length - 1);
     var bw = bankWidths[bwIdx];
     if (bw) {
-      halfWidth = perpOffset >= 0 ? (bw[0] || halfWidth) : (bw[1] || halfWidth);
+      halfWidth = perpOffset >= 0 ? ((bw[0] || halfWidth) * bwScale) : ((bw[1] || halfWidth) * bwScale);
     }
   }
 
@@ -4068,13 +4069,14 @@ function _deployMicroCluster(opts) {
   // ── Get bankWidth data for this spot ──
   var bw = null;
   var halfWidth = 5.5;
+  var bwScale = (typeof _BANK_WIDTH_SCALE === 'number') ? _BANK_WIDTH_SCALE : 1;
   var rawBW = opts.bankWidths || (opts.water && opts.water.bankWidths) || null;
   // Always use the raw streamPath for proximity lookup so _getDenseBankWidth
   // can map dense segment indices back to raw bankWidths entries correctly.
   var rawSP = (opts.water && opts.water.streamPath) || null;
   if (rawBW && rawSP) {
     bw = _getDenseBankWidth(rawBW, rawSP, seg, sIdx);
-    if (bw) halfWidth = Math.max(bw[0] || 5.5, bw[1] || 5.5);
+    if (bw) halfWidth = Math.max((bw[0] || 5.5) * bwScale, (bw[1] || 5.5) * bwScale);
   }
   var avgWidth = (opts.water && opts.water.avgStreamWidth) || (halfWidth * 2) || 12;
 
@@ -4177,10 +4179,10 @@ function _deployMicroCluster(opts) {
   if (rawBW && rawSP) {
     var standBw = _getDenseBankWidth(rawBW, rawSP, seg, standSIdx);
     if (standBw) {
-      bankEdge = (bankSide > 0) ? (standBw[0] || halfWidth) : (standBw[1] || halfWidth);
+      bankEdge = (bankSide > 0) ? ((standBw[0] || halfWidth) * bwScale) : ((standBw[1] || halfWidth) * bwScale);
     }
   }
-  var wadeOffsetM = bankSide * (bankEdge + 8); // 8m onto dry bank — well clear of stream
+  var wadeOffsetM = bankSide * (bankEdge + 5); // 5m onto dry bank
   var wadeEntry = _perpendicularOffset(seg, standSIdx, wadeOffsetM);
 
   var wadeLabel = (wade === 'waders') ? '\uD83E\uDD7E WADE HERE' : '\uD83C\uDFD6 STAND HERE';
@@ -4375,6 +4377,11 @@ var LIDAR_CONFIG = Object.freeze({
   VERSION: '2.0.0-lidar-locked'
 });
 
+// Global bankWidth scaling factor — raw data values are ~2× too wide for
+// the actual river channel.  0.5 brings the overlay, pins, cast arcs, and
+// WADE HERE markers in line with the satellite-visible banks.
+var _BANK_WIDTH_SCALE = 0.5;
+
 /** Validate that terrain analysis input is LiDAR-derived only */
 function _validateLidarInput(segment, bankWidths) {
   if (!segment || !Array.isArray(segment) || segment.length < 3) {
@@ -4439,16 +4446,17 @@ function _analyzeStreamTerrain(segment, bankWidths) {
 
     // LiDAR-derived channel width + bank asymmetry
     // Asymmetry → undercut bank, root wad structure, boulder deposits
+    var bwScale = (typeof _BANK_WIDTH_SCALE === 'number') ? _BANK_WIDTH_SCALE : 1;
     p.width = 8; p.asymmetry = 0;
     if (bankWidths && bankWidths[i]) {
-      p.width = bankWidths[i][0] + bankWidths[i][1];
-      p.asymmetry = Math.abs(bankWidths[i][0] - bankWidths[i][1]) / Math.max(p.width, 0.1);
+      p.width = (bankWidths[i][0] + bankWidths[i][1]) * bwScale;
+      p.asymmetry = Math.abs(bankWidths[i][0] - bankWidths[i][1]) / Math.max(bankWidths[i][0] + bankWidths[i][1], 0.1);
     }
 
     // Width change rate (narrowing→riffle acceleration, widening→pool decel)
     p.widthDelta = 0;
     if (bankWidths && i > 0 && bankWidths[i] && bankWidths[i-1]) {
-      var pw = bankWidths[i-1][0] + bankWidths[i-1][1];
+      var pw = (bankWidths[i-1][0] + bankWidths[i-1][1]) * bwScale;
       if (pw > 0) p.widthDelta = (p.width - pw) / pw;
     }
 
@@ -5684,10 +5692,12 @@ function _computeBankGeometry(streamPath, bankWidths) {
     var perpLngUnit = dyM / len;
 
     // Get bank widths (left, right meters from centerline)
+    // Apply _BANK_WIDTH_SCALE to correct oversized raw LiDAR data
     var lw = 6, rw = 6; // default 6m each side
+    var bwScale = (typeof _BANK_WIDTH_SCALE === 'number') ? _BANK_WIDTH_SCALE : 1;
     if (bankWidths && bankWidths[i]) {
-      lw = bankWidths[i][0] || 6;
-      rw = bankWidths[i][1] || 6;
+      lw = (bankWidths[i][0] || 6) * bwScale;
+      rw = (bankWidths[i][1] || 6) * bwScale;
     }
 
     left.push([
@@ -5872,15 +5882,15 @@ function _renderFlowFrame() {
   }
   ctx.closePath();
 
-  // Multi-layer water fill for depth effect
-  // Layer 1: Deep base (dark teal) — strong opacity so user can clearly see it
-  ctx.fillStyle = 'rgba(8, 55, 85, 0.60)';
+  // Multi-layer water fill for depth effect — semi-transparent so satellite water is visible
+  // Layer 1: Deep base (dark teal)
+  ctx.fillStyle = 'rgba(8, 55, 85, 0.28)';
   ctx.fill();
   // Layer 2: Mid-tone (blue-green)
-  ctx.fillStyle = 'rgba(15, 100, 135, 0.30)';
+  ctx.fillStyle = 'rgba(15, 100, 135, 0.12)';
   ctx.fill();
   // Layer 3: Surface shimmer
-  ctx.fillStyle = 'rgba(35, 170, 210, 0.12)';
+  ctx.fillStyle = 'rgba(35, 170, 210, 0.06)';
   ctx.fill();
 
   // Clip to water channel for all subsequent drawing
@@ -5899,7 +5909,7 @@ function _renderFlowFrame() {
     }
   }
   ctx.lineWidth = 14 * _flowDpr;
-  ctx.strokeStyle = 'rgba(5, 40, 70, 0.15)';
+  ctx.strokeStyle = 'rgba(5, 40, 70, 0.08)';
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
   ctx.stroke();
@@ -6001,15 +6011,15 @@ function _renderFlowFrame() {
   ctx.restore(); // un-clip
 
   // ── 6) BANK EDGE GLOW LINES ──
-  // Outer glow (wide, visible)
-  _drawBankLine(ctx, leftPx, 6 * _flowDpr, 'rgba(30, 190, 170, 0.25)');
-  _drawBankLine(ctx, rightPx, 6 * _flowDpr, 'rgba(30, 190, 170, 0.25)');
+  // Outer glow (wide, subtle)
+  _drawBankLine(ctx, leftPx, 4 * _flowDpr, 'rgba(30, 190, 170, 0.15)');
+  _drawBankLine(ctx, rightPx, 4 * _flowDpr, 'rgba(30, 190, 170, 0.15)');
   // Mid glow
-  _drawBankLine(ctx, leftPx, 3.5 * _flowDpr, 'rgba(50, 215, 195, 0.45)');
-  _drawBankLine(ctx, rightPx, 3.5 * _flowDpr, 'rgba(50, 215, 195, 0.45)');
+  _drawBankLine(ctx, leftPx, 2.5 * _flowDpr, 'rgba(50, 215, 195, 0.30)');
+  _drawBankLine(ctx, rightPx, 2.5 * _flowDpr, 'rgba(50, 215, 195, 0.30)');
   // Core line (bright, thin)
-  _drawBankLine(ctx, leftPx, 1.8 * _flowDpr, 'rgba(70, 240, 215, 0.75)');
-  _drawBankLine(ctx, rightPx, 1.8 * _flowDpr, 'rgba(70, 240, 215, 0.75)');
+  _drawBankLine(ctx, leftPx, 1.2 * _flowDpr, 'rgba(70, 240, 215, 0.55)');
+  _drawBankLine(ctx, rightPx, 1.2 * _flowDpr, 'rgba(70, 240, 215, 0.55)');
   } catch(renderErr) {
     _flowRenderErrors = (_flowRenderErrors || 0) + 1;
     console.error('[HT-FLOW] Render frame error #' + _flowRenderErrors + ':', renderErr);
