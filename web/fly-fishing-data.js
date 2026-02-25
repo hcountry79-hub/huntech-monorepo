@@ -788,35 +788,40 @@ window.TROUT_WATERS = [
       { name: 'Van Buren Access', lat: 36.9910, lng: -91.0150, type: 'parking', notes: 'NPS headquarters town. Hwy 60 bridge. Float take-out. Canoe liveries. Services.' }
     ],
     // ── 7 Hotspot Holding Areas — Blue Ribbon Trophy Brown Trout Zone ──
+    // OSM Way 162645228 — all coordinates from real river nodes, verified 2026-02-25
     // Spread across all 3 Blue Ribbon reaches (Park End → Cedar Grove)
-    // Emphasize brown trout ambush points + rainbow feeding lanes
     hotspots: [
-      { name: 'Park End Riffle', lat: 37.44985, lng: -91.67050, habitat: 'riffle', notes: 'Fast riffle water just below the park boundary. Brown trout ambush from behind boulders and ledge cuts at dawn and dusk. Rainbows feed in the faster current seams. Dead-drift nymphs or swing a sculpin pattern tight to structure.' },
-      { name: 'Spring Seep Bend', lat: 37.45025, lng: -91.66650, habitat: 'pool', notes: 'Deep bend pool fed by a cold spring seep on the right bank. Wild browns stack here year-round in the thermal break. The deepest water in Zone 1. Strip a Woolly Bugger along the far bank or dead-drift a scud in the seep current.' },
-      { name: 'Tan Vat Undercut', lat: 37.44950, lng: -91.66050, habitat: 'run', notes: 'Deep run with undercut limestone ledges below Tan Vat access. Trophy browns hold tight under overhanging rock. Low-light ambush water — fish it early and late. Swing streamers or bounce a weighted sculpin along the ledge face.' },
-      { name: 'Log Jam Pool', lat: 37.44500, lng: -91.65870, habitat: 'pool', notes: 'Large pool with downed timber and root wads. Structure-oriented browns prowl the shadows. Dead-drift a sculpin pattern along the log edges. Rainbows stack in the tailout. This is prime trophy brown water.' },
-      { name: 'Baptist Camp Riffle', lat: 37.43900, lng: -91.65760, habitat: 'riffle', notes: 'Long productive riffle above Baptist Camp. Both species feed aggressively during hatches. Browns hold in the deeper slots between gravel bars. Match the hatch with dries or swing soft hackles through the runs.' },
-      { name: 'Sculpin Ledge Run', lat: 37.43180, lng: -91.65000, habitat: 'run', notes: 'Deep bedrock ledge run with dark water. Browns hunt sculpin and crayfish along the ledge face — this is their dining room. Drift a weighted Muddler Minnow or Sculpin Zonker tight to the rock. Prime trophy water.' },
-      { name: 'Cedar Grove Tailout', lat: 37.42420, lng: -91.61800, habitat: 'tailout', notes: 'Shallow tailout near Cedar Grove access. Big browns push up from deep holding water at dusk to feed on emergers and baitfish. Evening dry fly and streamer action. Remote backcountry — you may have it to yourself.' }
+      { name: 'Park End Riffle', lat: 37.44594, lng: -91.67011, habitat: 'riffle', notes: 'Fast riffle water just below the park boundary (OSM node[11], 498m). Brown trout ambush from behind boulders and ledge cuts at dawn and dusk. Rainbows feed in the faster current seams. Dead-drift nymphs or swing a sculpin pattern tight to structure.' },
+      { name: 'Spring Seep Bend', lat: 37.44962, lng: -91.66291, habitat: 'pool', notes: 'Deep bend pool at the first big oxbow (OSM node[28], 1391m). Wild browns stack year-round in the thermal break. The deepest water in Zone 1. Strip a Woolly Bugger along the far bank or dead-drift a scud in the seep current.' },
+      { name: 'Tan Vat Undercut', lat: 37.44513, lng: -91.65624, habitat: 'run', notes: 'Deep run with undercut limestone ledges below Tan Vat (OSM node[53], 2372m). Trophy browns hold tight under overhanging rock. Low-light ambush water. Swing streamers or bounce a weighted sculpin along the ledge face.' },
+      { name: 'Log Jam Pool', lat: 37.43678, lng: -91.65744, habitat: 'pool', notes: 'Large pool with downed timber near Baptist Camp boundary (OSM node[68], 3333m). Structure-oriented browns prowl the shadows. Dead-drift a sculpin pattern along the log edges. Rainbows stack in the tailout.' },
+      { name: 'Baptist Camp Riffle', lat: 37.42909, lng: -91.64967, habitat: 'riffle', notes: 'Long productive riffle in mid-Cedar Grove reach (OSM node[149], 5836m). Both species feed aggressively during hatches. Browns hold in deeper slots between gravel bars. Match the hatch with dries or swing soft hackles.' },
+      { name: 'Sculpin Ledge Run', lat: 37.42821, lng: -91.63281, habitat: 'run', notes: 'Deep bedrock ledge run in remote Cedar Grove water (OSM node[272], 9311m). Browns hunt sculpin and crayfish along the ledge face. Drift a weighted Muddler Minnow or Sculpin Zonker tight to the rock. Prime trophy water.' },
+      { name: 'Cedar Grove Tailout', lat: 37.42689, lng: -91.61539, habitat: 'tailout', notes: 'Broad tailout approaching Cedar Grove access (OSM node[360], 12822m). Big browns push up from deep holding water at dusk to feed on emergers and baitfish. Evening dry fly and streamer action. Remote backcountry.' }
     ],
     // ── Stream Path — Blue Ribbon Section (Park End → Cedar Grove) ──
-    // 20 waypoints tracing the Current River through all 3 Blue Ribbon zones
+    // OSM Way 162645228 — Current River (waterway=river), 387 nodes clipped to Blue Ribbon
+    // Distance-based subsampled to 25 points at ~530m avg spacing, total 12,200m (7.58 mi)
+    // Verified 2026-02-25 — start node 7m from Park End boundary, end node 15m from Cedar Grove
     streamPath: [
-      [37.44976,-91.67143],[37.44990,-91.66950],[37.45010,-91.66750],
-      [37.45039,-91.66550],[37.45070,-91.66350],[37.45102,-91.66161],
-      [37.44950,-91.66050],[37.44750,-91.65950],[37.44500,-91.65870],
-      [37.44200,-91.65800],[37.43900,-91.65760],[37.43539,-91.65714],
-      [37.43350,-91.65400],[37.43180,-91.65000],[37.43000,-91.64500],
-      [37.42850,-91.63800],[37.42720,-91.63200],[37.42580,-91.62500],
-      [37.42420,-91.61800],[37.42228,-91.60848]
+      [37.4497106,-91.6714732],[37.4453721,-91.6690674],[37.4480262,-91.6643295],
+      [37.4494265,-91.6594773],[37.4451319,-91.6562376],[37.4401075,-91.6561601],
+      [37.4353039,-91.6574222],[37.4368198,-91.6525388],[37.4376782,-91.6480224],
+      [37.4327911,-91.6479338],[37.4290878,-91.6496744],[37.4242675,-91.6493755],
+      [37.4206338,-91.6454790],[37.4229811,-91.6420474],[37.4270982,-91.6437632],
+      [37.4280803,-91.6381285],[37.4282088,-91.6328115],[37.4325864,-91.6299039],
+      [37.4368143,-91.6298449],[37.4376083,-91.6235757],[37.4357771,-91.6184135],
+      [37.4315608,-91.6142255],[37.4268901,-91.6153878],[37.4221917,-91.6142101],
+      [37.4222591,-91.6083173]
     ],
-    // bankWidths: [leftMeters, rightMeters] — Upper Current River wider channel
+    // bankWidths: [leftMeters, rightMeters] — Current River Blue Ribbon, widens downstream
+    // Upper (Park End): ~14-15m total. Mid: ~15-17m. Lower (Cedar Grove): ~18-20m.
     bankWidths: [
-      [7.0,7.5],[7.0,7.0],[6.5,7.0],[6.5,6.5],
-      [6.5,7.0],[7.0,7.0],[7.5,7.0],[7.0,7.0],
-      [7.0,7.5],[7.5,7.5],[7.0,7.0],[7.0,7.5],
-      [7.5,7.5],[8.0,7.5],[7.5,7.5],[7.5,8.0],
-      [8.0,8.0],[8.0,7.5],[7.5,7.5],[7.0,7.0]
+      [7.0,7.5],[7.0,7.0],[7.0,7.5],[7.5,7.0],[7.0,7.5],
+      [7.5,7.5],[7.5,8.0],[7.5,7.5],[8.0,7.5],[8.0,8.0],
+      [7.5,8.0],[8.0,8.5],[8.5,8.0],[8.0,8.5],[8.5,8.5],
+      [8.5,9.0],[9.0,8.5],[8.5,9.0],[9.0,9.0],[9.0,9.5],
+      [9.5,9.0],[9.0,9.5],[9.5,9.5],[9.5,10.0],[10.0,9.5]
     ],
     solitude: 'medium', difficulty: 'moderate', wadingRequired: false, familyFriendly: true,
     bestSeasons: ['spring', 'fall', 'winter'],

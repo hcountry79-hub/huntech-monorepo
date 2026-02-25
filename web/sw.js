@@ -2,7 +2,7 @@
 // HUNTECH — Service Worker with Offline Tile Caching
 // ═══════════════════════════════════════════════════════════════════════
 
-const SW_VERSION = 'huntech-sw-v62';
+const SW_VERSION = 'huntech-sw-v63';
 const APP_SHELL_CACHE = 'huntech-shell-v28';
 const TILE_CACHE = 'huntech-tiles-v1';
 
