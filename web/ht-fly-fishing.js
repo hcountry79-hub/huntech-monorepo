@@ -4620,10 +4620,10 @@ window.deployAiFishingPins = function(water, zone, fishFlow) {
 
   // Sort candidates by interest score, then pick top N with spacing enforcement
   hotspotCandidates.sort(function(a, b) { return b.interestScore - a.interestScore; });
-  // Deploy pins on ALL detected habitat features — no artificial cap, spacing-only deconfliction
-  var maxPins = hotspotCandidates.length;
+  // Deploy pins on ALL detected micro-features — boulders, logs, undercuts, seams, pockets
+  var maxPins = Math.min(15, Math.max(4, segment.length));
   var selectedSpots = [];
-  var MIN_PIN_SPACING_M = 150; // wide spacing ensures pins spread across full zone
+  var MIN_PIN_SPACING_M = 15; // tighter spacing to catch every micro-feature
 
   for (var sc = 0; sc < hotspotCandidates.length && selectedSpots.length < maxPins; sc++) {
     var cand = hotspotCandidates[sc];
@@ -4698,36 +4698,102 @@ window.deployAiFishingPins = function(water, zone, fishFlow) {
 
   var deployed = selectedSpots.length;
 
-  // ── Micro clusters deploy on-demand when user taps a pill and clicks CHECK IN ──
-  // (handled by _autoCheckInToPin via _onAiPinClick popup button)
+  // ── AUTO-DEPLOY 3-icon micro clusters (fish + angler + target) for ALL spots ──
+  _checkedInPinIdx = -1;
+  _checkedInMicroIdx = -1;
+  _activeMicroPins.forEach(function(m) { try { map.removeLayer(m); } catch {} });
+  _activeMicroPins = [];
+  _activeMicroPolygons.forEach(function(p) { try { map.removeLayer(p); } catch {} });
+  _activeMicroPolygons = [];
 
-  // Zoom to fit ALL pills across the zone
+  var allMicroCoords = [];
+  var wadeMode = fishFlow.wade || 'waders';
+  selectedSpots.forEach(function(spot, spotIdx) {
+    var maxMicros = spot.score >= 70 ? 5 : spot.score >= 50 ? 4 : 3;
+    var microTypes = ['primary-lie', 'seam-edge', 'pocket-water', 'undercut-bank', 'feeding-lane'];
+    var cIdx = spot.segmentIdx;
+    var MAX_DIST_FROM_PIN = 60;
+    var MIN_FROM_MAIN = 8;
+    var MIN_BETWEEN_MICRO = 8;
+
+    var sortedByStream = selectedSpots.slice().sort(function(a, b) { return a.segmentIdx - b.segmentIdx; });
+    var streamOrderIdx = -1;
+    for (var si = 0; si < sortedByStream.length; si++) {
+      if (sortedByStream[si].segmentIdx === spot.segmentIdx) { streamOrderIdx = si; break; }
+    }
+    var boundaryLow = 0, boundaryHigh = segment.length - 1;
+    if (streamOrderIdx > 0) boundaryLow = Math.ceil((sortedByStream[streamOrderIdx - 1].segmentIdx + spot.segmentIdx) / 2);
+    if (streamOrderIdx < sortedByStream.length - 1) boundaryHigh = Math.floor((spot.segmentIdx + sortedByStream[streamOrderIdx + 1].segmentIdx) / 2);
+
+    // ── EDGE BUFFER: keep micro spots 5+ indices from zone edges to
+    //    prevent angler/wade pins from overflowing past zone boundary ──
+    var ZONE_EDGE_BUFFER = 5;
+    var safelow = Math.max(boundaryLow, ZONE_EDGE_BUFFER);
+    var safehigh = Math.min(boundaryHigh, segment.length - 1 - ZONE_EDGE_BUFFER);
+
+    var candidates = [];
+    for (var sIdx = safelow; sIdx <= safehigh; sIdx++) {
+      if (sIdx === cIdx || sIdx < 0 || sIdx >= segment.length) continue;
+      var cLat = segment[sIdx][0], cLng = segment[sIdx][1];
+      var distFromMain = _distM(spot.lat, spot.lng, cLat, cLng);
+      if (distFromMain > MAX_DIST_FROM_PIN || distFromMain < MIN_FROM_MAIN) continue;
+      var tooCloseM = false;
+      for (var am = 0; am < allMicroCoords.length; am++) {
+        if (_distM(allMicroCoords[am][0], allMicroCoords[am][1], cLat, cLng) < MIN_BETWEEN_MICRO) { tooCloseM = true; break; }
+      }
+      if (tooCloseM) continue;
+      for (var cm = 0; cm < candidates.length; cm++) {
+        if (_distM(candidates[cm].lat, candidates[cm].lng, cLat, cLng) < MIN_BETWEEN_MICRO) { tooCloseM = true; break; }
+      }
+      if (tooCloseM) continue;
+      var microScore = 50 + Math.max(0, 30 - distFromMain);
+      candidates.push({ lat: cLat, lng: cLng, segIdx: sIdx, score: microScore });
+    }
+    candidates.sort(function(a, b) { return b.score - a.score; });
+    var accepted = candidates.slice(0, maxMicros);
+
+    accepted.forEach(function(mc, i) {
+      var mType = microTypes[i] || 'primary-lie';
+      var clusterMarkers = _deployMicroCluster({
+        fishLat: mc.lat, fishLng: mc.lng,
+        segIdx: mc.segIdx, segment: segment,
+        wade: wadeMode, habitat: spot.habitat,
+        microType: mType, microIdx: _activeMicroPins.length,
+        spot: spot, water: water, zone: zone,
+        bankWidths: zoneBankWidths  // zone-aligned bankWidths (indices match segment)
+      });
+      clusterMarkers.forEach(function(mk) { _activeMicroPins.push(mk); });
+      allMicroCoords.push([mc.lat, mc.lng]);
+      bounds.push([mc.lat, mc.lng]);
+    });
+  });
+
+  // Zoom to fit ALL pins (hotspots + micro)
   if (bounds.length > 0) {
     var fitBounds = L.latLngBounds(bounds);
     map.fitBounds(fitBounds.pad(0.15), { animate: true, duration: 1.0, maxZoom: 18 });
   }
 
-  // ── Pills stay visible — user taps one to expand micro clusters + hide others ──
-  // (pill hiding now happens inside _autoCheckInToPin after CHECK IN)
-
-  // ── Deploy animated stream flow overlay (LiDAR-derived) ──
-  try {
-    deployStreamFlowOverlay(water, zone);
-    if (_flowActive && _flowCanvas) {
-      showNotice('🌊 Stream flow overlay active', 'success', 2500);
-    } else {
-      showNotice('⚠️ Stream flow overlay did not activate — check console', 'warning', 4000);
-      console.warn('[HT-FLOW] deploy returned but _flowActive=' + _flowActive + ', _flowCanvas=' + !!_flowCanvas);
-    }
-  } catch(flowErr) {
-    showNotice('⚠️ Stream flow failed: ' + flowErr.message, 'error', 5000);
-    console.error('[HT-FLOW] Stream flow overlay failed:', flowErr);
-  }
+  // ── Hide ALL location pills so they don't overlap micro pins ──
+  // Hide AI ranked pills (#1 Seam, #2 Pool, etc.)
+  _aiFishingPins.forEach(function(pin) {
+    try {
+      var el = pin.getElement && pin.getElement();
+      if (el) el.style.display = 'none';
+    } catch(e) {}
+  });
+  // Hide hotspot area pills (Mid-Run Seam, Deep Run, etc.)
+  _hotspotPins.forEach(function(pin) {
+    try {
+      var el = pin.getElement && pin.getElement();
+      if (el) el.style.display = 'none';
+    } catch(e) {}
+  });
 
   // Start proximity watch
   _startProximityWatch();
 
-  console.log('HUNTECH: Deployed ' + deployed + ' AI hotspot pins across zone (LiDAR-locked, tap a pill to fish)');
+  console.log('HUNTECH: Deployed ' + deployed + ' AI hotspots + ' + _activeMicroPins.length + ' micro-feature pins (LiDAR-locked)');
 };
 
 /* Score a spot based on user inputs */
