@@ -1767,17 +1767,27 @@ function _showStreamCommandTray(hs) {
   // Hide the background toolbar so it doesn't show behind the 6-button tray
   var _tb = document.getElementById('toolbar');
   if (_tb) _tb.style.display = 'none';
+
+  // Build NEXT pill label
+  var nextLabel = 'Next Spot';
+
   var tray = document.createElement('div');
   tray.className = 'ht-stream-command-tray';
   tray.innerHTML =
-    '<div class="ht-stream-command-title">STREAM COMMAND</div>' +
-    '<div class="ht-stream-command-grid">' +
-      '<button class="ht-stream-command-btn" type="button" onclick="cmdAiFlyBox()">🎣 AI Fly Box</button>' +
-      '<button class="ht-stream-command-btn" type="button" onclick="cmdLogCatch()">📸 Log Catch</button>' +
-      '<button class="ht-stream-command-btn" type="button" onclick="cmdLogHatch()">🦟 Log Hatch</button>' +
-      '<button class="ht-stream-command-btn" type="button" onclick="cmdAiCoach()">🤖 AI Coach</button>' +
-      '<button class="ht-stream-command-btn" type="button" onclick="cmdStrategy()">⚡ Strategy</button>' +
-      '<button class="ht-stream-command-btn ht-stream-command-btn--checkout" type="button" onclick="cmdCheckOut()">🔴 Check Out</button>' +
+    '<div class="ht-stream-command-tab">' +
+      '<button class="ht-toolbar-mini-btn" type="button" onclick="cmdAiFlyBox()">FLY<br>BOX</button>' +
+      '<button class="ht-stream-command-toggle" type="button" onclick="toggleStreamCommandTray()">STREAM COMMAND</button>' +
+      '<button class="ht-toolbar-mini-btn" type="button" onclick="cmdLogCatch()">LOG<br>CATCH</button>' +
+    '</div>' +
+    '<div class="ht-stream-command-body">' +
+      '<div class="ht-stream-command-grid">' +
+        '<button class="ht-stream-command-btn" type="button" onclick="cmdAiFlyBox()">🎣 AI Fly Box</button>' +
+        '<button class="ht-stream-command-btn" type="button" onclick="cmdLogCatch()">📸 Log Catch</button>' +
+        '<button class="ht-stream-command-btn" type="button" onclick="cmdLogHatch()">🦟 Log Hatch</button>' +
+        '<button class="ht-stream-command-btn" type="button" onclick="cmdAiCoach()">🤖 AI Coach</button>' +
+        '<button class="ht-stream-command-btn" type="button" onclick="cmdStrategy()">⚡ Strategy</button>' +
+        '<button class="ht-stream-command-btn ht-stream-command-btn--checkout" type="button" onclick="cmdCheckOut()">🔴 Check Out</button>' +
+      '</div>' +
     '</div>';
   document.body.appendChild(tray);
   _streamCommandTrayEl = tray;
@@ -1786,6 +1796,12 @@ function _showStreamCommandTray(hs) {
     tray.classList.add('is-visible');
   });
 }
+
+/* Toggle the Stream Command tray open/collapsed */
+window.toggleStreamCommandTray = function() {
+  if (!_streamCommandTrayEl) return;
+  _streamCommandTrayEl.classList.toggle('is-collapsed');
+};
 
 function _dismissStreamCommandTray() {
   if (_streamCommandTrayEl) {
@@ -1797,6 +1813,94 @@ function _dismissStreamCommandTray() {
   if (_tb) _tb.style.display = '';
 }
 window._dismissStreamCommandTray = _dismissStreamCommandTray;
+
+/* Go to next hotspot from inside the Stream Command tray */
+window.cmdGoNext = function() {
+  if (!_hotspotData.length) return;
+  var nextIdx = (_activeHotspotIdx >= 0 ? _activeHotspotIdx : 0) + 1;
+  if (nextIdx >= _hotspotData.length) nextIdx = 0;
+  // _hotspotCheckIn handles dismissing the current tray via checkout + re-checkin
+  _hotspotCheckOut(false);
+  _hotspotCheckIn(nextIdx);
+};
+
+/* Pick a spot — checkout and zoom out to show all hotspot pills */
+window.cmdPickASpot = function() {
+  _hotspotCheckOut(false);
+  // Restore hotspot pins (already done in _hotspotCheckOut)
+  showNotice('Pick your next hotspot!', 'info', 2500);
+};
+
+/* Change water — full area checkout, return to favorites/toolbar */
+window.cmdChangeWater = function() {
+  if (!isFlyModule()) return;
+  var prevName = (_hotspotWater && _hotspotWater.name) || (window._fishFlow && window._fishFlow.area && window._fishFlow.area.name) || 'area';
+
+  // 1) Check out of current hotspot if any (silent)
+  if (_activeHotspotIdx >= 0) {
+    _hotspotCheckOut(false);
+  }
+
+  // 2) Dismiss stream command tray & checkout bar
+  _dismissStreamCommandTray();
+  _dismissHotspotCheckoutBar();
+
+  // 3) Clear all map pins — hotspots, micro spots, access points, area pins
+  if (typeof window._clearAllFishPins === 'function') window._clearAllFishPins();
+  _clearHotspotPins();
+  clearFlyWaterLayer();
+
+  // 4) Close any open action bars
+  if (typeof closeFlyWaterActionBar === 'function') {
+    try { closeFlyWaterActionBar(); } catch(e) {}
+  }
+
+  // 5) Reset fish flow state but keep the workflow alive
+  if (window._fishFlow) {
+    if (window._fishFlow.areaMarker && typeof map !== 'undefined' && map) {
+      try { map.removeLayer(window._fishFlow.areaMarker); } catch(e) {}
+    }
+    window._fishFlow.area = null;
+    window._fishFlow.areaMarker = null;
+    window._fishFlow.selectedZone = null;
+    window._fishFlow.selectedZoneIdx = 0;
+    window._fishFlow.step = 1;
+  }
+
+  // 6) Hide fly-live tray if visible
+  if (typeof hideFlyLiveCommandTray === 'function') {
+    try { hideFlyLiveCommandTray(); } catch(e) {}
+  }
+
+  // 7) Restore the toolbar and show step 1 (favorites + welcome)
+  var _tb = document.getElementById('toolbar');
+  if (_tb) _tb.style.display = '';
+
+  // Re-open toolbar if collapsed
+  if (typeof window.toggleToolbar === 'function') {
+    var toolbar = document.getElementById('toolbar');
+    if (toolbar && toolbar.classList.contains('collapsed')) {
+      window.toggleToolbar();
+    }
+  }
+
+  // Show FISH NOW panel with step 1
+  if (typeof window.showStreamPanel === 'function') {
+    window._fishNowSkipInitOnce = true;
+    window.showStreamPanel('fishNowPanel');
+  }
+  if (typeof window.fishShowStep === 'function') {
+    window.fishShowStep(1);
+  }
+
+  // 8) Zoom out to state/region level so user can orient
+  if (typeof map !== 'undefined' && map) {
+    map.setZoom(10, { animate: true, duration: 0.8 });
+  }
+
+  showNotice('Left ' + prevName + '. Pick your next water!', 'success', 3500);
+  console.log('HUNTECH: cmdChangeWater — full area checkout from ' + prevName);
+};
 
 /* Check in to a hotspot — deploy micro fishing spots */
 function _hotspotCheckIn(idx) {
@@ -1987,14 +2091,10 @@ function _showHotspotCheckoutBar(prevIdx) {
   var bar = document.createElement('div');
   bar.className = 'ht-hotspot-checkout-bar';
   var nextLabel = 'Next Spot';
-  if (prevIdx >= 0 && prevIdx < _hotspotData.length - 1) {
-    nextLabel = 'Next: ' + _hotspotData[prevIdx + 1].name;
-  } else if (_hotspotData.length > 0) {
-    nextLabel = 'Next: ' + _hotspotData[0].name;
-  }
   bar.innerHTML =
-    '<button class="ht-hotspot-checkout-btn ht-hotspot-checkout-btn--next" onclick="hotspotGoNext()">➡ ' + escapeHtml(nextLabel) + '</button>' +
-    '<button class="ht-hotspot-checkout-btn" onclick="dismissHotspotCheckoutBar()">Pick a Spot</button>';
+    '<button class="ht-hotspot-checkout-btn ht-hotspot-checkout-btn--next" onclick="hotspotGoNext()">&rarr; ' + escapeHtml(nextLabel) + '</button>' +
+    '<button class="ht-hotspot-checkout-btn" onclick="dismissHotspotCheckoutBar()">Pick a Spot</button>' +
+    '<button class="ht-hotspot-checkout-btn ht-hotspot-checkout-btn--change" onclick="cmdChangeWater()">Change Water</button>';
   document.body.appendChild(bar);
   _hotspotCheckoutBarEl = bar;
 }
@@ -2831,13 +2931,15 @@ function ensureFlyLiveCommandTray() {
 }
 
 function showFlyLiveCommandTray() {
-  const tray = ensureFlyLiveCommandTray();
-  tray.classList.add('is-visible');
+  // Disabled — Stream Command tray now handles all fly box/catch/hatch actions
+  hideFlyLiveCommandTray();
 }
 
 function hideFlyLiveCommandTray() {
   if (!flyLiveCommandTray) return;
   flyLiveCommandTray.classList.remove('is-visible');
+  try { flyLiveCommandTray.remove(); } catch(e) {}
+  flyLiveCommandTray = null;
 }
 
 function setFlyLiveSessionActive(active) {
@@ -2863,6 +2965,376 @@ async function startFlyStrategyFromTray(water) {
   setFieldCommandStep(2);
   openFieldCommandTray();
   showNotice('Trout strategy online. Check in to deploy your fishing zone.', 'success', 3600);
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   AI FLY BOX HUB — Premium entry point for the fly box experience
+   The key technology feature of the fly fishing module.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+function _timeAgo(ts) {
+  var diff = Date.now() - ts;
+  var mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return mins + 'm ago';
+  var hours = Math.floor(mins / 60);
+  if (hours < 24) return hours + 'h ago';
+  var days = Math.floor(hours / 24);
+  if (days < 7) return days + 'd ago';
+  return new Date(ts).toLocaleDateString();
+}
+
+function _openAiFlyBoxHub() {
+  var inv = loadFlyInventory();
+  var flies = Array.isArray(inv.flies) ? inv.flies : [];
+  var totalFlies = flies.length;
+  var dryCount = flies.filter(function(f) { return f.category === 'dryFlies'; }).length;
+  var nymphCount = flies.filter(function(f) { return f.category === 'nymphs'; }).length;
+  var streamerCount = flies.filter(function(f) { return f.category === 'streamers'; }).length;
+  var highConfCount = flies.filter(function(f) { return f.confidence === 'high' || f.confidence === 'manual'; }).length;
+  var confPct = totalFlies > 0 ? Math.round((highConfCount / totalFlies) * 100) : 0;
+  var lastScan = inv.lastUpdated ? _timeAgo(inv.lastUpdated) : 'Never';
+
+  var backdrop = document.createElement('div');
+  backdrop.className = 'ht-modal-backdrop ht-flybox-hub-backdrop';
+  backdrop.style.display = 'flex';
+
+  var hub = document.createElement('div');
+  hub.className = 'ht-flybox-hub';
+  hub.innerHTML =
+    '<div class="ht-flybox-hub-header">' +
+      '<div class="ht-flybox-hub-brand">' +
+        '<div class="ht-flybox-hub-icon-wrap"><span class="ht-flybox-hub-icon">🪰</span></div>' +
+        '<div>' +
+          '<h2 class="ht-flybox-hub-title">AI Fly Box</h2>' +
+          '<p class="ht-flybox-hub-subtitle">Your Digital Fly Collection</p>' +
+        '</div>' +
+      '</div>' +
+      '<button class="ht-flybox-close-btn" type="button" data-hub-close>×</button>' +
+    '</div>' +
+
+    '<div class="ht-flybox-hub-stats">' +
+      '<div class="ht-flybox-hub-stat">' +
+        '<span class="ht-flybox-hub-stat-num">' + totalFlies + '</span>' +
+        '<span class="ht-flybox-hub-stat-label">Total Flies</span>' +
+      '</div>' +
+      '<div class="ht-flybox-hub-stat">' +
+        '<span class="ht-flybox-hub-stat-num">' + dryCount + '<small>/' + nymphCount + '/' + streamerCount + '</small></span>' +
+        '<span class="ht-flybox-hub-stat-label">Dry / Nymph / Streamer</span>' +
+      '</div>' +
+      '<div class="ht-flybox-hub-stat">' +
+        '<span class="ht-flybox-hub-stat-num">' + confPct + '<small>%</small></span>' +
+        '<span class="ht-flybox-hub-stat-label">AI Confidence</span>' +
+      '</div>' +
+    '</div>' +
+
+    '<div class="ht-flybox-hub-actions">' +
+      '<button class="ht-flybox-hub-action ht-flybox-hub-action--primary" type="button" data-hub-scan>' +
+        '<div class="ht-flybox-hub-action-icon-wrap"><span class="ht-flybox-hub-action-icon">📸</span></div>' +
+        '<div class="ht-flybox-hub-action-text">' +
+          '<span class="ht-flybox-hub-action-title">Scan Fly Box</span>' +
+          '<span class="ht-flybox-hub-action-desc">Point your camera at your open fly box. AI detects and inventories every fly.</span>' +
+        '</div>' +
+        '<span class="ht-flybox-hub-action-arrow">&#x203A;</span>' +
+      '</button>' +
+      '<button class="ht-flybox-hub-action" type="button" data-hub-upload>' +
+        '<div class="ht-flybox-hub-action-icon-wrap"><span class="ht-flybox-hub-action-icon">🖼️</span></div>' +
+        '<div class="ht-flybox-hub-action-text">' +
+          '<span class="ht-flybox-hub-action-title">Upload Photos</span>' +
+          '<span class="ht-flybox-hub-action-desc">Select photos of individual flies or your full box from your gallery.</span>' +
+        '</div>' +
+        '<span class="ht-flybox-hub-action-arrow">&#x203A;</span>' +
+      '</button>' +
+      '<button class="ht-flybox-hub-action' + (totalFlies > 0 ? '' : ' ht-flybox-hub-action--disabled') + '" type="button" data-hub-viewbox>' +
+        '<div class="ht-flybox-hub-action-icon-wrap"><span class="ht-flybox-hub-action-icon">🪰</span></div>' +
+        '<div class="ht-flybox-hub-action-text">' +
+          '<span class="ht-flybox-hub-action-title">View My Fly Box</span>' +
+          '<span class="ht-flybox-hub-action-desc">' + (totalFlies > 0 ? totalFlies + ' flies inventoried \u2022 Last updated ' + lastScan : 'No flies yet \u2014 scan your box to get started') + '</span>' +
+        '</div>' +
+        '<span class="ht-flybox-hub-action-arrow">&#x203A;</span>' +
+      '</button>' +
+    '</div>' +
+
+    '<div class="ht-flybox-hub-tip">' +
+      '<strong>💡 Pro tip:</strong> Lay your fly box open under good overhead light. The AI works best with even, natural lighting and a clear view of each compartment.' +
+    '</div>';
+
+  var closeModal = function() { backdrop.remove(); };
+
+  hub.querySelector('[data-hub-close]').addEventListener('click', closeModal);
+
+  hub.querySelector('[data-hub-scan]').addEventListener('click', function() {
+    closeModal();
+    _openFlyBoxLiveScanner();
+  });
+
+  hub.querySelector('[data-hub-upload]').addEventListener('click', function() {
+    closeModal();
+    openFlyBoxScanner();
+  });
+
+  hub.querySelector('[data-hub-viewbox]').addEventListener('click', function() {
+    if (totalFlies === 0) {
+      showNotice('Scan or upload flies first to build your box.', 'info', 2800);
+      return;
+    }
+    closeModal();
+    openVirtualFlyBox();
+  });
+
+  backdrop.addEventListener('click', function(e) { if (e.target === backdrop) closeModal(); });
+  backdrop.appendChild(hub);
+  document.body.appendChild(backdrop);
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   LIVE CAMERA SCANNER — Real-time video feed with AI guide overlay
+   ══════════════════════════════════════════════════════════════════════════ */
+function _openFlyBoxLiveScanner() {
+  var backdrop = document.createElement('div');
+  backdrop.className = 'ht-modal-backdrop ht-flybox-scanner-backdrop';
+  backdrop.style.display = 'flex';
+
+  var scanner = document.createElement('div');
+  scanner.className = 'ht-flybox-scanner';
+  scanner.innerHTML =
+    '<div class="ht-flybox-scanner-header">' +
+      '<h3>AI Fly Box Scanner</h3>' +
+      '<button class="ht-flybox-close-btn" type="button" data-scanner-close>×</button>' +
+    '</div>' +
+    '<div class="ht-flybox-scanner-viewport">' +
+      '<video class="ht-flybox-scanner-video" autoplay playsinline muted></video>' +
+      '<canvas class="ht-flybox-scanner-overlay"></canvas>' +
+      '<div class="ht-flybox-scanner-guide">' +
+        '<div class="ht-flybox-scanner-corner tl"></div>' +
+        '<div class="ht-flybox-scanner-corner tr"></div>' +
+        '<div class="ht-flybox-scanner-corner bl"></div>' +
+        '<div class="ht-flybox-scanner-corner br"></div>' +
+      '</div>' +
+      '<div class="ht-flybox-scanner-pulse"></div>' +
+      '<div class="ht-flybox-scanner-status">Initializing camera...</div>' +
+    '</div>' +
+    '<div class="ht-flybox-scanner-controls">' +
+      '<p class="ht-flybox-scanner-tip">Position your open fly box inside the frame</p>' +
+      '<div class="ht-flybox-scanner-btn-row">' +
+        '<button class="ht-flybox-scanner-btn ht-flybox-scanner-btn--secondary" type="button" data-scanner-flip>🔄 Flip</button>' +
+        '<button class="ht-flybox-scanner-btn ht-flybox-scanner-btn--capture" type="button" data-scanner-capture>' +
+          '<span class="ht-flybox-scanner-btn-ring"></span>' +
+          '📸 Capture &amp; Analyze' +
+        '</button>' +
+      '</div>' +
+      '<button class="ht-flybox-scanner-link" type="button" data-scanner-upload>Or upload a photo instead</button>' +
+    '</div>';
+
+  var video = scanner.querySelector('.ht-flybox-scanner-video');
+  var overlay = scanner.querySelector('.ht-flybox-scanner-overlay');
+  var statusEl = scanner.querySelector('.ht-flybox-scanner-status');
+  var stream = null;
+  var facingMode = 'environment';
+  var animFrame = null;
+
+  function startCamera(facing) {
+    if (stream) {
+      stream.getTracks().forEach(function(t) { t.stop(); });
+    }
+    statusEl.textContent = 'Starting camera...';
+    statusEl.style.display = '';
+
+    navigator.mediaDevices.getUserMedia({
+      video: { facingMode: facing, width: { ideal: 1920 }, height: { ideal: 1080 } }
+    })
+    .then(function(s) {
+      stream = s;
+      video.srcObject = s;
+      video.play();
+      statusEl.style.display = 'none';
+      _startScannerOverlay();
+    })
+    .catch(function(err) {
+      console.warn('HUNTECH: Camera error:', err);
+      statusEl.textContent = 'Camera unavailable \u2014 use Upload instead';
+      statusEl.style.display = '';
+    });
+  }
+
+  function _startScannerOverlay() {
+    var ctx = overlay.getContext('2d');
+    var scanLineY = 0;
+    var frameCount = 0;
+
+    function drawFrame() {
+      if (!stream || !stream.active) return;
+      var w = overlay.width = video.videoWidth || overlay.clientWidth;
+      var h = overlay.height = video.videoHeight || overlay.clientHeight;
+      ctx.clearRect(0, 0, w, h);
+      frameCount++;
+
+      // Scanning beam animation
+      scanLineY = (scanLineY + 1.5) % h;
+      var grad = ctx.createLinearGradient(0, scanLineY - 8, 0, scanLineY + 8);
+      grad.addColorStop(0, 'rgba(43, 212, 255, 0)');
+      grad.addColorStop(0.5, 'rgba(43, 212, 255, 0.35)');
+      grad.addColorStop(1, 'rgba(43, 212, 255, 0)');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, scanLineY - 8, w, 16);
+
+      // Compartment grid overlay (subtle, suggests AI detection)
+      var cols = 6, rows = 4;
+      ctx.strokeStyle = 'rgba(43, 212, 255, 0.06)';
+      ctx.lineWidth = 1;
+      for (var c = 1; c < cols; c++) {
+        var x = Math.round((w / cols) * c);
+        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke();
+      }
+      for (var r = 1; r < rows; r++) {
+        var y = Math.round((h / rows) * r);
+        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
+      }
+
+      // Corner detection pulse (cycles through cells)
+      if (frameCount % 40 < 20) {
+        var pulseCol = Math.floor((frameCount / 40) % cols);
+        var pulseRow = Math.floor((frameCount / 240) % rows);
+        var cx = Math.round((w / cols) * pulseCol + (w / cols) / 2);
+        var cy = Math.round((h / rows) * pulseRow + (h / rows) / 2);
+        var radius = Math.min(w / cols, h / rows) * 0.3;
+        ctx.strokeStyle = 'rgba(43, 212, 255, 0.15)';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+
+      animFrame = requestAnimationFrame(drawFrame);
+    }
+    drawFrame();
+  }
+
+  function captureFrame() {
+    if (!video.videoWidth) {
+      showNotice('Camera not ready yet. Wait a moment.', 'warning', 2400);
+      return;
+    }
+    var canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    canvas.getContext('2d').drawImage(video, 0, 0);
+    var dataUrl = canvas.toDataURL('image/jpeg', 0.92);
+    cleanup(false);
+    _showBoxScanProcessing(dataUrl, backdrop, scanner);
+  }
+
+  function cleanup(removeBackdrop) {
+    if (animFrame) cancelAnimationFrame(animFrame);
+    if (stream) {
+      stream.getTracks().forEach(function(t) { t.stop(); });
+      stream = null;
+    }
+    if (removeBackdrop !== false) backdrop.remove();
+  }
+
+  scanner.querySelector('[data-scanner-close]').addEventListener('click', function() { cleanup(true); });
+  scanner.querySelector('[data-scanner-flip]').addEventListener('click', function() {
+    facingMode = facingMode === 'environment' ? 'user' : 'environment';
+    startCamera(facingMode);
+  });
+  scanner.querySelector('[data-scanner-capture]').addEventListener('click', captureFrame);
+  scanner.querySelector('[data-scanner-upload]').addEventListener('click', function() {
+    cleanup(true);
+    openFlyBoxScanner();
+  });
+
+  backdrop.addEventListener('click', function(e) { if (e.target === backdrop) cleanup(true); });
+  backdrop.appendChild(scanner);
+  document.body.appendChild(backdrop);
+
+  if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+    startCamera(facingMode);
+  } else {
+    statusEl.textContent = 'Camera API not available on this device';
+    statusEl.style.display = '';
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   SCAN PROCESSING — Animated staged AI analysis with progress
+   ══════════════════════════════════════════════════════════════════════════ */
+function _showBoxScanProcessing(dataUrl, backdrop, containerEl) {
+  containerEl.innerHTML =
+    '<div class="ht-flybox-processing">' +
+      '<h3 class="ht-flybox-processing-title">Analyzing Your Fly Box</h3>' +
+      '<div class="ht-flybox-processing-img"><img src="' + dataUrl + '" alt="Captured fly box"></div>' +
+      '<div class="ht-flybox-processing-stages">' +
+        '<div class="ht-flybox-stage" data-stage="detect"><span class="ht-flybox-stage-icon">🔍</span> Detecting individual flies<span class="ht-flybox-stage-check"></span></div>' +
+        '<div class="ht-flybox-stage" data-stage="color"><span class="ht-flybox-stage-icon">🎨</span> Analyzing color patterns<span class="ht-flybox-stage-check"></span></div>' +
+        '<div class="ht-flybox-stage" data-stage="shape"><span class="ht-flybox-stage-icon">📐</span> Evaluating shape &amp; profile<span class="ht-flybox-stage-check"></span></div>' +
+        '<div class="ht-flybox-stage" data-stage="match"><span class="ht-flybox-stage-icon">🧠</span> AI pattern matching<span class="ht-flybox-stage-check"></span></div>' +
+      '</div>' +
+      '<div class="ht-flybox-processing-progress">' +
+        '<div class="ht-flybox-progress-bar"><div class="ht-flybox-progress-fill"></div></div>' +
+        '<div class="ht-flybox-progress-text">Starting analysis...</div>' +
+      '</div>' +
+    '</div>';
+
+  var stages = containerEl.querySelectorAll('.ht-flybox-stage');
+  var progressFill = containerEl.querySelector('.ht-flybox-progress-fill');
+  var progressText = containerEl.querySelector('.ht-flybox-progress-text');
+
+  function setProgress(pct, text) {
+    if (progressFill) progressFill.style.width = pct + '%';
+    if (progressText) progressText.textContent = text;
+  }
+  function completeStage(idx) {
+    if (stages[idx]) {
+      stages[idx].classList.add('is-complete');
+      var chk = stages[idx].querySelector('.ht-flybox-stage-check');
+      if (chk) chk.textContent = ' \u2713';
+    }
+  }
+  function activateStage(idx) {
+    if (stages[idx]) stages[idx].classList.add('is-active');
+  }
+
+  activateStage(0);
+  setProgress(5, 'Scanning image for fly box compartments...');
+
+  setTimeout(function() { setProgress(12, 'Segmenting compartments...'); }, 300);
+
+  _detectFliesInBox(dataUrl).then(function(regions) {
+    completeStage(0);
+    setProgress(25, 'Found ' + regions.length + ' potential flies');
+    activateStage(1);
+
+    setTimeout(function() { setProgress(30, 'Running color analysis...'); }, 200);
+
+    return _analyzeRegions(regions, function(done, total) {
+      var pct = 30 + Math.round((done / total) * 55);
+      setProgress(pct, 'Analyzing fly ' + done + ' of ' + total + '...');
+      if (done === 1) { completeStage(1); activateStage(2); }
+      if (done >= Math.ceil(total * 0.5)) { completeStage(2); activateStage(3); }
+    });
+  }).then(function(results) {
+    completeStage(2);
+    completeStage(3);
+    setProgress(100, results.length + ' flies identified!');
+
+    setTimeout(function() {
+      backdrop.remove();
+      if (results.length > 0) {
+        openFlyBoxScanReviewModal(results);
+      } else {
+        showNotice('No flies detected. Try better lighting or a closer photo.', 'warning', 4000);
+        _openAiFlyBoxHub();
+      }
+    }, 1400);
+  }).catch(function(err) {
+    console.error('HUNTECH: Fly box scan error:', err);
+    setProgress(100, 'Analysis complete');
+    setTimeout(function() {
+      backdrop.remove();
+      showNotice('Scan error \u2014 try again with better lighting.', 'warning', 3500);
+    }, 800);
+  });
 }
 
 function openFlyBoxScanner() {
@@ -3063,6 +3535,297 @@ function _matchFlyByColors(colorResults) {
       matchCount += 2;
     }
     return { entry: entry, score: matchCount };
+  });
+
+  scored.sort(function(a, b) { return b.score - a.score; });
+  return scored.filter(function(s) { return s.score > 0; }).slice(0, 6);
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   MULTI-FLY DETECTION — Grid segmentation of fly box images
+   Divides the captured image into a compartment grid, then tests each
+   cell for color variance and edge density to determine if it contains
+   a fly. Returns an array of regions with cropped data URLs.
+   ══════════════════════════════════════════════════════════════════════════ */
+function _detectFliesInBox(dataUrl) {
+  return new Promise(function(resolve) {
+    var img = new Image();
+    img.onload = function() {
+      var W = img.width, H = img.height;
+      // Determine grid layout based on aspect ratio
+      var cols, rows;
+      var ratio = W / H;
+      if (ratio > 1.5)      { cols = 8; rows = 4; }
+      else if (ratio > 1.1) { cols = 6; rows = 4; }
+      else if (ratio > 0.7) { cols = 5; rows = 5; }
+      else                  { cols = 4; rows = 6; }
+
+      var cellW = Math.floor(W / cols);
+      var cellH = Math.floor(H / rows);
+      var regions = [];
+      var canvas = document.createElement('canvas');
+      var ctx = canvas.getContext('2d');
+
+      for (var r = 0; r < rows; r++) {
+        for (var c = 0; c < cols; c++) {
+          var sx = c * cellW, sy = r * cellH;
+          canvas.width = cellW; canvas.height = cellH;
+          ctx.drawImage(img, sx, sy, cellW, cellH, 0, 0, cellW, cellH);
+          var pixelData = ctx.getImageData(0, 0, cellW, cellH).data;
+          var variance = _measureColorVariance(pixelData);
+          var edges = _measureEdgeDensity(pixelData, cellW, cellH);
+          // Non-empty cell: has enough color variation AND edge content
+          if (variance > 15 && edges > 0.02) {
+            regions.push({
+              dataUrl: canvas.toDataURL('image/jpeg', 0.85),
+              col: c, row: r, x: sx, y: sy, w: cellW, h: cellH,
+              variance: variance, edgeDensity: edges
+            });
+          }
+        }
+      }
+      console.log('HUNTECH: Fly box grid ' + cols + 'x' + rows + ' → detected ' + regions.length + ' potential flies');
+      resolve(regions);
+    };
+    img.onerror = function() { resolve([]); };
+    img.src = dataUrl;
+  });
+}
+
+/* Color variance — higher values mean more color complexity in the cell */
+function _measureColorVariance(data) {
+  var sumR = 0, sumG = 0, sumB = 0, count = 0;
+  for (var i = 0; i < data.length; i += 16) {
+    sumR += data[i]; sumG += data[i+1]; sumB += data[i+2]; count++;
+  }
+  if (count === 0) return 0;
+  var avgR = sumR / count, avgG = sumG / count, avgB = sumB / count;
+  var varSum = 0;
+  for (var j = 0; j < data.length; j += 16) {
+    var dr = data[j] - avgR, dg = data[j+1] - avgG, db = data[j+2] - avgB;
+    varSum += dr * dr + dg * dg + db * db;
+  }
+  return Math.sqrt(varSum / count);
+}
+
+/* Edge density via gradient detection — higher = more detail/texture */
+function _measureEdgeDensity(data, width, height) {
+  var edgeCount = 0, threshold = 30, step = 2;
+  for (var y = step; y < height - step; y += step) {
+    for (var x = step; x < width - step; x += step) {
+      var idx = (y * width + x) * 4;
+      var idxR = (y * width + x + step) * 4;
+      var idxD = ((y + step) * width + x) * 4;
+      if (idxR + 2 >= data.length || idxD + 2 >= data.length) continue;
+      var lumC = (data[idx] + data[idx+1] + data[idx+2]) / 3;
+      var lumR = (data[idxR] + data[idxR+1] + data[idxR+2]) / 3;
+      var lumD = (data[idxD] + data[idxD+1] + data[idxD+2]) / 3;
+      if (Math.abs(lumR - lumC) > threshold || Math.abs(lumD - lumC) > threshold) edgeCount++;
+    }
+  }
+  var totalCells = Math.floor(width / step) * Math.floor(height / step);
+  return totalCells > 0 ? edgeCount / totalCells : 0;
+}
+
+/* Process all detected regions through the enhanced AI pipeline */
+function _analyzeRegions(regions, onProgress) {
+  return new Promise(async function(resolve) {
+    var results = [];
+    for (var i = 0; i < regions.length; i++) {
+      var entry = await _aiFlyAnalysisEnhanced(regions[i].dataUrl);
+      if (entry) {
+        entry.scanRegion = { col: regions[i].col, row: regions[i].row };
+        results.push(entry);
+      }
+      if (onProgress) onProgress(i + 1, regions.length);
+      // Brief delay so the UI can repaint progress
+      await new Promise(function(r) { setTimeout(r, 60); });
+    }
+    resolve(results);
+  });
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   ENHANCED AI ANALYSIS — Color + Shape + Texture identification
+   ══════════════════════════════════════════════════════════════════════════ */
+async function _aiFlyAnalysisEnhanced(dataUrl) {
+  if (!dataUrl) return null;
+  var colors = await _analyzeImageColors(dataUrl);
+  var shape = await _analyzeImageShape(dataUrl);
+  var matches = _matchFlyByColorsAndShape(colors, shape);
+  var bestMatch = matches.length > 0 ? matches[0] : null;
+  var confidence = 'low';
+  if (bestMatch && bestMatch.score >= 5) confidence = 'high';
+  else if (bestMatch && bestMatch.score >= 3) confidence = 'medium';
+
+  var dominantColors = colors.slice(0, 3).map(function(c) { return c.color; });
+  var colorLabel = dominantColors.length ? dominantColors.join(', ') : 'varied';
+  colorLabel = colorLabel.charAt(0).toUpperCase() + colorLabel.slice(1);
+
+  return {
+    id: 'fly-' + Date.now() + '-' + Math.random().toString(16).slice(2, 8),
+    name: bestMatch ? bestMatch.entry.name : 'Unknown Fly',
+    category: bestMatch ? bestMatch.entry.category : 'dryFlies',
+    categoryLabel: bestMatch ? bestMatch.entry.categoryLabel : 'Dry Flies',
+    color: colorLabel,
+    size: bestMatch ? bestMatch.entry.sizes[0] : 'Assorted',
+    imageDataUrl: dataUrl,
+    notes: '',
+    confidence: confidence,
+    compartment: -1,
+    addedAt: Date.now(),
+    source: 'scan',
+    shapeProfile: shape,
+    altMatches: matches.slice(1, 4).map(function(m) {
+      return { name: m.entry.name, category: m.entry.categoryLabel, score: m.score };
+    })
+  };
+}
+
+/* Shape & profile analysis — aspect ratio, symmetry, texture, edge density */
+function _analyzeImageShape(dataUrl) {
+  return new Promise(function(resolve) {
+    if (!dataUrl) { resolve({}); return; }
+    var img = new Image();
+    img.onload = function() {
+      var sz = 64;
+      var canvas = document.createElement('canvas');
+      canvas.width = sz; canvas.height = sz;
+      var ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, sz, sz);
+      var data = ctx.getImageData(0, 0, sz, sz).data;
+
+      // Background reference from corners
+      var bgR = data[0], bgG = data[1], bgB = data[2];
+      var bgThreshold = 35;
+
+      // Bounding box of non-background pixels
+      var minX = sz, maxX = 0, minY = sz, maxY = 0;
+      for (var y = 0; y < sz; y++) {
+        for (var x = 0; x < sz; x++) {
+          var i = (y * sz + x) * 4;
+          if (Math.abs(data[i] - bgR) + Math.abs(data[i+1] - bgG) + Math.abs(data[i+2] - bgB) > bgThreshold) {
+            if (x < minX) minX = x;
+            if (x > maxX) maxX = x;
+            if (y < minY) minY = y;
+            if (y > maxY) maxY = y;
+          }
+        }
+      }
+      var bboxW = maxX - minX + 1;
+      var bboxH = maxY - minY + 1;
+      var aspectRatio = bboxH > 0 ? bboxW / bboxH : 1;
+
+      // Symmetry score
+      var symScore = 0, symTotal = 0;
+      var centerX = Math.floor((minX + maxX) / 2);
+      for (var y2 = minY; y2 <= maxY; y2++) {
+        for (var dx = 0; dx <= Math.min(centerX - minX, maxX - centerX); dx++) {
+          var lI = (y2 * sz + (centerX - dx)) * 4;
+          var rI = (y2 * sz + (centerX + dx)) * 4;
+          var lumL = (data[lI] + data[lI+1] + data[lI+2]) / 3;
+          var lumRt = (data[rI] + data[rI+1] + data[rI+2]) / 3;
+          if (Math.abs(lumL - lumRt) < 30) symScore++;
+          symTotal++;
+        }
+      }
+      var symmetry = symTotal > 0 ? symScore / symTotal : 0.5;
+
+      // Texture complexity
+      var lumArr = [];
+      for (var p = 0; p < data.length; p += 4) {
+        lumArr.push((data[p] + data[p+1] + data[p+2]) / 3);
+      }
+      var avgLum = lumArr.reduce(function(a, b) { return a + b; }, 0) / lumArr.length;
+      var lumVar = lumArr.reduce(function(a, v) { return a + (v - avgLum) * (v - avgLum); }, 0) / lumArr.length;
+      var textureComplexity = Math.sqrt(lumVar);
+
+      // Edge density
+      var edges = 0;
+      for (var yy = 1; yy < sz - 1; yy++) {
+        for (var xx = 1; xx < sz - 1; xx++) {
+          var ci = (yy * sz + xx) * 4;
+          var ri = (yy * sz + xx + 1) * 4;
+          var di = ((yy + 1) * sz + xx) * 4;
+          var lC = (data[ci] + data[ci+1] + data[ci+2]) / 3;
+          var lR2 = (data[ri] + data[ri+1] + data[ri+2]) / 3;
+          var lD = (data[di] + data[di+1] + data[di+2]) / 3;
+          if (Math.abs(lC - lR2) > 20 || Math.abs(lC - lD) > 20) edges++;
+        }
+      }
+      var edgeDensity = edges / ((sz - 2) * (sz - 2));
+
+      // Profile classification
+      var profile = 'standard';
+      if (aspectRatio > 2.5) profile = 'elongated';
+      else if (aspectRatio > 1.5) profile = 'long';
+      else if (aspectRatio < 0.6) profile = 'tall';
+      else if (bboxW < sz * 0.3 && bboxH < sz * 0.3) profile = 'tiny';
+      if (edgeDensity > 0.4 && textureComplexity > 40) profile += '-bushy';
+      else if (edgeDensity < 0.15 && textureComplexity < 25) profile += '-smooth';
+
+      resolve({
+        aspectRatio: Math.round(aspectRatio * 100) / 100,
+        symmetry: Math.round(symmetry * 100) / 100,
+        textureComplexity: Math.round(textureComplexity * 10) / 10,
+        edgeDensity: Math.round(edgeDensity * 100) / 100,
+        profile: profile,
+        fillRatio: Math.round((bboxW * bboxH) / (sz * sz) * 100) / 100
+      });
+    };
+    img.onerror = function() { resolve({}); };
+    img.src = dataUrl;
+  });
+}
+
+/* Enhanced matching using both color analysis AND shape profile */
+function _matchFlyByColorsAndShape(colorResults, shape) {
+  var db = _buildFlyIdDatabase();
+  var detectedColors = colorResults.map(function(c) { return c.color; });
+  var profile = (shape && shape.profile) || '';
+
+  var scored = db.map(function(entry) {
+    var score = 0;
+    // Color matching
+    entry.colors.forEach(function(fc) {
+      var fcLower = fc.toLowerCase();
+      detectedColors.forEach(function(dc) {
+        if (fcLower.indexOf(dc) >= 0 || dc.indexOf(fcLower) >= 0) score++;
+      });
+    });
+    // Dominant color bonus
+    var topColor = detectedColors[0] || '';
+    var topPct = colorResults.length > 0 ? colorResults[0].pct : 0;
+    if (topPct > 0.5 && entry.colors.some(function(c) { return c.toLowerCase().indexOf(topColor) >= 0; })) {
+      score += 2;
+    }
+    // Shape-based scoring
+    var cat = entry.category;
+    var nameLower = entry.name.toLowerCase();
+    if (profile.indexOf('elongated') >= 0) {
+      if (cat === 'streamers') score += 3;
+      if (/worm|leech|zonker|bugger/.test(nameLower)) score += 2;
+    }
+    if (profile.indexOf('long') >= 0) {
+      if (cat === 'nymphs') score += 2;
+      if (/nymph|emerger|larva/.test(nameLower)) score += 1;
+    }
+    if (profile.indexOf('tall') >= 0) {
+      if (cat === 'dryFlies') score += 2;
+      if (/parachute|wulff|comparadun/.test(nameLower)) score += 1;
+    }
+    if (profile.indexOf('bushy') >= 0) {
+      if (/stimulator|humpy|wulff|adams/.test(nameLower)) score += 2;
+      if (cat === 'dryFlies') score += 1;
+    }
+    if (profile.indexOf('smooth') >= 0) {
+      if (/perdigon|copper john|zebra|bead/.test(nameLower)) score += 2;
+      if (cat === 'nymphs') score += 1;
+    }
+    if (profile.indexOf('tiny') >= 0) {
+      if (/midge|trico|gnat/.test(nameLower)) score += 3;
+    }
+    return { entry: entry, score: score };
   });
 
   scored.sort(function(a, b) { return b.score - a.score; });
@@ -3549,35 +4312,235 @@ function openFlyCatchLogModal() {
 
   const modal = document.createElement('div');
   modal.className = 'ht-modal';
-  modal.innerHTML = `
-    <h3>Log Catch</h3>
-    <div style="display:grid;gap:10px;">
-      <label style="font-size:12px;color:#bbb;">Species</label>
-      <input type="text" id="flyCatchSpeciesLive" placeholder="Rainbow, brown, etc.">
-      <label style="font-size:12px;color:#bbb;">Notes</label>
-      <input type="text" id="flyCatchNotesLive" placeholder="Fly, depth, hatch">
-    </div>
-    <div class="ht-modal-actions">
-      <button class="ht-modal-btn ghost" type="button" data-fly-catch-cancel>Cancel</button>
-      <button class="ht-modal-btn primary" type="button" data-fly-catch-save>Save</button>
-    </div>
-  `;
+  modal.innerHTML =
+    '<h3>Log Catch</h3>' +
+    '<p style="color:#aaa;font-size:13px;margin:0 0 14px;">How do you want to log this catch?</p>' +
+    '<div class="ht-catch-options">' +
+      '<button class="ht-catch-option-btn" type="button" data-catch-manual>' +
+        '<span class="ht-catch-option-icon">&#x1F4DD;</span>' +
+        '<span class="ht-catch-option-label">Manual<br>Entry</span>' +
+      '</button>' +
+      '<button class="ht-catch-option-btn" type="button" data-catch-photo>' +
+        '<span class="ht-catch-option-icon">&#x1F4F8;</span>' +
+        '<span class="ht-catch-option-label">Take<br>Photo</span>' +
+      '</button>' +
+      '<button class="ht-catch-option-btn" type="button" data-catch-voice>' +
+        '<span class="ht-catch-option-icon">&#x1F3A4;</span>' +
+        '<span class="ht-catch-option-label">Voice<br>Log</span>' +
+      '</button>' +
+    '</div>' +
+    '<div class="ht-modal-actions">' +
+      '<button class="ht-modal-btn ghost" type="button" data-fly-catch-cancel>Cancel</button>' +
+    '</div>';
 
   const closeModal = () => backdrop.remove();
-  modal.querySelector('[data-fly-catch-cancel]')?.addEventListener('click', closeModal);
-  modal.querySelector('[data-fly-catch-save]')?.addEventListener('click', () => {
-    const species = modal.querySelector('#flyCatchSpeciesLive')?.value.trim() || 'Trout';
-    const notes = modal.querySelector('#flyCatchNotesLive')?.value.trim() || '';
-    logFlyCatchEntry(species, notes);
+  modal.querySelector('[data-fly-catch-cancel]').addEventListener('click', closeModal);
+
+  // Manual entry — show species/notes form
+  modal.querySelector('[data-catch-manual]').addEventListener('click', function() {
     closeModal();
+    _openCatchManualForm();
   });
 
-  backdrop.addEventListener('click', (event) => {
+  // Take photo — open camera capture
+  modal.querySelector('[data-catch-photo]').addEventListener('click', function() {
+    closeModal();
+    _openCatchPhotoCapture();
+  });
+
+  // Voice log
+  modal.querySelector('[data-catch-voice]').addEventListener('click', function() {
+    closeModal();
+    _openCatchVoiceLog();
+  });
+
+  backdrop.addEventListener('click', function(event) {
     if (event.target === backdrop) closeModal();
   });
 
   backdrop.appendChild(modal);
   document.body.appendChild(backdrop);
+}
+
+/* Manual entry form for logging a catch */
+function _openCatchManualForm() {
+  var backdrop = document.createElement('div');
+  backdrop.className = 'ht-modal-backdrop';
+  backdrop.style.display = 'flex';
+
+  var modal = document.createElement('div');
+  modal.className = 'ht-modal';
+  modal.innerHTML =
+    '<h3>Manual Entry</h3>' +
+    '<div style="display:grid;gap:10px;">' +
+      '<label style="font-size:12px;color:#bbb;">Species</label>' +
+      '<input type="text" id="flyCatchSpeciesLive" placeholder="Rainbow, brown, etc.">' +
+      '<label style="font-size:12px;color:#bbb;">Size (inches)</label>' +
+      '<input type="number" id="flyCatchSizeLive" placeholder="e.g. 14">' +
+      '<label style="font-size:12px;color:#bbb;">Fly Used</label>' +
+      '<input type="text" id="flyCatchFlyLive" placeholder="Elk Hair Caddis #16">' +
+      '<label style="font-size:12px;color:#bbb;">Notes</label>' +
+      '<input type="text" id="flyCatchNotesLive" placeholder="Depth, hatch, method">' +
+    '</div>' +
+    '<div class="ht-modal-actions">' +
+      '<button class="ht-modal-btn ghost" type="button" data-catch-form-cancel>Cancel</button>' +
+      '<button class="ht-modal-btn primary" type="button" data-catch-form-save>Save</button>' +
+    '</div>';
+
+  var closeModal = function() { backdrop.remove(); };
+  modal.querySelector('[data-catch-form-cancel]').addEventListener('click', closeModal);
+  modal.querySelector('[data-catch-form-save]').addEventListener('click', function() {
+    var species = (modal.querySelector('#flyCatchSpeciesLive').value || '').trim() || 'Trout';
+    var notes = (modal.querySelector('#flyCatchNotesLive').value || '').trim() || '';
+    var size = (modal.querySelector('#flyCatchSizeLive').value || '').trim();
+    var fly = (modal.querySelector('#flyCatchFlyLive').value || '').trim();
+    var fullNotes = [fly ? 'Fly: ' + fly : '', size ? 'Size: ' + size + '"' : '', notes].filter(Boolean).join('. ');
+    logFlyCatchEntry(species, fullNotes);
+    closeModal();
+  });
+
+  backdrop.addEventListener('click', function(e) { if (e.target === backdrop) closeModal(); });
+  backdrop.appendChild(modal);
+  document.body.appendChild(backdrop);
+}
+
+/* Photo capture for logging a catch */
+function _openCatchPhotoCapture() {
+  var input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'image/*';
+  input.capture = 'environment';
+  input.addEventListener('change', function() {
+    var file = input.files && input.files[0];
+    if (!file) return;
+    var url = URL.createObjectURL(file);
+    _openCatchPhotoReview(url);
+  });
+  input.click();
+}
+
+/* Review a catch photo and add species/notes */
+function _openCatchPhotoReview(imageUrl) {
+  var backdrop = document.createElement('div');
+  backdrop.className = 'ht-modal-backdrop';
+  backdrop.style.display = 'flex';
+
+  var modal = document.createElement('div');
+  modal.className = 'ht-modal';
+  modal.innerHTML =
+    '<h3>Catch Photo</h3>' +
+    '<div style="text-align:center;margin:8px 0;"><img src="' + imageUrl + '" alt="Catch photo" style="max-width:100%;max-height:200px;border-radius:8px;"></div>' +
+    '<div style="display:grid;gap:10px;">' +
+      '<label style="font-size:12px;color:#bbb;">Species</label>' +
+      '<input type="text" id="flyCatchPhotoSpecies" placeholder="Rainbow, brown, etc.">' +
+      '<label style="font-size:12px;color:#bbb;">Notes</label>' +
+      '<input type="text" id="flyCatchPhotoNotes" placeholder="Size, fly, method">' +
+    '</div>' +
+    '<div class="ht-modal-actions">' +
+      '<button class="ht-modal-btn ghost" type="button" data-catch-photo-cancel>Cancel</button>' +
+      '<button class="ht-modal-btn primary" type="button" data-catch-photo-save>Save</button>' +
+    '</div>';
+
+  var closeModal = function() { backdrop.remove(); };
+  modal.querySelector('[data-catch-photo-cancel]').addEventListener('click', closeModal);
+  modal.querySelector('[data-catch-photo-save]').addEventListener('click', function() {
+    var species = (modal.querySelector('#flyCatchPhotoSpecies').value || '').trim() || 'Trout';
+    var notes = (modal.querySelector('#flyCatchPhotoNotes').value || '').trim() || '';
+    logFlyCatchEntry(species, notes ? notes + ' (photo)' : '(photo)');
+    closeModal();
+  });
+
+  backdrop.addEventListener('click', function(e) { if (e.target === backdrop) closeModal(); });
+  backdrop.appendChild(modal);
+  document.body.appendChild(backdrop);
+}
+
+/* Voice log for logging a catch */
+function _openCatchVoiceLog() {
+  if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+    showNotice('Voice recognition not supported on this device. Try manual entry.', 'warn', 3500);
+    _openCatchManualForm();
+    return;
+  }
+
+  var backdrop = document.createElement('div');
+  backdrop.className = 'ht-modal-backdrop';
+  backdrop.style.display = 'flex';
+
+  var modal = document.createElement('div');
+  modal.className = 'ht-modal';
+  modal.innerHTML =
+    '<h3>Voice Log</h3>' +
+    '<p style="color:#aaa;font-size:13px;">Speak your catch details: species, size, fly used, and any notes.</p>' +
+    '<div id="voiceCatchStatus" style="text-align:center;padding:16px 0;font-size:28px;">&#x1F3A4;</div>' +
+    '<div id="voiceCatchTranscript" style="background:#1a1a1a;border-radius:8px;padding:10px;min-height:48px;color:#fff;font-size:14px;">Listening...</div>' +
+    '<div class="ht-modal-actions">' +
+      '<button class="ht-modal-btn ghost" type="button" data-voice-cancel>Cancel</button>' +
+      '<button class="ht-modal-btn primary" type="button" data-voice-save style="display:none;">Save</button>' +
+    '</div>';
+
+  var closeModal = function() {
+    if (recognition) { try { recognition.abort(); } catch(e) {} }
+    backdrop.remove();
+  };
+
+  var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  var recognition = new SpeechRecognition();
+  recognition.lang = 'en-US';
+  recognition.interimResults = true;
+  recognition.maxAlternatives = 1;
+  recognition.continuous = false;
+
+  var finalTranscript = '';
+  var statusEl = modal.querySelector('#voiceCatchStatus');
+  var transcriptEl = modal.querySelector('#voiceCatchTranscript');
+  var saveBtn = modal.querySelector('[data-voice-save]');
+
+  recognition.onresult = function(event) {
+    var interim = '';
+    for (var i = event.resultIndex; i < event.results.length; i++) {
+      if (event.results[i].isFinal) {
+        finalTranscript += event.results[i][0].transcript;
+      } else {
+        interim += event.results[i][0].transcript;
+      }
+    }
+    transcriptEl.textContent = finalTranscript || interim || 'Listening...';
+  };
+
+  recognition.onend = function() {
+    statusEl.textContent = '\u2705';
+    if (finalTranscript) {
+      transcriptEl.textContent = finalTranscript;
+      saveBtn.style.display = '';
+    } else {
+      transcriptEl.textContent = 'No speech detected. Try again or use manual entry.';
+    }
+  };
+
+  recognition.onerror = function(event) {
+    console.warn('HUNTECH: Voice recognition error:', event.error);
+    statusEl.textContent = '\u274C';
+    transcriptEl.textContent = 'Error: ' + event.error + '. Try manual entry.';
+  };
+
+  modal.querySelector('[data-voice-cancel]').addEventListener('click', closeModal);
+  saveBtn.addEventListener('click', function() {
+    if (finalTranscript) {
+      logFlyCatchEntry('Trout', 'Voice: ' + finalTranscript);
+    }
+    closeModal();
+  });
+
+  backdrop.addEventListener('click', function(e) { if (e.target === backdrop) closeModal(); });
+  backdrop.appendChild(modal);
+  document.body.appendChild(backdrop);
+
+  // Start listening
+  try { recognition.start(); } catch(e) {
+    console.warn('HUNTECH: Could not start voice recognition:', e);
+    transcriptEl.textContent = 'Could not start microphone. Try manual entry.';
+  }
 }
 
 function openFlyHatchLogModal() {
@@ -3773,15 +4736,7 @@ window.flySearchOnMap = function() {
 
 window.cmdAiFlyBox = function() {
   if (!isFlyModule()) return;
-  var inv = loadFlyInventory();
-  var flyCount = Array.isArray(inv.flies) ? inv.flies.length : 0;
-  if (flyCount > 0) {
-    // Has flies — open virtual fly box gallery
-    openVirtualFlyBox();
-  } else {
-    // No flies yet — go straight to scanner
-    openFlyBoxScanner();
-  }
+  _openAiFlyBoxHub();
 };
 
 window.cmdLogCatch = function() {
@@ -4097,9 +5052,7 @@ function _deployMicroCluster(opts) {
   fishMarker.__microType = opts.microType;
   fishMarker.__microIdx = opts.microIdx;
   fishMarker.__iconKind = 'fish';
-  fishMarker.on('click', function() {
-    _showSpotInfoTray(opts.water, opts.zone, opts.spot, opts.microType, opts.microIdx);
-  });
+  // Fish marker click removed — info tray now triggered from WADE HERE pill
   markers.push(fishMarker);
 
   // ══════════════════════════════════════════════════════════════
@@ -4158,17 +5111,25 @@ function _deployMicroCluster(opts) {
   var wadeEntry = _perpendicularOffset(seg, standSIdx, wadeOffsetM);
 
   var wadeLabel = (wade === 'waders') ? '\uD83E\uDD7E WADE HERE' : '\uD83C\uDFD6 STAND HERE';
+  var arrowSide = (bankSide > 0) ? 'left' : 'right'; // arrow points TOWARD water
   var wadeIcon = L.divIcon({
     className: 'ht-wade-pin',
-    html: '<div class="ht-wade-pill">' + wadeLabel + '</div>',
-    iconSize: [90, 22],
-    iconAnchor: [45, 22]
+    html: '<div class="ht-wade-pill ht-wade-pill--arrow-' + arrowSide + '">' +
+          '<span class="ht-wade-pill-text">' + wadeLabel + '</span>' +
+          '<span class="ht-wade-arrow"><span class="ht-wade-arrow-ping"></span></span>' +
+          '</div>',
+    iconSize: [110, 26],
+    iconAnchor: [55, 13]
   });
   var wadeMarker = L.marker([wadeEntry.lat, wadeEntry.lng], {
     icon: wadeIcon, zIndexOffset: 570
   }).addTo(map);
   wadeMarker.__iconKind = 'wade';
   wadeMarker.__microIdx = opts.microIdx;
+  // Click wade pill → show micro spot info tray
+  wadeMarker.on('click', function() {
+    _showSpotInfoTray(opts.water, opts.zone, opts.spot, opts.microType, opts.microIdx);
+  });
   markers.push(wadeMarker);
 
   // ══════════════════════════════════════════════════════════════

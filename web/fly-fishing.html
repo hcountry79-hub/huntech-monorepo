@@ -20,11 +20,11 @@
   <link rel="dns-prefetch" href="https://server.arcgisonline.com">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css" />
-  <link rel="stylesheet" href="app.css?v=20260225w">
+  <link rel="stylesheet" href="app.css?v=20260226a">
 
   <!-- AWS Backend Configuration -->
-  <script src="config.js?v=20260224j"></script>
-  <script src="api.js?v=20260224j"></script>
+  <script src="config.js?v=20260226a"></script>
+  <script src="api.js?v=20260226a"></script>
 
   <!-- Force SW update on every page load -->
   <script>
@@ -124,10 +124,6 @@
       <div class="ht-hero-slide ht-fly-slide-6" style="background-image:url('assets/fly-hero-6.webp')"></div>
       <div class="ht-hero-slide ht-fly-slide-7" style="background-image:url('assets/fly-hero-7.webp')"></div>
       <div class="ht-hero-slide ht-fly-slide-8" style="background-image:url('assets/fly-hero-8.jpg')"></div>
-      <div class="ht-hero-slide ht-fly-slide-9" style="background-image:url('assets/OIP (1).webp')"></div>
-      <div class="ht-hero-slide ht-fly-slide-10" style="background-image:url('assets/OIP (2).webp')"></div>
-      <div class="ht-hero-slide ht-fly-slide-11" style="background-image:url('assets/OIP (4).webp')"></div>
-      <div class="ht-hero-slide ht-fly-slide-12" style="background-image:url('assets/OIP (5).webp')"></div>
       <div class="ht-hero-vignette"></div>
     </div>
 
@@ -161,8 +157,7 @@
       <!-- ────── PILL NAVIGATION ────── -->
       <div class="ht-stream-pills" id="streamPills">
         <button class="ht-stream-pill ht-stream-pill--active ht-stream-pill--primary" data-panel="fishNowPanel" onclick="showStreamPanel('fishNowPanel')">FISH NOW</button>
-        <button class="ht-stream-pill" onclick="showMap()">MAP</button>
-        <button class="ht-stream-pill" data-panel="tripPlannerPanel" onclick="showStreamPanel('tripPlannerPanel')">PLANNER</button>
+        <button class="ht-stream-pill" data-panel="tripPlannerPanel" onclick="showStreamPanel('tripPlannerPanel')">PLAN TRIP</button>
         <button class="ht-stream-pill" data-panel="flyBoxPanel" onclick="showStreamPanel('flyBoxPanel')">FLY BOX</button>
       </div>
 
@@ -177,10 +172,10 @@
         </div>
       </div>
 
-      <!-- ═══════ FISH NOW PANEL — Simple Welcome ═══════ -->
+      <!-- ═══════ FISH NOW PANEL — Clean Welcome ═══════ -->
       <div class="ht-stream-panel" id="fishNowPanel">
 
-        <!-- ──── Step 0: Welcome ──── -->
+        <!-- ──── Step 0: Locating ──── -->
         <div class="ht-fish-step" id="fishStep0_loading" style="display:none">
           <div class="ht-fish-locate-card">
             <div class="ht-fish-locate-pulse">📡</div>
@@ -192,11 +187,11 @@
         <!-- ──── Step 1: Area Detected / Welcome ──── -->
         <div class="ht-fish-step" id="fishStep1_areaAction">
           <div class="ht-fish-welcome-card">
-            <div class="ht-fish-welcome-ribbon" id="fishAreaRibbon">🐟 Trout Water</div>
-            <div class="ht-fish-welcome-name" id="fishAreaTitle">Select a Water</div>
-            <div class="ht-fish-welcome-detail" id="fishAreaDesc">Tap one of your saved spots above to get started</div>
-            <div style="margin-top:12px;text-align:center;">
-              <button class="ht-gold-btn ht-go-btn" type="button" onclick="fishStepCheckIn()" style="font-size:14px;padding:10px 22px;">✅ CHECK IN TO AREA</button>
+            <span id="fishAreaRibbon" style="display:none"></span>
+            <span id="fishAreaTitle" style="display:none"></span>
+            <span id="fishAreaDesc" style="display:none"></span>
+            <div style="text-align:center;">
+              <button class="ht-gold-btn ht-go-btn" type="button" onclick="fishStepCheckIn()" style="font-size:15px;padding:12px 28px;">✅ CHECK IN TO AREA</button>
             </div>
           </div>
         </div>
@@ -234,7 +229,7 @@
       <!-- ------- TRIP PLANNER PANEL ------- -->
       <div class="ht-stream-panel" id="tripPlannerPanel" style="display:none">
         <div class="ht-accordion-header ht-accordion-header-center">
-          <span class="ht-define-title">Trip Planner</span>
+          <span class="ht-define-title">Plan Trip</span>
         </div>
         <div class="ht-form-grid">
           <!-- Water finder by region -->
@@ -401,10 +396,10 @@
     };
   </script>
 
-  <script src="regulations.js?v=20260225w"></script>
-  <script src="fly-fishing-data.js?v=20260225w"></script>
-  <script src="ht-fly-fishing.js?v=20260225w"></script>
-  <script src="main.js?v=20260225w"></script>
+  <script src="regulations.js?v=20260226a"></script>
+  <script src="fly-fishing-data.js?v=20260226a"></script>
+  <script src="ht-fly-fishing.js?v=20260226a"></script>
+  <script src="main.js?v=20260226a"></script>
 
 </body>
 </html>
