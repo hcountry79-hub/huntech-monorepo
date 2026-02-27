@@ -52,12 +52,13 @@ function _waterBounds(water) {
 
 // Tile layers with their max useful zoom (download only what the server actually serves)
 // satellite: real tiles to z19  |  topo: maxNativeZoom 16  |  hillshade: 16
-// roads/labels: 19 native but only needed to z17 for offline overview
+// roads/hydro/labels: 19 native but only needed to z17 for offline overview
 var _OFFLINE_TILE_LAYERS = [
   { url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', minZ: 15, maxZ: 19 },
   { url: 'https://basemap.nationalmap.gov/arcgis/rest/services/USGSTopo/MapServer/tile/{z}/{y}/{x}', minZ: 13, maxZ: 16 },
   { url: 'https://server.arcgisonline.com/ArcGIS/rest/services/Elevation/World_Hillshade/MapServer/tile/{z}/{y}/{x}', minZ: 13, maxZ: 16 },
   { url: 'https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}', minZ: 13, maxZ: 17 },
+  { url: 'https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Hydro_Reference/MapServer/tile/{z}/{y}/{x}', minZ: 13, maxZ: 17 },
   { url: 'https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', minZ: 13, maxZ: 17 }
 ];
 
@@ -103,7 +104,8 @@ window.cmdDownloadArea = function() {
   var done = 0;
   var failed = 0;
   var failedUrls = [];
-  var BATCH = 10;
+  var BATCH = 6;          // conservative — avoid Esri rate limits
+  var BATCH_DELAY = 120;  // ms pause between batches
 
   if (typeof showNotice === 'function') {
     showNotice('\ud83d\udcf6 Saving ' + total + ' map tiles to your browser\u2026 stay on this page until done', 'info', 8000);
@@ -124,6 +126,8 @@ window.cmdDownloadArea = function() {
       prog.textContent = '\ud83d\udcf6 ' + (label || 'Saving') + ' ' + done + ' / ' + total + '  (' + pct + '%)';
     }
   }
+
+  function sleep(ms) { return new Promise(function(r) { setTimeout(r, ms); }); }
 
   function fetchTile(url) {
     return fetch(url).then(function(res) {
@@ -152,42 +156,56 @@ window.cmdDownloadArea = function() {
           updateProgress('Retry');
           resolve();
         });
-      }, 200);
+      }, 300); // 300ms per-tile delay on retries
     });
   }
 
-  // Process in batches
+  // Process in batches with inter-batch delay
   var idx = 0;
   function nextBatch() {
     if (idx >= tileUrls.length) {
-      // First pass done - retry failed tiles if any
-      if (failedUrls.length > 0) {
-        var retryList = failedUrls.slice();
-        failedUrls = [];
-        total = total + retryList.length;
-        if (typeof showNotice === 'function') {
-          showNotice('\ud83d\udd04 Retrying ' + retryList.length + ' failed tiles\u2026', 'info', 4000);
-        }
-        var ri = 0;
-        var RETRY_BATCH = 6;
-        function nextRetryBatch() {
-          if (ri >= retryList.length) {
-            finishDownload();
-            return;
-          }
-          var batch = retryList.slice(ri, ri + RETRY_BATCH);
-          ri += RETRY_BATCH;
-          Promise.all(batch.map(fetchTileRetry)).then(nextRetryBatch);
-        }
-        nextRetryBatch();
-      } else {
-        finishDownload();
-      }
+      startRetries();
       return;
     }
     var batch = tileUrls.slice(idx, idx + BATCH);
     idx += BATCH;
-    Promise.all(batch.map(fetchTile)).then(nextBatch);
+    Promise.all(batch.map(fetchTile)).then(function() {
+      return sleep(BATCH_DELAY);
+    }).then(nextBatch);
+  }
+
+  // Up to 3 retry passes, each slower than the last
+  var MAX_RETRIES = 3;
+  var retryPass = 0;
+  function startRetries() {
+    if (failedUrls.length === 0 || retryPass >= MAX_RETRIES) {
+      finishDownload();
+      return;
+    }
+    retryPass++;
+    var retryList = failedUrls.slice();
+    failedUrls = [];
+    total = total + retryList.length;
+    var retryBatchSize = Math.max(3, 7 - retryPass * 2); // 5, 3, 1
+    var retryDelay = 200 + retryPass * 200; // 400, 600, 800ms between batches
+
+    if (typeof showNotice === 'function') {
+      showNotice('\ud83d\udd04 Retry pass ' + retryPass + ': ' + retryList.length + ' tiles\u2026', 'info', 3000);
+    }
+
+    var ri = 0;
+    function nextRetryBatch() {
+      if (ri >= retryList.length) {
+        startRetries(); // check if another pass needed
+        return;
+      }
+      var batch = retryList.slice(ri, ri + retryBatchSize);
+      ri += retryBatchSize;
+      Promise.all(batch.map(fetchTileRetry)).then(function() {
+        return sleep(retryDelay);
+      }).then(nextRetryBatch);
+    }
+    nextRetryBatch();
   }
 
   function finishDownload() {
