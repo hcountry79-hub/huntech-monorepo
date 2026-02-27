@@ -9,7 +9,7 @@
   <meta name="apple-mobile-web-app-title" content="HUNTECH">
   <meta name="theme-color" content="#2bd4ff">
   <meta name="description" content="AI-powered fly fishing scouting system with GPS tracking">
-  <link rel="manifest" href="manifest.json">
+  <link rel="manifest" href="manifest-fly.json">
   <link rel="apple-touch-icon" href="assets/app-icon-180.png">
   <title>HUNTECH - Fly Fishing Module</title>
   <!-- Preconnect to CDN + tile servers for faster first paint -->
@@ -375,11 +375,15 @@
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        const isLocal = ['localhost', '127.0.0.1'].includes(location.hostname);
-        if (!isLocal) return;
         navigator.serviceWorker.register('/sw.js')
           .then(() => console.log('HUNTECH: Service Worker registered'))
           .catch(err => console.log('Service Worker registration failed:', err));
+        // Request persistent storage so tile cache survives browser cleanup
+        if (navigator.storage && navigator.storage.persist) {
+          navigator.storage.persist().then(granted => {
+            console.log('HUNTECH: Persistent storage ' + (granted ? 'granted' : 'denied'));
+          });
+        }
       });
     }
   </script>
