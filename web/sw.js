@@ -2,8 +2,8 @@
 // HUNTECH — Service Worker with Offline Tile Caching
 // ═══════════════════════════════════════════════════════════════════════
 
-const SW_VERSION = 'huntech-sw-v82e';
-const APP_SHELL_CACHE = 'huntech-shell-v48';
+const SW_VERSION = 'huntech-sw-v82f';
+const APP_SHELL_CACHE = 'huntech-shell-v49';
 const TILE_CACHE = 'huntech-tiles-v1';
 
 // Max tile cache size (~750 MB at ~30KB avg/tile ≈ 25 000 tiles)
@@ -51,7 +51,8 @@ const CDN_PATTERNS = [
 const TILE_PATTERNS = [
   /server\.arcgisonline\.com/,
   /services\.arcgisonline\.com/,
-  /basemaps\.arcgis\.com/,
+  /basemaps?\.arcgis\.com/,
+  /basemap\.nationalmap\.gov/,
   /tile\.openstreetmap\.org/,
   /tile\.opentopomap\.org/,
   /api\.mapbox\.com/,
@@ -192,7 +193,14 @@ async function _netFirst(req) {
     const hit = await caches.match(req);
     if (hit) return hit;
     if (req.mode === 'navigate') {
-      const idx = await caches.match('/index.html');
+      // Try the exact page first, then fly module, then shed
+      const url = new URL(req.url);
+      const page = url.pathname.split('/').pop() || 'index.html';
+      const exact = await caches.match('./' + page);
+      if (exact) return exact;
+      const fly = await caches.match('./fly-fishing.html');
+      if (fly && page.includes('fly')) return fly;
+      const idx = await caches.match('./index.html');
       if (idx) return idx;
     }
     return new Response('Offline', { status: 503 });

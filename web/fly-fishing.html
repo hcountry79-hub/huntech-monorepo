@@ -375,8 +375,12 @@
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js')
-          .then(() => console.log('HUNTECH: Service Worker registered'))
+        navigator.serviceWorker.register('./sw.js')
+          .then(reg => {
+            console.log('HUNTECH: Service Worker registered');
+            // Check for updates every 30min while page is open
+            setInterval(() => reg.update(), 30 * 60 * 1000);
+          })
           .catch(err => console.log('Service Worker registration failed:', err));
         // Request persistent storage so tile cache survives browser cleanup
         if (navigator.storage && navigator.storage.persist) {
@@ -402,7 +406,7 @@
 
   <script src="regulations.js?v=20260226a"></script>
   <script src="fly-fishing-data.js?v=20260226b"></script>
-  <script src="ht-fly-fishing.js?v=20260227s"></script>
+  <script src="ht-fly-fishing.js?v=20260227t"></script>
   <script src="main.js?v=20260227p"></script>
 
 </body>

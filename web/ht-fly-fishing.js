@@ -143,11 +143,12 @@ window.cmdDownloadArea = function() {
       setTimeout(function() {
         fetch(url).then(function(res) {
           done++;
-          if (res.ok) { failed--; }
+          if (res.ok) { failed--; } // recovered — reduce fail count
           updateProgress('Retry');
           resolve();
         }).catch(function() {
           done++;
+          // still failed — don't change failed count (already counted in first pass)
           updateProgress('Retry');
           resolve();
         });
@@ -192,7 +193,9 @@ window.cmdDownloadArea = function() {
   function finishDownload() {
     _offlineDownloadRunning = false;
     if (prog && prog.parentNode) prog.parentNode.removeChild(prog);
-    var saved = done - failed;
+    // Original unique tile count = tileUrls.length. failed = remaining failures after retries.
+    var uniqueTiles = tileUrls.length;
+    var saved = uniqueTiles - failed;
     var msg = '\u2705 Map saved! ' + saved + ' tiles stored in your browser';
     if (failed > 0) msg += ' (' + failed + " couldn't load \u2014 zoom those areas online first)";
     msg += '. Works offline \u2014 no cell needed!';
