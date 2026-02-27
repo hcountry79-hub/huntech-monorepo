@@ -2038,8 +2038,10 @@ function _deployHotspotMicroSpots(idx) {
 
     var skip = false;
 
-    // (a) Check against ALL fish/cast positions — cast+fish always win
+    // (a) Check against OTHER spots' fish/cast positions — cast+fish always win
+    //     Skip index i (this stand's own fish) — a stand 15m from its own fish is expected
     for (var f = 0; f < fishCastPositions.length; f++) {
+      if (f === i) continue; // don't conflict with own fish/cast
       if (_distM(ss.lat, ss.lng, fishCastPositions[f].lat, fishCastPositions[f].lng) < STAND_MERGE_DIST) {
         skip = true;
         break;
