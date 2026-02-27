@@ -2155,33 +2155,36 @@ function initializeMap() {
   // - maxZoom:22             → allows deep zoom; maxNativeZoom sets CSS-upscale threshold
   const _tileOpts = { keepBuffer: 4, updateWhenZooming: true, updateWhenIdle: false, updateInterval: 100, maxZoom: 20 };
 
-  const satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+  // Use L.tileLayer.offline when available (checks IndexedDB first, auto-caches on miss)
+  var _tl = (L.tileLayer.offline || L.tileLayer).bind(L.tileLayer);
+
+  const satellite = _tl('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
     attribution: '&copy; Esri',
     maxNativeZoom: 19,        // Esri serves real tiles to z19; CSS-upscale beyond
     ..._tileOpts
   });
   satellite.on('tileerror', tileErrorNotice('satellite-tiles', 'Base map tiles failed to load. Check internet access.'));
-  const satelliteHybrid = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+  const satelliteHybrid = _tl('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
     attribution: '&copy; Esri',
     maxNativeZoom: 19,        // Esri serves real tiles to z19; CSS-upscale beyond
     ..._tileOpts
   });
   satelliteHybrid.on('tileerror', tileErrorNotice('hybrid-tiles', 'Hybrid base tiles failed to load. Check internet access.'));
-  const hybridRoads = L.tileLayer('https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}', {
+  const hybridRoads = _tl('https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}', {
     attribution: '&copy; Esri',
     maxNativeZoom: 19,
     pane: 'hybridRoadsPane',
     ..._tileOpts
   });
   hybridRoads.on('tileerror', tileErrorNotice('hybrid-roads-tiles', 'Hybrid road tiles failed to load.'));
-  const hybridHydro = L.tileLayer('https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Hydro_Reference/MapServer/tile/{z}/{y}/{x}', {
+  const hybridHydro = _tl('https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Hydro_Reference/MapServer/tile/{z}/{y}/{x}', {
     attribution: '&copy; Esri',
     maxNativeZoom: 19,
     pane: 'hybridLabelsPane',
     ..._tileOpts
   });
   hybridHydro.on('tileerror', tileErrorNotice('hybrid-hydro-tiles', 'Hybrid hydro tiles failed to load.'));
-  const hybridLabels = L.tileLayer('https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', {
+  const hybridLabels = _tl('https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', {
     attribution: '&copy; Esri',
     maxNativeZoom: 19,
     pane: 'hybridLabelsPane',
@@ -2193,9 +2196,9 @@ function initializeMap() {
   const latestImageryUrl = String(window.LATEST_IMAGERY_TILE_URL || '').trim();
   const latestImageryNoteText = String(window.LATEST_IMAGERY_NOTE || '').trim();
   const latestImagery = latestImageryUrl
-    ? L.tileLayer(latestImageryUrl, { attribution: '&copy; Esri', maxNativeZoom: 19, ..._tileOpts })
+    ? _tl(latestImageryUrl, { attribution: '&copy; Esri', maxNativeZoom: 19, ..._tileOpts })
     : null;
-  const topo = L.tileLayer('https://basemap.nationalmap.gov/arcgis/rest/services/USGSTopo/MapServer/tile/{z}/{y}/{x}', {
+  const topo = _tl('https://basemap.nationalmap.gov/arcgis/rest/services/USGSTopo/MapServer/tile/{z}/{y}/{x}', {
     attribution: '&copy; USGS The National Map',
     maxNativeZoom: 16,        // USGS Topo serves real tiles to z16
     ..._tileOpts
@@ -2216,7 +2219,7 @@ function initializeMap() {
   } else {
     const lidarUrl = (window.LIDAR_TILE_URL || '').trim();
     if (lidarUrl) {
-      lidarHillshadeLayer = L.tileLayer(lidarUrl, { opacity: 0.55, maxNativeZoom: 16, zIndex: 350, ..._tileOpts });
+      lidarHillshadeLayer = _tl(lidarUrl, { opacity: 0.55, maxNativeZoom: 16, zIndex: 350, ..._tileOpts });
     }
   }
 
@@ -2228,7 +2231,7 @@ function initializeMap() {
   try {
     const tileUrl = (window.PUBLIC_LAND_TILE_URL || DEFAULT_PUBLIC_LAND_TILE_URL || '').trim();
     if (tileUrl) {
-      publicLandLayer = L.tileLayer(tileUrl, { opacity: 0.7, maxNativeZoom: 19, zIndex: 450, ..._tileOpts });
+      publicLandLayer = _tl(tileUrl, { opacity: 0.7, maxNativeZoom: 19, zIndex: 450, ..._tileOpts });
       overlays['Public Land'] = publicLandLayer;
     }
   } catch {
@@ -2239,7 +2242,7 @@ function initializeMap() {
   try {
     const privateUrl = (window.PRIVATE_PARCELS_TILE_URL || '').trim();
     if (privateUrl) {
-      privateParcelsLayer = L.tileLayer(privateUrl, { opacity: 0.65, maxNativeZoom: 19, zIndex: 460, ..._tileOpts });
+      privateParcelsLayer = _tl(privateUrl, { opacity: 0.65, maxNativeZoom: 19, zIndex: 460, ..._tileOpts });
       overlays['Private Parcels'] = privateParcelsLayer;
     }
   } catch {

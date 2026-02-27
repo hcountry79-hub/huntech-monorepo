@@ -14,11 +14,11 @@
   <title>HUNTECH — Whitetail Hunting Command Center</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css" />
-  <link rel="stylesheet" href="app.css?v=20260220f">
+  <link rel="stylesheet" href="app.css?v=20260225x">
 
   <!-- AWS Backend Configuration -->
-  <script src="config.js?v=20260220f"></script>
-  <script src="api.js?v=20260220f"></script>
+  <script src="config.js?v=20260225x"></script>
+  <script src="api.js?v=20260225x"></script>
 </head>
 <body class="module-whitetail ht-toolbar-collapsed">
   <header class="ht-topbar">
@@ -263,17 +263,19 @@
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js?v=20260220f')
+        navigator.serviceWorker.register('/sw.js?v=20260225x')
           .then(() => console.log('HUNTECH: Service Worker registered'))
           .catch(err => console.log('Service Worker registration failed:', err));
       });
     }
   </script>
 
+  <script src="ht-offline-tiles.js?v=20260228a"></script>
+
   <!-- Whitetail data engine (biology, regs, pin system) — load BEFORE main.js -->
-  <script src="whitetail-data.js?v=20260220f"></script>
-  <script src="regulations.js?v=20260220f"></script>
-  <script src="main.js?v=20260220f"></script>
+  <script src="whitetail-data.js?v=20260225x"></script>
+  <script src="regulations.js?v=20260225x"></script>
+  <script src="main.js?v=20260228a"></script>
 
   <script>
     // ── Whitetail Module Init ──

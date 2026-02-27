@@ -1,13 +1,14 @@
 // ═══════════════════════════════════════════════════════════════════════
-// HUNTECH — Service Worker with Offline Tile Caching
+// HUNTECH — Service Worker (App Shell Only)
+//
+// v82i: Tiles are now stored in IndexedDB via ht-offline-tiles.js.
+// This SW only handles app-shell pre-caching and CDN caching.
+// No tile caching here — eliminates Vary header, opaque response,
+// and cache eviction issues that plagued previous versions.
 // ═══════════════════════════════════════════════════════════════════════
 
-const SW_VERSION = 'huntech-sw-v82h';
-const APP_SHELL_CACHE = 'huntech-shell-v51';
-const TILE_CACHE = 'huntech-tiles-v1';
-
-// Max tile cache size (~750 MB at ~30KB avg/tile ≈ 25 000 tiles)
-const MAX_TILE_ENTRIES = 25000;
+const SW_VERSION = 'huntech-sw-v82i';
+const APP_SHELL_CACHE = 'huntech-shell-v52';
 
 // ── App-shell files to pre-cache on install ───────────────────────────
 const APP_SHELL = [
@@ -15,8 +16,9 @@ const APP_SHELL = [
   './index.html',
   './fly-fishing.html',
   './app.css',
-  './main.js', 
+  './main.js',
   './ht-fly-fishing.js',
+  './ht-offline-tiles.js',
   './fly-fishing-data.js',
   './config.js',
   './api.js',
@@ -47,23 +49,6 @@ const CDN_PATTERNS = [
   /fonts\.gstatic\.com/,
 ];
 
-// Map tile host patterns — cached aggressively
-const TILE_PATTERNS = [
-  /server\.arcgisonline\.com/,
-  /services\.arcgisonline\.com/,
-  /basemaps?\.arcgis\.com/,
-  /basemap\.nationalmap\.gov/,
-  /tile\.openstreetmap\.org/,
-  /tile\.opentopomap\.org/,
-  /api\.mapbox\.com/,
-  /mt[0-3]\.google\.com/,
-  /tiles\.arcgis\.com/,
-  /imagery\.arcgis\.com/,
-  /elevation3d\.arcgis\.com/,
-  /naip\.mrlc\.gov/,
-  /map1\.vis\.earthdata\.nasa\.gov/,
-];
-
 // ── INSTALL ───────────────────────────────────────────────────────────
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -81,12 +66,13 @@ self.addEventListener('install', (event) => {
 });
 
 // ── ACTIVATE ──────────────────────────────────────────────────────────
+// Clean up ALL old caches (including the old tile cache)
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then(keys =>
       Promise.all(
         keys
-          .filter(k => k !== APP_SHELL_CACHE && k !== TILE_CACHE)
+          .filter(k => k !== APP_SHELL_CACHE)
           .map(k => caches.delete(k))
       )
     ).then(() => self.clients.claim())
@@ -94,16 +80,12 @@ self.addEventListener('activate', (event) => {
 });
 
 // ── FETCH ─────────────────────────────────────────────────────────────
+// Tiles are NOT intercepted — they go straight to network or IndexedDB
+// via the custom L.TileLayer.Offline in ht-offline-tiles.js.
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
 
   const url = new URL(event.request.url);
-
-  // Map tiles → cache-first, fallback to transparent PNG
-  if (_isTile(url)) {
-    event.respondWith(_tileCF(event.request));
-    return;
-  }
 
   // CDN libs → cache-first
   if (_isCdn(url)) {
@@ -117,54 +99,6 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 });
-
-// ── Tile: cache-first ─────────────────────────────────────────────────
-// KEY DESIGN NOTES:
-// 1. ignoreVary:true  — Esri returns "Vary: Origin". Download uses a CORS
-//    request (has Origin header) but Leaflet <img> sends no-cors (no Origin).
-//    Without ignoreVary the cached tile won't match the <img> request.
-// 2. CORS fetch first — avoids "opaque response" which Chrome pads to 7 MB
-//    against storage quota.  All active tile providers (Esri, USGS, OSM)
-//    send CORS headers, so the CORS path succeeds in practice.
-// 3. No-cors fallback — for any tile server without CORS headers.
-let _trimCounter = 0;
-async function _tileCF(req) {
-  const c = await caches.open(TILE_CACHE);
-  const url = req.url;
-  const hit = await c.match(url, { ignoreVary: true });
-  if (hit) return hit;
-  try {
-    // CORS fetch — non-opaque, quota-friendly
-    const res = await fetch(new Request(url, { mode: 'cors', credentials: 'omit' }));
-    if (res.ok) {
-      c.put(url, res.clone());
-      if (++_trimCounter % 200 === 0) _trimTiles(c);
-    }
-    return res;
-  } catch {
-    // Fallback for non-CORS tile servers (Google, NASA, etc.)
-    try {
-      const res = await fetch(req);
-      if (res.ok || res.type === 'opaque') {
-        c.put(url, res.clone());
-        if (++_trimCounter % 200 === 0) _trimTiles(c);
-      }
-      return res;
-    } catch {
-      return _emptyTile();
-    }
-  }
-}
-
-async function _trimTiles(cache) {
-  try {
-    const keys = await cache.keys();
-    if (keys.length > MAX_TILE_ENTRIES) {
-      const cut = Math.floor(keys.length * 0.1);
-      for (let i = 0; i < cut; i++) cache.delete(keys[i]);
-    }
-  } catch { /* quota — ignore */ }
-}
 
 // ── CDN: cache-first ──────────────────────────────────────────────────
 async function _cdnCF(req) {
@@ -214,45 +148,27 @@ async function _netFirst(req) {
   }
 }
 
-// ── URL classifiers ───────────────────────────────────────────────────
-function _isTile(u) { return TILE_PATTERNS.some(p => p.test(u.href)); }
-function _isCdn(u)  { return CDN_PATTERNS.some(p => p.test(u.href)); }
+// ── URL classifier ────────────────────────────────────────────────────
+function _isCdn(u) { return CDN_PATTERNS.some(p => p.test(u.href)); }
 
-// ── Transparent 1×1 PNG (offline tile placeholder) ────────────────────
-function _emptyTile() {
-  const b64 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVQI12' +
-    'NgAAIABQABNjN9GQAAAAlwSFlzAAAWJQAAFiUBSVIk8AAAABl0RVh0Q29tbWVudA' +
-    'BDcmVhdGVkIHdpdGggR0lNUFeBDhcAAAANSURBVAjXY2BgYPgPAAEEAQBBCuSYAA' +
-    'AAAElFTkSuQmCC';
-  const raw = atob(b64);
-  const buf = new Uint8Array(raw.length);
-  for (let i = 0; i < raw.length; i++) buf[i] = raw.charCodeAt(i);
-  return new Response(buf.buffer, {
-    headers: { 'Content-Type': 'image/png' },
-  });
-}
-
-// ── Message channel (cache status / clear) ────────────────────────────
+// ── Message channel (cache status) ────────────────────────────────────
 self.addEventListener('message', (event) => {
   const d = event.data;
   if (d?.type === 'GET_CACHE_STATUS') {
     _status().then(s => event.ports?.[0]?.postMessage(s));
   }
+  // Legacy: CLEAR_TILE_CACHE from old code — just acknowledge
   if (d?.type === 'CLEAR_TILE_CACHE') {
-    caches.delete(TILE_CACHE).then(() =>
-      event.ports?.[0]?.postMessage({ cleared: true })
-    );
+    event.ports?.[0]?.postMessage({ cleared: true });
   }
 });
 
 async function _status() {
   try {
-    const tc = await caches.open(TILE_CACHE);
     const sc = await caches.open(APP_SHELL_CACHE);
     return {
-      tiles: (await tc.keys()).length,
       shell: (await sc.keys()).length,
       version: SW_VERSION,
     };
-  } catch { return { tiles: 0, shell: 0, version: SW_VERSION }; }
+  } catch { return { shell: 0, version: SW_VERSION }; }
 }

@@ -64,14 +64,18 @@ var _OFFLINE_TILE_LAYERS = [
 
 window.cmdDownloadArea = function() {
   if (_offlineDownloadRunning) {
-    if (typeof showNotice === 'function') showNotice('Download already in progress…', 'info', 2000);
+    if (typeof showNotice === 'function') showNotice('Save already in progress\u2026', 'info', 2000);
+    return;
+  }
+  if (!window.htOfflineTiles) {
+    if (typeof showNotice === 'function') showNotice('Offline tile system not loaded. Refresh and try again.', 'warn', 3000);
     return;
   }
 
   // Find current water — either from hotspot session or fishFlow
   var water = _hotspotWater || (window._fishFlow && window._fishFlow.area) || _downloadWater;
   if (!water) {
-    if (typeof showNotice === 'function') showNotice('Open a water first, then tap Download Area.', 'warn', 3000);
+    if (typeof showNotice === 'function') showNotice('Open a water first, then tap Save Map.', 'warn', 3000);
     return;
   }
 
@@ -95,20 +99,14 @@ window.cmdDownloadArea = function() {
   }
 
   if (tileUrls.length === 0) {
-    if (typeof showNotice === 'function') showNotice('No tiles to download for this area.', 'warn', 3000);
+    if (typeof showNotice === 'function') showNotice('No tiles to save for this area.', 'warn', 3000);
     return;
   }
 
   _offlineDownloadRunning = true;
-  var total = tileUrls.length;
-  var done = 0;
-  var failed = 0;
-  var failedUrls = [];
-  var BATCH = 6;          // conservative — avoid Esri rate limits
-  var BATCH_DELAY = 120;  // ms pause between batches
 
   if (typeof showNotice === 'function') {
-    showNotice('\ud83d\udcf6 Saving ' + total + ' map tiles to your browser\u2026 stay on this page until done', 'info', 8000);
+    showNotice('\ud83d\udcf6 Saving ' + tileUrls.length + ' map tiles\u2026 stay on this page until done', 'info', 8000);
   }
 
   // Progress indicator overlay
@@ -117,110 +115,27 @@ window.cmdDownloadArea = function() {
   prog.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);' +
     'background:rgba(0,0,0,0.85);color:#4ade80;padding:10px 20px;border-radius:12px;' +
     'font:bold 14px/1.3 system-ui;z-index:99999;text-align:center;pointer-events:none;';
-  prog.textContent = '\ud83d\udcf6 Saving 0 / ' + total;
+  prog.textContent = '\ud83d\udcf6 Saving 0 / ' + tileUrls.length;
   document.body.appendChild(prog);
 
-  function updateProgress(label) {
+  window.htOfflineTiles.saveTiles(tileUrls, function(done, total, failed) {
+    // Progress callback
     if (prog && prog.parentNode) {
       var pct = Math.round(done / total * 100);
-      prog.textContent = '\ud83d\udcf6 ' + (label || 'Saving') + ' ' + done + ' / ' + total + '  (' + pct + '%)';
+      prog.textContent = '\ud83d\udcf6 Saving ' + done + ' / ' + total + '  (' + pct + '%)';
     }
-  }
-
-  function sleep(ms) { return new Promise(function(r) { setTimeout(r, ms); }); }
-
-  function fetchTile(url) {
-    return fetch(url).then(function(res) {
-      done++;
-      if (!res.ok) { failed++; failedUrls.push(url); }
-      updateProgress();
-    }).catch(function() {
-      done++;
-      failed++;
-      failedUrls.push(url);
-      updateProgress();
-    });
-  }
-
-  function fetchTileRetry(url) {
-    return new Promise(function(resolve) {
-      setTimeout(function() {
-        fetch(url).then(function(res) {
-          done++;
-          if (res.ok) { failed--; } // recovered — reduce fail count
-          updateProgress('Retry');
-          resolve();
-        }).catch(function() {
-          done++;
-          // still failed — don't change failed count (already counted in first pass)
-          updateProgress('Retry');
-          resolve();
-        });
-      }, 300); // 300ms per-tile delay on retries
-    });
-  }
-
-  // Process in batches with inter-batch delay
-  var idx = 0;
-  function nextBatch() {
-    if (idx >= tileUrls.length) {
-      startRetries();
-      return;
-    }
-    var batch = tileUrls.slice(idx, idx + BATCH);
-    idx += BATCH;
-    Promise.all(batch.map(fetchTile)).then(function() {
-      return sleep(BATCH_DELAY);
-    }).then(nextBatch);
-  }
-
-  // Up to 3 retry passes, each slower than the last
-  var MAX_RETRIES = 3;
-  var retryPass = 0;
-  function startRetries() {
-    if (failedUrls.length === 0 || retryPass >= MAX_RETRIES) {
-      finishDownload();
-      return;
-    }
-    retryPass++;
-    var retryList = failedUrls.slice();
-    failedUrls = [];
-    total = total + retryList.length;
-    var retryBatchSize = Math.max(3, 7 - retryPass * 2); // 5, 3, 1
-    var retryDelay = 200 + retryPass * 200; // 400, 600, 800ms between batches
-
-    if (typeof showNotice === 'function') {
-      showNotice('\ud83d\udd04 Retry pass ' + retryPass + ': ' + retryList.length + ' tiles\u2026', 'info', 3000);
-    }
-
-    var ri = 0;
-    function nextRetryBatch() {
-      if (ri >= retryList.length) {
-        startRetries(); // check if another pass needed
-        return;
-      }
-      var batch = retryList.slice(ri, ri + retryBatchSize);
-      ri += retryBatchSize;
-      Promise.all(batch.map(fetchTileRetry)).then(function() {
-        return sleep(retryDelay);
-      }).then(nextRetryBatch);
-    }
-    nextRetryBatch();
-  }
-
-  function finishDownload() {
+  }).then(function(result) {
     _offlineDownloadRunning = false;
     if (prog && prog.parentNode) prog.parentNode.removeChild(prog);
-    // Original unique tile count = tileUrls.length. failed = remaining failures after retries.
-    var uniqueTiles = tileUrls.length;
-    var saved = uniqueTiles - failed;
-    var msg = '\u2705 Map saved! ' + saved + ' tiles stored in your browser';
-    if (failed > 0) msg += ' (' + failed + " couldn't load \u2014 zoom those areas online first)";
+    var msg = '\u2705 Map saved! ' + result.saved + ' tiles stored in your browser';
+    if (result.failed > 0) msg += ' (' + result.failed + " couldn't load \u2014 zoom those areas online first)";
     msg += '. Works offline \u2014 no cell needed!';
     if (typeof showNotice === 'function') showNotice(msg, 'success', 8000);
-  }
-
-  nextBatch();
+  }).catch(function() {
+    _offlineDownloadRunning = false;
+    if (prog && prog.parentNode) prog.parentNode.removeChild(prog);
+    if (typeof showNotice === 'function') showNotice('Save failed. Check your connection and try again.', 'error', 5000);
+  });
 };
 function isTurkeyModule() {
   return Boolean(document.body && document.body.classList.contains('module-turkey'));
