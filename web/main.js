@@ -9779,8 +9779,8 @@ function saveLastKnownLocation(latlng) {
 
 function restoreLastKnownLocation() {
   if (!map || selectedAreaLayer || defaultLocationAreaSet) return false;
-  // DEV OVERRIDE — force Montauk for dev focus (remove when done)
-  map.setView([37.4605, -91.6834], 15, { animate: false });
+  // DEV OVERRIDE — force Cedar Grove for field testing (remove when done)
+  map.setView([37.42228, -91.60848], 15, { animate: false });
   return true;
   try {
     const raw = localStorage.getItem(LAST_KNOWN_LOCATION_STORAGE_KEY);
@@ -16439,12 +16439,12 @@ document.addEventListener('DOMContentLoaded', () => {
       if (map && typeof map.invalidateSize === 'function') map.invalidateSize();
     });
     // Default fly-fishing map center on launch
-    // DEV OVERRIDE — force Montauk for dev focus (remove when done)
+    // DEV OVERRIDE — force Cedar Grove for field testing (remove when done)
     requestAnimationFrame(() => {
       setTimeout(() => {
         if (map) {
-          map.setView([37.4605, -91.6834], 15, { animate: false });
-          console.log('HUNTECH: DEV OVERRIDE — Defaulted map to Montauk');
+          map.setView([37.42228, -91.60848], 15, { animate: false });
+          console.log('HUNTECH: DEV OVERRIDE — Defaulted map to Cedar Grove');
         }
       }, 50);
     });
