@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="28" height="36" viewBox="0 0 28 36">
+  <defs>
+    <linearGradient id="bankGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#6a5a3a"/>
+      <stop offset="100%" stop-color="#4a3a1a"/>
+    </linearGradient>
+  </defs>
+  <!-- Ground under feet -->
+  <ellipse cx="14" cy="34" rx="9" ry="2" fill="rgba(139,119,79,0.4)" stroke="rgba(100,80,40,0.5)" stroke-width="0.5"/>
+  <!-- Legs (regular pants) -->
+  <rect x="10" y="22" width="3.5" height="11" rx="1.5" fill="#4a5a6a" stroke="#2a3a4a" stroke-width="0.8"/>
+  <rect x="15" y="22" width="3.5" height="11" rx="1.5" fill="#4a5a6a" stroke="#2a3a4a" stroke-width="0.8"/>
+  <!-- Boots -->
+  <rect x="9" y="31" width="5.5" height="3" rx="1.5" fill="#3a2a1a" stroke="#111" stroke-width="0.5"/>
+  <rect x="14" y="31" width="5.5" height="3" rx="1.5" fill="#3a2a1a" stroke="#111" stroke-width="0.5"/>
+  <!-- Torso (fishing shirt) -->
+  <rect x="8" y="12" width="12" height="12" rx="3" fill="#6a8a3a" stroke="#4a6a1a" stroke-width="0.8"/>
+  <!-- Pockets -->
+  <rect x="10" y="16" width="3" height="2.5" rx="0.5" fill="#8aaa5a" stroke="#5a7a2a" stroke-width="0.4"/>
+  <rect x="15" y="16" width="3" height="2.5" rx="0.5" fill="#8aaa5a" stroke="#5a7a2a" stroke-width="0.4"/>
+  <!-- Head -->
+  <circle cx="14" cy="8.5" r="4.5" fill="#d4a574" stroke="#8a6a3a" stroke-width="0.8"/>
+  <!-- Cap -->
+  <path d="M9 7.5C9 5 11 3 14 3s5 2 5 4.5H9z" fill="#5a4a2a" stroke="#3a2a1a" stroke-width="0.6"/>
+  <rect x="7" y="7" width="14" height="1.5" rx="0.5" fill="#5a4a2a" stroke="#3a2a1a" stroke-width="0.5"/>
+  <!-- Rod arm extended -->
+  <line x1="20" y1="14" x2="26" y2="4" stroke="#6a4a2a" stroke-width="1.8" stroke-linecap="round"/>
+  <!-- Rod -->
+  <line x1="26" y1="4" x2="27" y2="1" stroke="#3a3a3a" stroke-width="0.8" stroke-linecap="round"/>
+  <!-- Arm -->
+  <line x1="8" y1="15" x2="5" y2="20" stroke="#d4a574" stroke-width="1.5" stroke-linecap="round"/>
+</svg>

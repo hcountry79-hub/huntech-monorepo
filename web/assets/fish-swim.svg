@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="36" height="20" viewBox="0 0 36 20">
+  <defs>
+    <linearGradient id="swimBody" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#3a6a2a"/>
+      <stop offset="35%" stop-color="#7aaa3a"/>
+      <stop offset="55%" stop-color="#ffe082"/>
+      <stop offset="75%" stop-color="#ff9e47"/>
+      <stop offset="90%" stop-color="#ff6e6e"/>
+      <stop offset="100%" stop-color="#f0e8d0"/>
+    </linearGradient>
+    <!-- Animated shimmer -->
+    <linearGradient id="shimmer" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="rgba(255,255,255,0)" />
+      <stop offset="50%" stop-color="rgba(255,255,255,0.3)" />
+      <stop offset="100%" stop-color="rgba(255,255,255,0)" />
+    </linearGradient>
+  </defs>
+  <!-- Shadow/water ring -->
+  <ellipse cx="18" cy="17" rx="12" ry="2.5" fill="rgba(0,180,255,0.25)" />
+  <!-- Body -->
+  <path d="M2 10.5C2 10.5 4.5 4 12 3.5c4-.3 8 1 12 2.5l5-2c1.2-.4 3-.2 4 .6l3 2.2c.5.4.5 1.1 0 1.5L33 10.5l2.5 1.8c.4.4.3 1.1-.2 1.4l-3 1.4c-1.2.5-2.5.7-3.7.2L24 13c-3.5 1.5-7.5 2.5-12 2.2C5 15 2 10.5 2 10.5z"
+    fill="url(#swimBody)" stroke="#0a0a0a" stroke-width="1.2" stroke-linejoin="round"/>
+  <!-- Shimmer overlay -->
+  <path d="M2 10.5C2 10.5 4.5 4 12 3.5c4-.3 8 1 12 2.5l5-2c1.2-.4 3-.2 4 .6l3 2.2c.5.4.5 1.1 0 1.5L33 10.5l2.5 1.8c.4.4.3 1.1-.2 1.4l-3 1.4c-1.2.5-2.5.7-3.7.2L24 13c-3.5 1.5-7.5 2.5-12 2.2C5 15 2 10.5 2 10.5z"
+    fill="url(#shimmer)" opacity="0.4"/>
+  <!-- Lateral line -->
+  <path d="M6 10h22" stroke="#5a3c1a" stroke-width="0.5" opacity="0.4"/>
+  <!-- Spots -->
+  <circle cx="10" cy="7" r="0.8" fill="#1a1a0a" opacity="0.5"/>
+  <circle cx="13" cy="6" r="0.7" fill="#1a1a0a" opacity="0.45"/>
+  <circle cx="16" cy="6.5" r="0.8" fill="#1a1a0a" opacity="0.5"/>
+  <circle cx="12" cy="9" r="0.6" fill="#8b2020" opacity="0.45"/>
+  <circle cx="15" cy="9.5" r="0.7" fill="#8b2020" opacity="0.45"/>
+  <circle cx="19" cy="7.5" r="0.6" fill="#1a1a0a" opacity="0.4"/>
+  <circle cx="21" cy="9" r="0.5" fill="#1a1a0a" opacity="0.35"/>
+  <circle cx="9" cy="11" r="0.5" fill="#8b2020" opacity="0.35"/>
+  <!-- Dorsal fin -->
+  <path d="M14 4.5 Q16.5 1.5 19 4" fill="#3a6a2a" stroke="#0a0a0a" stroke-width="0.6" opacity="0.8"/>
+  <!-- Pectoral fin -->
+  <path d="M11 12 Q9.5 14 12.5 13" fill="#c9a050" stroke="#0a0a0a" stroke-width="0.4" opacity="0.65"/>
+  <!-- Tail fin detail -->
+  <path d="M31 7 Q34 10.5 31 14" fill="none" stroke="#4a6a2a" stroke-width="0.6" opacity="0.5"/>
+  <!-- Eye -->
+  <circle cx="6" cy="9" r="1.3" fill="#111" opacity="0.7"/>
+  <circle cx="5.7" cy="8.7" r="0.5" fill="#fff" opacity="0.6"/>
+</svg>
