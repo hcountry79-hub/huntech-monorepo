@@ -5150,7 +5150,9 @@ function _deployMicroCluster(opts) {
   }
   var standSnap = _snapToStream(seg[standSIdx][0], seg[standSIdx][1], seg, rawBW, avgWidth, rawSP);
 
-  if (!opts.skipStand) {
+  // Skip stand markers for advanced skill level (they know where to stand)
+  var isAdvanced = window._fishFlow && window._fishFlow.experience === 'advanced';
+  if (!opts.skipStand && !isAdvanced) {
   // Clean circle + "STAND HERE" label (matches CAST HERE visual language)
   var standIcon = L.divIcon({
     className: 'ht-stand-here-pin',
