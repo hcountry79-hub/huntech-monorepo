@@ -2,8 +2,8 @@
 // HUNTECH — Service Worker with Offline Tile Caching
 // ═══════════════════════════════════════════════════════════════════════
 
-const SW_VERSION = 'huntech-sw-v82a';
-const APP_SHELL_CACHE = 'huntech-shell-v45a';
+const SW_VERSION = 'huntech-sw-v82b';
+const APP_SHELL_CACHE = 'huntech-shell-v46';
 const TILE_CACHE = 'huntech-tiles-v1';
 
 // Max tile cache size (~750 MB at ~30KB avg/tile ≈ 25 000 tiles)
@@ -117,22 +117,40 @@ self.addEventListener('fetch', (event) => {
 });
 
 // ── Tile: cache-first ─────────────────────────────────────────────────
+// KEY DESIGN NOTES:
+// 1. ignoreVary:true  — Esri returns "Vary: Origin". Download uses a CORS
+//    request (has Origin header) but Leaflet <img> sends no-cors (no Origin).
+//    Without ignoreVary the cached tile won't match the <img> request.
+// 2. CORS fetch first — avoids "opaque response" which Chrome pads to 7 MB
+//    against storage quota.  All active tile providers (Esri, USGS, OSM)
+//    send CORS headers, so the CORS path succeeds in practice.
+// 3. No-cors fallback — for any tile server without CORS headers.
+let _trimCounter = 0;
 async function _tileCF(req) {
   const c = await caches.open(TILE_CACHE);
-  const hit = await c.match(req);
+  const url = req.url;
+  const hit = await c.match(url, { ignoreVary: true });
   if (hit) return hit;
   try {
-    const res = await fetch(req);
-    // Cache both transparent (ok) AND opaque (no-cors) responses.
-    // Opaque responses (res.type==='opaque') have res.ok===false but ARE valid
-    // tile images — they just can't be inspected due to CORS. Cache them anyway.
-    if (res.ok || res.type === 'opaque') {
-      c.put(req, res.clone());
-      _trimTiles(c);
+    // CORS fetch — non-opaque, quota-friendly
+    const res = await fetch(new Request(url, { mode: 'cors', credentials: 'omit' }));
+    if (res.ok) {
+      c.put(url, res.clone());
+      if (++_trimCounter % 200 === 0) _trimTiles(c);
     }
     return res;
   } catch {
-    return _emptyTile();
+    // Fallback for non-CORS tile servers (Google, NASA, etc.)
+    try {
+      const res = await fetch(req);
+      if (res.ok || res.type === 'opaque') {
+        c.put(url, res.clone());
+        if (++_trimCounter % 200 === 0) _trimTiles(c);
+      }
+      return res;
+    } catch {
+      return _emptyTile();
+    }
   }
 }
 

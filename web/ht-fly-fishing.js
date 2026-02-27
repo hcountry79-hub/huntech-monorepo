@@ -126,8 +126,8 @@ window.cmdDownloadArea = function() {
 
   function fetchTile(url) {
     return fetch(url).then(function(res) {
-      // SW intercepts this and caches via _tileCF with cors mode
       done++;
+      if (!res.ok) failed++;   // count server errors (429, 503, etc.)
       updateProgress();
     }).catch(function() {
       done++;
