@@ -2,8 +2,8 @@
 // HUNTECH — Service Worker with Offline Tile Caching
 // ═══════════════════════════════════════════════════════════════════════
 
-const SW_VERSION = 'huntech-sw-v82';
-const APP_SHELL_CACHE = 'huntech-shell-v45';
+const SW_VERSION = 'huntech-sw-v82a';
+const APP_SHELL_CACHE = 'huntech-shell-v45a';
 const TILE_CACHE = 'huntech-tiles-v1';
 
 // Max tile cache size (~750 MB at ~30KB avg/tile ≈ 25 000 tiles)
@@ -122,14 +122,13 @@ async function _tileCF(req) {
   const hit = await c.match(req);
   if (hit) return hit;
   try {
-    // Force cors mode so responses are inspectable (res.ok === true).
-    // Without this, <img> tiles arrive as opaque no-cors and res.ok is always false,
-    // so tiles NEVER get cached. ArcGIS/Esri/USGS tile servers all support CORS.
-    const corsReq = new Request(req.url, { mode: 'cors', credentials: 'omit' });
-    const res = await fetch(corsReq);
-    if (res.ok) {
-      c.put(req, res.clone());       // cache under original URL for future lookups
-      _trimTiles(c);                  // keep under quota
+    const res = await fetch(req);
+    // Cache both transparent (ok) AND opaque (no-cors) responses.
+    // Opaque responses (res.type==='opaque') have res.ok===false but ARE valid
+    // tile images — they just can't be inspected due to CORS. Cache them anyway.
+    if (res.ok || res.type === 'opaque') {
+      c.put(req, res.clone());
+      _trimTiles(c);
     }
     return res;
   } catch {

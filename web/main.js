@@ -2292,6 +2292,26 @@ function initializeMap() {
     layersControlEl.addEventListener('touchstart', () => setTimeout(syncLayersOpenState, 0), { passive: true });
     const observer = new MutationObserver(syncLayersOpenState);
     observer.observe(layersControlEl, { attributes: true, attributeFilter: ['class'] });
+
+    // ── Layers pill toggle fix ─────────────────────────────────────
+    // The control lives outside #map in .ht-map-layer-stack, so
+    // Leaflet's built-in collapse-on-tap (which fires on map._container)
+    // never triggers.  Fix: make the toggle button act as a true toggle,
+    // and collapse on any tap outside the control.
+    const _layersToggleBtn = layersControlEl.querySelector('.leaflet-control-layers-toggle');
+    if (_layersToggleBtn) {
+      _layersToggleBtn.addEventListener('click', function (e) {
+        if (layersControlEl.classList.contains('leaflet-control-layers-expanded')) {
+          e.stopImmediatePropagation();   // block Leaflet's expand()
+          baseLayersControl.collapse();
+        }
+      }, true);  // capture phase — fires BEFORE Leaflet's handler
+    }
+    document.addEventListener('click', function (e) {
+      if (!layersControlEl.classList.contains('leaflet-control-layers-expanded')) return;
+      if (layersControlEl.contains(e.target)) return;
+      baseLayersControl.collapse();
+    });
   }
 
   const imageryNote = document.createElement('div');
