@@ -74,7 +74,7 @@ window.cmdDownloadArea = function() {
 
   var bounds = _waterBounds(water);
   var MIN_ZOOM = 13;
-  var MAX_ZOOM = 18;
+  var MAX_ZOOM = 19; // Esri satellite serves real tiles to z19 — prevents blurry upscale
 
   // Count total tiles
   var tileUrls = [];
