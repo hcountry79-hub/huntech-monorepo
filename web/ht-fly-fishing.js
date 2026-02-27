@@ -2004,7 +2004,7 @@ function _deployHotspotMicroSpots(idx) {
   //   a) Another kept stand is within 30ft (~9m), OR
   //   b) ANY fish/cast position (from any spot) is within 30ft.
   // Rule: CAST HERE + fish icon ALWAYS win over STAND HERE.
-  var STAND_MERGE_DIST = 9; // 9 meters ≈ 30 feet
+  var STAND_MERGE_DIST = 20; // 20 meters — aggressively merge so one stand serves multiple fish
   var standPositions = [];  // { lat, lng } for each accepted spot
   var fishCastPositions = []; // { lat, lng } — the fly landing / fish icon positions
   var skipStandFlags = [];  // true = skip stand marker for this spot
@@ -2025,7 +2025,7 @@ function _deployHotspotMicroSpots(idx) {
     // Replicate the stand-position logic from _deployMicroCluster:
     var fishSnap2 = _snapToStream(mc.lat, mc.lng, denseSeg, water.bankWidths, water.avgStreamWidth || 12, segment);
     var fishSIdx2 = fishSnap2.segIdx || mc.segIdx;
-    var standDistDense2 = 14;
+    var standDistDense2 = 3;
     var EDGE_BUF = 5;
     var standSIdx2;
     if (fishSIdx2 + standDistDense2 > denseSeg.length - 1 - EDGE_BUF) {
@@ -5139,7 +5139,7 @@ function _deployMicroCluster(opts) {
   // Standing position: normally downstream of fish (angler behind fish)
   // BUT if fish is near the downstream end of the zone, flip to upstream
   // to avoid placing angler past zone boundary / waterfalls / obstacles
-  var standDistDense = 14; // 14 dense steps × 5m = ~70m
+  var standDistDense = 3; // 3 dense steps × 5m = ~15m ≈ 50ft downstream of fish
   var EDGE_BUFFER = 5;   // stay at least 5 indices from zone boundary
   var standSIdx;
   if (fishSIdx + standDistDense > seg.length - 1 - EDGE_BUFFER) {
