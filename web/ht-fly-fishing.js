@@ -5165,6 +5165,9 @@ function _deployMicroCluster(opts) {
   var flyTargetSIdx = Math.max(fishSIdx - flyDistDense, Math.min(EDGE_BUFFER, fishSIdx));
   var flySnap = _snapToStream(seg[flyTargetSIdx][0], seg[flyTargetSIdx][1], seg, rawBW, avgWidth);
 
+  // Move fish icon to the exact CAST HERE dot position (centered on target)
+  fishMarker.setLatLng([flySnap.lat, flySnap.lng]);
+
   // Splash rings (expanding ripple)
   var splashIcon = L.divIcon({
     className: 'ht-cast-splash-pin',
