@@ -12,6 +12,148 @@ function isFlyModule() {
   return Boolean(document.body && document.body.classList.contains('module-fly'));
 }
 
+/* ═══════════════════════════════════════════════════════════════════════
+   OFFLINE TILE DOWNLOAD — Pre-fetch map tiles for a water's bounding box
+   so the entire area works with zero cell service.
+   ═══════════════════════════════════════════════════════════════════════ */
+var _offlineDownloadRunning = false;
+
+// Convert lat/lng to tile XYZ at a given zoom
+function _latLngToTile(lat, lng, z) {
+  var x = Math.floor((lng + 180) / 360 * Math.pow(2, z));
+  var latRad = lat * Math.PI / 180;
+  var y = Math.floor((1 - Math.log(Math.tan(latRad) + 1 / Math.cos(latRad)) / Math.PI) / 2 * Math.pow(2, z));
+  return { x: x, y: y };
+}
+
+// Build bounding box from a water's access points + streamPath + center
+function _waterBounds(water) {
+  var lats = [water.lat];
+  var lngs = [water.lng];
+  (water.access || []).forEach(function(a) {
+    if (a.lat && a.lng) { lats.push(a.lat); lngs.push(a.lng); }
+    if (a.zoneBounds) {
+      a.zoneBounds.forEach(function(b) { lats.push(b[0]); lngs.push(b[1]); });
+    }
+  });
+  if (water.streamPath) {
+    water.streamPath.forEach(function(p) { lats.push(p[0]); lngs.push(p[1]); });
+  }
+  // Pad by ~0.01° (~1km) so nearby roads/trailheads are captured
+  var PAD = 0.01;
+  return {
+    south: Math.min.apply(null, lats) - PAD,
+    north: Math.max.apply(null, lats) + PAD,
+    west:  Math.min.apply(null, lngs) - PAD,
+    east:  Math.max.apply(null, lngs) + PAD
+  };
+}
+
+// Tile URL templates — satellite + topo + hillshade
+var _OFFLINE_TILE_LAYERS = [
+  'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+  'https://basemap.nationalmap.gov/arcgis/rest/services/USGSTopo/MapServer/tile/{z}/{y}/{x}',
+  'https://server.arcgisonline.com/ArcGIS/rest/services/Elevation/World_Hillshade/MapServer/tile/{z}/{y}/{x}',
+  'https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}',
+  'https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}'
+];
+
+window.cmdDownloadArea = function() {
+  if (_offlineDownloadRunning) {
+    if (typeof showNotice === 'function') showNotice('Download already in progress…', 'info', 2000);
+    return;
+  }
+
+  // Find current water — either from hotspot session or fishFlow
+  var water = _hotspotWater || (window._fishFlow && window._fishFlow.area);
+  if (!water) {
+    // Try to figure out from currently visible map bounds
+    if (typeof showNotice === 'function') showNotice('Open a water first, then tap Download Area.', 'warn', 3000);
+    return;
+  }
+
+  var bounds = _waterBounds(water);
+  var MIN_ZOOM = 13;
+  var MAX_ZOOM = 18;
+
+  // Count total tiles
+  var tileUrls = [];
+  for (var z = MIN_ZOOM; z <= MAX_ZOOM; z++) {
+    var tl = _latLngToTile(bounds.north, bounds.west, z);
+    var br = _latLngToTile(bounds.south, bounds.east, z);
+    for (var x = tl.x; x <= br.x; x++) {
+      for (var y = tl.y; y <= br.y; y++) {
+        for (var li = 0; li < _OFFLINE_TILE_LAYERS.length; li++) {
+          tileUrls.push(
+            _OFFLINE_TILE_LAYERS[li].replace('{z}', z).replace('{y}', y).replace('{x}', x)
+          );
+        }
+      }
+    }
+  }
+
+  if (tileUrls.length === 0) {
+    if (typeof showNotice === 'function') showNotice('No tiles to download for this area.', 'warn', 3000);
+    return;
+  }
+
+  _offlineDownloadRunning = true;
+  var total = tileUrls.length;
+  var done = 0;
+  var failed = 0;
+  var BATCH = 12; // concurrent fetches — gentle on the server + phone
+
+  if (typeof showNotice === 'function') {
+    showNotice('📥 Downloading ' + total + ' tiles for offline… (this may take a few minutes)', 'info', 8000);
+  }
+
+  // Progress indicator overlay
+  var prog = document.createElement('div');
+  prog.id = 'offline-download-progress';
+  prog.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);' +
+    'background:rgba(0,0,0,0.85);color:#4ade80;padding:10px 20px;border-radius:12px;' +
+    'font:bold 14px/1.3 system-ui;z-index:99999;text-align:center;pointer-events:none;';
+  prog.textContent = '📥 0 / ' + total;
+  document.body.appendChild(prog);
+
+  function updateProgress() {
+    if (prog && prog.parentNode) {
+      var pct = Math.round(done / total * 100);
+      prog.textContent = '📥 ' + done + ' / ' + total + '  (' + pct + '%)';
+    }
+  }
+
+  function fetchTile(url) {
+    return fetch(url, { mode: 'no-cors' }).then(function() {
+      done++;
+      updateProgress();
+    }).catch(function() {
+      done++;
+      failed++;
+      updateProgress();
+    });
+  }
+
+  // Process in batches
+  var idx = 0;
+  function nextBatch() {
+    if (idx >= tileUrls.length) {
+      // Done!
+      _offlineDownloadRunning = false;
+      if (prog && prog.parentNode) prog.parentNode.removeChild(prog);
+      var msg = '✅ Download complete! ' + (total - failed) + ' tiles cached';
+      if (failed > 0) msg += ' (' + failed + ' failed)';
+      msg += '. You\'re ready to go offline!';
+      if (typeof showNotice === 'function') showNotice(msg, 'success', 6000);
+      return;
+    }
+    var batch = tileUrls.slice(idx, idx + BATCH);
+    idx += BATCH;
+    Promise.all(batch.map(fetchTile)).then(nextBatch);
+  }
+  nextBatch();
+};
+
 function isTurkeyModule() {
   return Boolean(document.body && document.body.classList.contains('module-turkey'));
 }
@@ -483,6 +625,7 @@ function showFlyWaterActionBar(water) {
     </div>
     <div class="ht-fly-water-bar-actions ht-fly-water-bar-actions--single">
       <button class="ht-fly-pill ht-fly-pill--checkin-hero" type="button" onclick="fishStepCheckIn('${escapeHtml(water.id)}')">🎣 CHECK IN TO AREA</button>
+      <button class="ht-fly-pill ht-fly-pill--download" type="button" onclick="cmdDownloadArea()">📥 DOWNLOAD FOR OFFLINE</button>
     </div>
   `;
   bar.classList.add('is-visible');
@@ -1792,6 +1935,7 @@ function _showStreamCommandTray(hs) {
         '<button class="ht-stream-command-btn" type="button" onclick="cmdLogHatch()">🦟 Log Hatch</button>' +
         '<button class="ht-stream-command-btn" type="button" onclick="cmdAiCoach()">🤖 AI Coach</button>' +
         '<button class="ht-stream-command-btn" type="button" onclick="cmdStrategy()">⚡ Strategy</button>' +
+        '<button class="ht-stream-command-btn" type="button" onclick="cmdDownloadArea()">📥 Offline</button>' +
         '<button class="ht-stream-command-btn ht-stream-command-btn--checkout" type="button" onclick="cmdCheckOut()">🔴 Check Out</button>' +
       '</div>' +
     '</div>';
