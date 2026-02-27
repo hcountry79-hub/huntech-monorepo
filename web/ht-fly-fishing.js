@@ -5068,7 +5068,7 @@ function _deployMicroCluster(opts) {
   // Standing position: normally downstream of fish (angler behind fish)
   // BUT if fish is near the downstream end of the zone, flip to upstream
   // to avoid placing angler past zone boundary / waterfalls / obstacles
-  var standDistDense = 8; // 8 dense steps × 5m = ~40m
+  var standDistDense = 14; // 14 dense steps × 5m = ~70m
   var EDGE_BUFFER = 5;   // stay at least 5 indices from zone boundary
   var standSIdx;
   if (fishSIdx + standDistDense > seg.length - 1 - EDGE_BUFFER) {
@@ -5219,9 +5219,9 @@ function _deployMicroCluster(opts) {
 
   // ══════════════════════════════════════════════════════════════
   //  6) CURVED CAST ARC — parabolic arc from angler to fly target
-  //     Bows to the side like a real fly line unfurling
-  //     Uses ht-cast-arc CSS with castUnfurl animation
+  //     (Controlled by WADE_MARKERS_ENABLED flag — set true to restore)
   // ══════════════════════════════════════════════════════════════
+  if (WADE_MARKERS_ENABLED) {
   var castArcPoints = [];
   var arcSteps = 14;
   var DEG_C = Math.PI / 180;
@@ -5265,8 +5265,7 @@ function _deployMicroCluster(opts) {
 
   // ══════════════════════════════════════════════════════════════
   //  7) DRIFT LINE — from fly landing zone downstream past the fish
-  //     Follows the actual stream path for natural current feel
-  //     + pulsing drift direction arrows
+  //     (Controlled by WADE_MARKERS_ENABLED flag — set true to restore)
   // ══════════════════════════════════════════════════════════════
   var driftPoints = [];
   var driftStart = flyTargetSIdx;
@@ -5286,6 +5285,7 @@ function _deployMicroCluster(opts) {
 
     // (Drift arrow triangles removed — dashed line is sufficient)
   }
+  } // end WADE_MARKERS_ENABLED (cast arc + drift)
 
   return markers;
 }
