@@ -50,13 +50,15 @@ function _waterBounds(water) {
   };
 }
 
-// Tile URL templates — satellite + topo + hillshade
+// Tile layers with their max useful zoom (download only what the server actually serves)
+// satellite: real tiles to z19  |  topo: maxNativeZoom 16  |  hillshade: 16
+// roads/labels: 19 native but only needed to z17 for offline overview
 var _OFFLINE_TILE_LAYERS = [
-  'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-  'https://basemap.nationalmap.gov/arcgis/rest/services/USGSTopo/MapServer/tile/{z}/{y}/{x}',
-  'https://server.arcgisonline.com/ArcGIS/rest/services/Elevation/World_Hillshade/MapServer/tile/{z}/{y}/{x}',
-  'https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}',
-  'https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}'
+  { url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', minZ: 15, maxZ: 19 },
+  { url: 'https://basemap.nationalmap.gov/arcgis/rest/services/USGSTopo/MapServer/tile/{z}/{y}/{x}', minZ: 13, maxZ: 16 },
+  { url: 'https://server.arcgisonline.com/ArcGIS/rest/services/Elevation/World_Hillshade/MapServer/tile/{z}/{y}/{x}', minZ: 13, maxZ: 16 },
+  { url: 'https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}', minZ: 13, maxZ: 17 },
+  { url: 'https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', minZ: 13, maxZ: 17 }
 ];
 
 window.cmdDownloadArea = function() {
@@ -73,19 +75,18 @@ window.cmdDownloadArea = function() {
   }
 
   var bounds = _waterBounds(water);
-  var MIN_ZOOM = 13;
-  var MAX_ZOOM = 19; // Esri satellite serves real tiles to z19 — prevents blurry upscale
 
-  // Count total tiles
+  // Build tile URL list — each layer only downloads its useful zoom range
   var tileUrls = [];
-  for (var z = MIN_ZOOM; z <= MAX_ZOOM; z++) {
-    var tl = _latLngToTile(bounds.north, bounds.west, z);
-    var br = _latLngToTile(bounds.south, bounds.east, z);
-    for (var x = tl.x; x <= br.x; x++) {
-      for (var y = tl.y; y <= br.y; y++) {
-        for (var li = 0; li < _OFFLINE_TILE_LAYERS.length; li++) {
+  for (var li = 0; li < _OFFLINE_TILE_LAYERS.length; li++) {
+    var layer = _OFFLINE_TILE_LAYERS[li];
+    for (var z = layer.minZ; z <= layer.maxZ; z++) {
+      var tl = _latLngToTile(bounds.north, bounds.west, z);
+      var br = _latLngToTile(bounds.south, bounds.east, z);
+      for (var x = tl.x; x <= br.x; x++) {
+        for (var y = tl.y; y <= br.y; y++) {
           tileUrls.push(
-            _OFFLINE_TILE_LAYERS[li].replace('{z}', z).replace('{y}', y).replace('{x}', x)
+            layer.url.replace('{z}', z).replace('{y}', y).replace('{x}', x)
           );
         }
       }
@@ -124,7 +125,8 @@ window.cmdDownloadArea = function() {
   }
 
   function fetchTile(url) {
-    return fetch(url, { mode: 'no-cors' }).then(function() {
+    return fetch(url).then(function(res) {
+      // SW intercepts this and caches via _tileCF with cors mode
       done++;
       updateProgress();
     }).catch(function() {
