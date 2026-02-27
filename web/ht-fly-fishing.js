@@ -17,6 +17,7 @@ function isFlyModule() {
    so the entire area works with zero cell service.
    ═══════════════════════════════════════════════════════════════════════ */
 var _offlineDownloadRunning = false;
+var _downloadWater = null; // set when welcome bar or check-in form is shown
 
 // Convert lat/lng to tile XYZ at a given zoom
 function _latLngToTile(lat, lng, z) {
@@ -65,9 +66,8 @@ window.cmdDownloadArea = function() {
   }
 
   // Find current water — either from hotspot session or fishFlow
-  var water = _hotspotWater || (window._fishFlow && window._fishFlow.area);
+  var water = _hotspotWater || (window._fishFlow && window._fishFlow.area) || _downloadWater;
   if (!water) {
-    // Try to figure out from currently visible map bounds
     if (typeof showNotice === 'function') showNotice('Open a water first, then tap Download Area.', 'warn', 3000);
     return;
   }
@@ -613,6 +613,7 @@ function collapseFlyCommandPanels() {
 
 function showFlyWaterActionBar(water) {
   if (!water) return;
+  _downloadWater = water; // store for offline download button
   console.log('[HT] showFlyWaterActionBar called for:', water.name);
   collapseFlyCommandPanels();
   const bar = ensureFlyWaterActionBar();
@@ -635,6 +636,7 @@ function showFlyWaterActionBar(water) {
 /* ── Stream Command Tray: zone selection + user inputs + LET'S GO ── */
 function showFlyCheckInForm(water) {
   if (!water) return;
+  _downloadWater = water; // store for offline download button
   const bar = ensureFlyWaterActionBar();
   const zones = (water.access || []).filter(a => a.type === 'zone');
 
