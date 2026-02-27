@@ -601,8 +601,8 @@ function getFlyPinIcon(labelText, water) {
       <div class="ht-fly-area-pill-name">${escapeHtml(label)}</div>
       <div class="ht-fly-area-pill-cta">Click for area details</div>
     </div>`,
-    iconSize: [200, 50],
-    iconAnchor: [0, 16]
+    iconSize: [140, 36],
+    iconAnchor: [0, 12]
   });
 }
 

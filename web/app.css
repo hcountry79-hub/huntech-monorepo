@@ -6789,13 +6789,13 @@ body.module-mushroom .ht-map-hero-meta {
 .ht-fly-area-pill {
   background: rgba(8, 8, 8, 0.92);
   border: 1px solid rgba(255, 193, 7, 0.65);
-  border-radius: 12px;
-  padding: 8px 14px;
+  border-radius: 8px;
+  padding: 4px 8px;
   text-align: center;
-  min-width: 120px;
+  min-width: 60px;
   width: max-content;
-  max-width: 240px;
-  box-shadow: 0 12px 26px rgba(0, 0, 0, 0.45);
+  max-width: 150px;
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.45);
   cursor: pointer;
   transition: transform 0.15s ease, border-color 0.15s ease, background 0.15s ease;
 }
@@ -6805,7 +6805,7 @@ body.module-mushroom .ht-map-hero-meta {
   transform: scale(1.04);
 }
 .ht-fly-area-pill-name {
-  font-size: 13px;
+  font-size: 9px;
   font-weight: 800;
   color: #fff;
   letter-spacing: 0.3px;
@@ -6813,10 +6813,10 @@ body.module-mushroom .ht-map-hero-meta {
   white-space: nowrap;
 }
 .ht-fly-area-pill-cta {
-  font-size: 10px;
+  font-size: 7px;
   color: rgba(255, 193, 7, 0.85);
-  margin-top: 4px;
-  letter-spacing: 0.6px;
+  margin-top: 2px;
+  letter-spacing: 0.5px;
   text-transform: uppercase;
   font-weight: 700;
 }
