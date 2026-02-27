@@ -195,10 +195,15 @@
   // Checks IndexedDB for the tile blob, serves from there if found.
   // On cache miss, fetches from network normally and stores the result.
   // CRITICAL: A timeout ensures tiles always load even if IndexedDB hangs.
-  var IDB_TIMEOUT_MS = 2000; // max ms to wait for IndexedDB before network fallback
+  var IDB_TIMEOUT_MS = 2000; // max ms to wait for IndexedDB + fetch before network fallback
 
   if (typeof L !== 'undefined' && L.TileLayer) {
     L.TileLayer.Offline = L.TileLayer.extend({
+      // ── Single-fetch createTile ────────────────────────────────────
+      // v82k: On cache miss we fetch the blob ONCE and use it for BOTH
+      // display (via blob URL) AND caching (putTile to IndexedDB).
+      // Previous double-fetch (_cacheNetworkTile) silently failed at
+      // high zoom levels causing tiles to display but never cache.
       createTile: function (coords, done) {
         var tile = document.createElement('img');
         L.DomEvent.on(tile, 'load', L.Util.bind(this._tileOnLoad, this, done, tile));
@@ -211,58 +216,59 @@
         tile.alt = '';
 
         var url = this.getTileUrl(coords);
-        var that = this;
         var srcSet = false; // guard: only set tile.src once
 
-        // Safety timeout — if IndexedDB hangs, fall back to network
-        var timer = setTimeout(function () {
-          if (!srcSet) {
-            srcSet = true;
-            tile.src = url;
-          }
-        }, IDB_TIMEOUT_MS);
+        // Helper: display tile from a blob (creates object URL)
+        function setFromBlob(blob) {
+          if (srcSet) return;
+          clearTimeout(timer);
+          srcSet = true;
+          var objUrl = URL.createObjectURL(blob);
+          tile._htObjUrl = objUrl;
+          tile.src = objUrl;
+        }
 
-        // Try IndexedDB first (with timeout race)
+        // Helper: fall back to direct network load (no caching possible)
+        function setFromNetwork() {
+          if (srcSet) return;
+          clearTimeout(timer);
+          srcSet = true;
+          tile.src = url;
+        }
+
+        // Safety timeout — if IndexedDB + fetch take too long, load direct
+        var timer = setTimeout(setFromNetwork, IDB_TIMEOUT_MS);
+
+        // Try IndexedDB first, then single-fetch on miss
         getTile(url).then(function (blob) {
           if (srcSet) return; // timeout already fired
-          clearTimeout(timer);
-          srcSet = true;
           if (blob) {
-            // Cache hit — create object URL from stored blob
-            var objUrl = URL.createObjectURL(blob);
-            tile._htObjUrl = objUrl; // track for cleanup
-            tile.src = objUrl;
+            // Cache hit — display from stored blob
+            setFromBlob(blob);
           } else {
-            // Cache miss — load from network, cache on success
-            tile.src = url;
-            tile.addEventListener('load', function () {
-              // Fetch the tile again to get the blob for storage
-              // (we can't read pixels from a cross-origin img)
-              that._cacheNetworkTile(url);
-            }, { once: true });
+            // Cache miss — single fetch: display AND cache from one request
+            fetch(url, { mode: 'cors', credentials: 'omit' })
+              .then(function (res) {
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                return res.blob();
+              })
+              .then(function (blob) {
+                setFromBlob(blob);
+                // Background-cache the blob we just fetched
+                putTile(url, blob).catch(function () {});
+              })
+              .catch(function () {
+                // CORS fetch failed — fall back to img direct load
+                // (img tags bypass CORS, tile displays but can't be cached)
+                setFromNetwork();
+              });
           }
         }).catch(function () {
-          if (srcSet) return; // timeout already fired
-          clearTimeout(timer);
-          srcSet = true;
           // IndexedDB error — fall back to network
-          tile.src = url;
+          setFromNetwork();
         });
 
         return tile;
-      },
-
-      _cacheNetworkTile: function (url) {
-        // Background-cache: fetch the tile and store in IndexedDB
-        fetch(url, { mode: 'cors', credentials: 'omit' })
-          .then(function (res) {
-            if (res.ok) return res.blob();
-            return null;
-          })
-          .then(function (blob) {
-            if (blob) putTile(url, blob);
-          })
-          .catch(function () { /* ignore — tile displayed from network anyway */ });
       },
 
       _removeTile: function (key) {

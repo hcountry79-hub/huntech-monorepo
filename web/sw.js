@@ -7,8 +7,8 @@
 // and cache eviction issues that plagued previous versions.
 // ═══════════════════════════════════════════════════════════════════════
 
-const SW_VERSION = 'huntech-sw-v82j';
-const APP_SHELL_CACHE = 'huntech-shell-v53';
+const SW_VERSION = 'huntech-sw-v82k';
+const APP_SHELL_CACHE = 'huntech-shell-v54';
 
 // ── App-shell files to pre-cache on install ───────────────────────────
 const APP_SHELL = [
