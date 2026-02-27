@@ -5068,7 +5068,7 @@ function _deployMicroCluster(opts) {
   // Standing position: normally downstream of fish (angler behind fish)
   // BUT if fish is near the downstream end of the zone, flip to upstream
   // to avoid placing angler past zone boundary / waterfalls / obstacles
-  var standDistDense = 4; // 4 dense steps × 5m = ~20m
+  var standDistDense = 8; // 8 dense steps × 5m = ~40m
   var EDGE_BUFFER = 5;   // stay at least 5 indices from zone boundary
   var standSIdx;
   if (fishSIdx + standDistDense > seg.length - 1 - EDGE_BUFFER) {
