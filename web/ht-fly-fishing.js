@@ -2,6 +2,12 @@
 // HUNTECH - Fly Fishing Module (extracted from main.js)
 // ===================================================================
 
+// ── FEATURE FLAGS ──────────────────────────────────────────────────
+// Set to true to restore WADE HERE pills + green approach lines.
+// Set to false to hide them.  (To bring back: just flip to true)
+var WADE_MARKERS_ENABLED = false;
+// ───────────────────────────────────────────────────────────────────
+
 function isFlyModule() {
   return Boolean(document.body && document.body.classList.contains('module-fly'));
 }
@@ -5098,8 +5104,10 @@ function _deployMicroCluster(opts) {
   // ══════════════════════════════════════════════════════════════
   //  3) WADE HERE pill — on the BANK at the stream entry point
   //     Big, bold, glowing green — can't miss it
+  //     (Controlled by WADE_MARKERS_ENABLED flag — set true to restore)
   // ══════════════════════════════════════════════════════════════
   var bankSide = (opts.microIdx % 2 === 0) ? 1 : -1;
+  if (WADE_MARKERS_ENABLED) {
   var bankEdge = halfWidth;
   if (rawBW && rawSP) {
     var standBw = _getDenseBankWidth(rawBW, rawSP, seg, standSIdx);
@@ -5135,6 +5143,7 @@ function _deployMicroCluster(opts) {
   // ══════════════════════════════════════════════════════════════
   //  4) APPROACH ARROWS — animated pulsing ▶ along path
   //     Dashed line from wade entry → standing position + 3 arrow markers
+  //     (Controlled by WADE_MARKERS_ENABLED flag — set true to restore)
   // ══════════════════════════════════════════════════════════════
   var approachLine = L.polyline(
     [[wadeEntry.lat, wadeEntry.lng], [standSnap.lat, standSnap.lng]],
@@ -5146,6 +5155,7 @@ function _deployMicroCluster(opts) {
   markers.push(approachLine);
 
   // (Approach arrow triangles removed — dashed line is sufficient)
+  } // end WADE_MARKERS_ENABLED
 
   // ══════════════════════════════════════════════════════════════
   //  5) FLY LANDING ZONE — upstream of fish
