@@ -2,8 +2,8 @@
 // HUNTECH — Service Worker with Offline Tile Caching
 // ═══════════════════════════════════════════════════════════════════════
 
-const SW_VERSION = 'huntech-sw-v82g';
-const APP_SHELL_CACHE = 'huntech-shell-v50';
+const SW_VERSION = 'huntech-sw-v82h';
+const APP_SHELL_CACHE = 'huntech-shell-v51';
 const TILE_CACHE = 'huntech-tiles-v1';
 
 // Max tile cache size (~750 MB at ~30KB avg/tile ≈ 25 000 tiles)
@@ -181,6 +181,9 @@ async function _cdnCF(req) {
 }
 
 // ── Own origin: network-first ─────────────────────────────────────────
+// KEY: ignoreSearch:true on fallback — HTML loads scripts with ?v=xyz
+// cache busters, but pre-cache stores them without query strings.
+// Without ignoreSearch the offline fallback won't find them.
 async function _netFirst(req) {
   try {
     const res = await fetch(req);
@@ -190,10 +193,14 @@ async function _netFirst(req) {
     }
     return res;
   } catch {
+    // Try exact URL first (includes ?v= if previously cached online)
     const hit = await caches.match(req);
     if (hit) return hit;
+    // Then try ignoring query string — matches pre-cached ./app.css
+    // against a request for app.css?v=20260227d
+    const hitNoQ = await caches.match(req, { ignoreSearch: true });
+    if (hitNoQ) return hitNoQ;
     if (req.mode === 'navigate') {
-      // Try the exact page first, then fly module, then shed
       const url = new URL(req.url);
       const page = url.pathname.split('/').pop() || 'index.html';
       const exact = await caches.match('./' + page);
