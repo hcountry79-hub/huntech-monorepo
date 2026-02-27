@@ -1998,14 +1998,29 @@ function _deployHotspotMicroSpots(idx) {
 
   var bounds = [[hs.lat, hs.lng]];
 
-  // ── STAND MARKER DEDUPLICATION ──
-  // Pre-compute stand positions for each accepted spot.
-  // If two stand positions are within 30ft (~9m), skip the second stand marker
-  // so we don't get overlapping STAND HERE circles.
+  // ── STAND MARKER DEDUPLICATION + CONFLICT AVOIDANCE ──
+  // Pre-compute stand AND fish/cast positions for every accepted spot.
+  // A STAND HERE marker is SKIPPED when:
+  //   a) Another kept stand is within 30ft (~9m), OR
+  //   b) ANY fish/cast position (from any spot) is within 30ft.
+  // Rule: CAST HERE + fish icon ALWAYS win over STAND HERE.
   var STAND_MERGE_DIST = 9; // 9 meters ≈ 30 feet
   var standPositions = [];  // { lat, lng } for each accepted spot
+  var fishCastPositions = []; // { lat, lng } — the fly landing / fish icon positions
   var skipStandFlags = [];  // true = skip stand marker for this spot
 
+  // First pass: compute ALL fish/cast positions (these always win)
+  accepted.forEach(function(mc) {
+    var fs = _snapToStream(mc.lat, mc.lng, denseSeg, water.bankWidths, water.avgStreamWidth || 12);
+    var fsIdx = fs.segIdx || mc.segIdx;
+    // Cast-here (flySnap) = ~1.5m upstream of fish — fishMarker is moved here
+    var flyDist = Math.max(Math.round(1.5 / 5), 1);
+    var flyIdx = Math.max(fsIdx - flyDist, Math.min(5, fsIdx));
+    var flySn = _snapToStream(denseSeg[flyIdx][0], denseSeg[flyIdx][1], denseSeg, water.bankWidths, water.avgStreamWidth || 12);
+    fishCastPositions.push({ lat: flySn.lat, lng: flySn.lng });
+  });
+
+  // Second pass: compute stand positions + check conflicts
   accepted.forEach(function(mc, i) {
     // Replicate the stand-position logic from _deployMicroCluster:
     var fishSnap2 = _snapToStream(mc.lat, mc.lng, denseSeg, water.bankWidths, water.avgStreamWidth || 12);
@@ -2021,16 +2036,27 @@ function _deployHotspotMicroSpots(idx) {
     var ss = _snapToStream(denseSeg[standSIdx2][0], denseSeg[standSIdx2][1], denseSeg, water.bankWidths, water.avgStreamWidth || 12);
     standPositions.push({ lat: ss.lat, lng: ss.lng });
 
-    // Check if any EARLIER stand position is within merge distance
     var skip = false;
-    for (var j = 0; j < i; j++) {
-      if (skipStandFlags[j]) continue; // don't chain-skip — compare to the kept one
-      var d = _distM(ss.lat, ss.lng, standPositions[j].lat, standPositions[j].lng);
-      if (d < STAND_MERGE_DIST) {
+
+    // (a) Check against ALL fish/cast positions — cast+fish always win
+    for (var f = 0; f < fishCastPositions.length; f++) {
+      if (_distM(ss.lat, ss.lng, fishCastPositions[f].lat, fishCastPositions[f].lng) < STAND_MERGE_DIST) {
         skip = true;
         break;
       }
     }
+
+    // (b) Check if any EARLIER kept stand is within merge distance
+    if (!skip) {
+      for (var j = 0; j < i; j++) {
+        if (skipStandFlags[j]) continue; // compare to kept ones only
+        if (_distM(ss.lat, ss.lng, standPositions[j].lat, standPositions[j].lng) < STAND_MERGE_DIST) {
+          skip = true;
+          break;
+        }
+      }
+    }
+
     skipStandFlags.push(skip);
   });
 
