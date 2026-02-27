@@ -194,6 +194,9 @@
   // ── Custom Leaflet TileLayer: IndexedDB-first ────────────────────────
   // Checks IndexedDB for the tile blob, serves from there if found.
   // On cache miss, fetches from network normally and stores the result.
+  // CRITICAL: A timeout ensures tiles always load even if IndexedDB hangs.
+  var IDB_TIMEOUT_MS = 2000; // max ms to wait for IndexedDB before network fallback
+
   if (typeof L !== 'undefined' && L.TileLayer) {
     L.TileLayer.Offline = L.TileLayer.extend({
       createTile: function (coords, done) {
@@ -209,9 +212,21 @@
 
         var url = this.getTileUrl(coords);
         var that = this;
+        var srcSet = false; // guard: only set tile.src once
 
-        // Try IndexedDB first
+        // Safety timeout — if IndexedDB hangs, fall back to network
+        var timer = setTimeout(function () {
+          if (!srcSet) {
+            srcSet = true;
+            tile.src = url;
+          }
+        }, IDB_TIMEOUT_MS);
+
+        // Try IndexedDB first (with timeout race)
         getTile(url).then(function (blob) {
+          if (srcSet) return; // timeout already fired
+          clearTimeout(timer);
+          srcSet = true;
           if (blob) {
             // Cache hit — create object URL from stored blob
             var objUrl = URL.createObjectURL(blob);
@@ -227,6 +242,9 @@
             }, { once: true });
           }
         }).catch(function () {
+          if (srcSet) return; // timeout already fired
+          clearTimeout(timer);
+          srcSet = true;
           // IndexedDB error — fall back to network
           tile.src = url;
         });
