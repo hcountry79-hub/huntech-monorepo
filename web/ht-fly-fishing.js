@@ -1981,7 +1981,7 @@ function _deployHotspotMicroSpots(idx) {
     if (distFromMain > MAX_DIST || distFromMain < MIN_FROM_MAIN) continue;
 
     // ── GUARDRAIL: Snap candidate to stream — skip if on bank ──
-    var snap = _snapToStream(cLat, cLng, denseSeg, water.bankWidths, water.avgStreamWidth || 12);
+    var snap = _snapToStream(cLat, cLng, denseSeg, water.bankWidths, water.avgStreamWidth || 12, segment);
     if (!snap.inWater) continue;
 
     var tooClose = false;
@@ -2011,19 +2011,19 @@ function _deployHotspotMicroSpots(idx) {
 
   // First pass: compute ALL fish/cast positions (these always win)
   accepted.forEach(function(mc) {
-    var fs = _snapToStream(mc.lat, mc.lng, denseSeg, water.bankWidths, water.avgStreamWidth || 12);
+    var fs = _snapToStream(mc.lat, mc.lng, denseSeg, water.bankWidths, water.avgStreamWidth || 12, segment);
     var fsIdx = fs.segIdx || mc.segIdx;
     // Cast-here (flySnap) = ~1.5m upstream of fish — fishMarker is moved here
     var flyDist = Math.max(Math.round(1.5 / 5), 1);
     var flyIdx = Math.max(fsIdx - flyDist, Math.min(5, fsIdx));
-    var flySn = _snapToStream(denseSeg[flyIdx][0], denseSeg[flyIdx][1], denseSeg, water.bankWidths, water.avgStreamWidth || 12);
+    var flySn = _snapToStream(denseSeg[flyIdx][0], denseSeg[flyIdx][1], denseSeg, water.bankWidths, water.avgStreamWidth || 12, segment);
     fishCastPositions.push({ lat: flySn.lat, lng: flySn.lng });
   });
 
   // Second pass: compute stand positions + check conflicts
   accepted.forEach(function(mc, i) {
     // Replicate the stand-position logic from _deployMicroCluster:
-    var fishSnap2 = _snapToStream(mc.lat, mc.lng, denseSeg, water.bankWidths, water.avgStreamWidth || 12);
+    var fishSnap2 = _snapToStream(mc.lat, mc.lng, denseSeg, water.bankWidths, water.avgStreamWidth || 12, segment);
     var fishSIdx2 = fishSnap2.segIdx || mc.segIdx;
     var standDistDense2 = 14;
     var EDGE_BUF = 5;
@@ -2033,7 +2033,7 @@ function _deployHotspotMicroSpots(idx) {
     } else {
       standSIdx2 = Math.min(fishSIdx2 + standDistDense2, denseSeg.length - 1 - EDGE_BUF);
     }
-    var ss = _snapToStream(denseSeg[standSIdx2][0], denseSeg[standSIdx2][1], denseSeg, water.bankWidths, water.avgStreamWidth || 12);
+    var ss = _snapToStream(denseSeg[standSIdx2][0], denseSeg[standSIdx2][1], denseSeg, water.bankWidths, water.avgStreamWidth || 12, segment);
     standPositions.push({ lat: ss.lat, lng: ss.lng });
 
     var skip = false;
@@ -4896,7 +4896,7 @@ window.deployZonePolygonWithFade = function(water, zone) {
  * @param {number} avgWidth - fallback avgStreamWidth from water object
  * @returns {{lat:number, lng:number, inWater:boolean, segIdx:number}}
  */
-function _snapToStream(lat, lng, segment, bankWidths, avgWidth) {
+function _snapToStream(lat, lng, segment, bankWidths, avgWidth, rawStreamPath) {
   if (!segment || segment.length < 2) return { lat: lat, lng: lng, inWater: true, segIdx: 0 };
 
   var DEG = Math.PI / 180;
@@ -4936,12 +4936,19 @@ function _snapToStream(lat, lng, segment, bankWidths, avgWidth) {
   var relLng = (lng - lng0) * mPerLng;
   var perpOffset = relLat * perpX + relLng * perpY; // meters, positive=left
 
-  // Get bank width at this point
+  // Get bank width at this point — use dense→raw mapping when available
   var halfWidth = (avgWidth || 12) / 2;
   if (bankWidths && bankWidths.length > 0) {
-    // Map from dense interpolated index → raw bankWidths index
-    var bwIdx = Math.min(bestIdx, bankWidths.length - 1);
-    var bw = bankWidths[bwIdx];
+    var bw = null;
+    // If rawStreamPath is provided, use proper dense→raw index mapping
+    // (bankWidths are indexed against the raw streamPath, not the dense segment)
+    if (rawStreamPath && rawStreamPath.length > 0) {
+      bw = _getDenseBankWidth(bankWidths, rawStreamPath, segment, bestIdx);
+    } else {
+      // Fallback: direct index (only correct when segment IS the raw path)
+      var bwIdx = Math.min(bestIdx, bankWidths.length - 1);
+      bw = bankWidths[bwIdx];
+    }
     if (bw) {
       halfWidth = perpOffset >= 0 ? (bw[0] || halfWidth) : (bw[1] || halfWidth);
     }
@@ -5068,9 +5075,8 @@ function _deployMicroCluster(opts) {
   var bw = null;
   var halfWidth = 5.5;
   var rawBW = opts.bankWidths || (opts.water && opts.water.bankWidths) || null;
-  // When zone-aligned bankWidths are passed, use the zone segment as reference
-  // (indices match). Otherwise fall back to the full raw streamPath for proximity lookup.
-  var rawSP = opts.bankWidths ? seg : ((opts.water && opts.water.streamPath) || null);
+  // rawSP = the ORIGINAL raw streamPath (bankWidths indices match this, NOT the dense segment)
+  var rawSP = (opts.water && opts.water.streamPath) || null;
   if (rawBW && rawSP) {
     bw = _getDenseBankWidth(rawBW, rawSP, seg, sIdx);
     if (bw) halfWidth = Math.max(bw[0] || 5.5, bw[1] || 5.5);
@@ -5080,7 +5086,7 @@ function _deployMicroCluster(opts) {
   // ══════════════════════════════════════════════════════════════
   //  1) FISH HOLD — must be IN the water
   // ══════════════════════════════════════════════════════════════
-  var fishSnap = _snapToStream(opts.fishLat, opts.fishLng, seg, rawBW, avgWidth);
+  var fishSnap = _snapToStream(opts.fishLat, opts.fishLng, seg, rawBW, avgWidth, rawSP);
   var fishLat = fishSnap.lat;
   var fishLng = fishSnap.lng;
   var fishSIdx = fishSnap.segIdx || sIdx;
@@ -5089,7 +5095,7 @@ function _deployMicroCluster(opts) {
   var jitterMax = halfWidth * 0.35;
   var jitter = (Math.random() - 0.5) * 2 * jitterMax;
   var jittered = _perpendicularOffset(seg, fishSIdx, jitter);
-  var jitterSnap = _snapToStream(jittered.lat, jittered.lng, seg, rawBW, avgWidth);
+  var jitterSnap = _snapToStream(jittered.lat, jittered.lng, seg, rawBW, avgWidth, rawSP);
   fishLat = jitterSnap.lat;
   fishLng = jitterSnap.lng;
 
@@ -5142,7 +5148,7 @@ function _deployMicroCluster(opts) {
   } else {
     standSIdx = Math.min(fishSIdx + standDistDense, seg.length - 1 - EDGE_BUFFER);
   }
-  var standSnap = _snapToStream(seg[standSIdx][0], seg[standSIdx][1], seg, rawBW, avgWidth);
+  var standSnap = _snapToStream(seg[standSIdx][0], seg[standSIdx][1], seg, rawBW, avgWidth, rawSP);
 
   if (!opts.skipStand) {
   // Clean circle + "STAND HERE" label (matches CAST HERE visual language)
@@ -5236,7 +5242,7 @@ function _deployMicroCluster(opts) {
   // ══════════════════════════════════════════════════════════════
   var flyDistDense = Math.max(Math.round(1.5 / 5), 1); // ~1.5m upstream of fish (~1-2 yards past)
   var flyTargetSIdx = Math.max(fishSIdx - flyDistDense, Math.min(EDGE_BUFFER, fishSIdx));
-  var flySnap = _snapToStream(seg[flyTargetSIdx][0], seg[flyTargetSIdx][1], seg, rawBW, avgWidth);
+  var flySnap = _snapToStream(seg[flyTargetSIdx][0], seg[flyTargetSIdx][1], seg, rawBW, avgWidth, rawSP);
 
   // Move fish icon to the exact CAST HERE dot position (centered on target)
   fishMarker.setLatLng([flySnap.lat, flySnap.lng]);
