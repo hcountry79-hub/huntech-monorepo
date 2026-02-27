@@ -105,7 +105,7 @@ window.cmdDownloadArea = function() {
   var BATCH = 12; // concurrent fetches — gentle on the server + phone
 
   if (typeof showNotice === 'function') {
-    showNotice('📥 Downloading ' + total + ' tiles for offline… (this may take a few minutes)', 'info', 8000);
+    showNotice('� Saving ' + total + ' map tiles to your browser… stay on this page until done', 'info', 8000);
   }
 
   // Progress indicator overlay
@@ -114,13 +114,13 @@ window.cmdDownloadArea = function() {
   prog.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);' +
     'background:rgba(0,0,0,0.85);color:#4ade80;padding:10px 20px;border-radius:12px;' +
     'font:bold 14px/1.3 system-ui;z-index:99999;text-align:center;pointer-events:none;';
-  prog.textContent = '📥 0 / ' + total;
+  prog.textContent = '� Saving 0 / ' + total;
   document.body.appendChild(prog);
 
   function updateProgress() {
     if (prog && prog.parentNode) {
       var pct = Math.round(done / total * 100);
-      prog.textContent = '📥 ' + done + ' / ' + total + '  (' + pct + '%)';
+      prog.textContent = '� Saving ' + done + ' / ' + total + '  (' + pct + '%)';
     }
   }
 
@@ -143,9 +143,9 @@ window.cmdDownloadArea = function() {
       // Done!
       _offlineDownloadRunning = false;
       if (prog && prog.parentNode) prog.parentNode.removeChild(prog);
-      var msg = '✅ Download complete! ' + (total - failed) + ' tiles cached';
+      var msg = '✅ Map saved! ' + (total - failed) + ' tiles stored in your browser';
       if (failed > 0) msg += ' (' + failed + ' failed)';
-      msg += '. You\'re ready to go offline!';
+      msg += '. Works offline — no cell needed!';
       if (typeof showNotice === 'function') showNotice(msg, 'success', 6000);
       return;
     }
@@ -628,7 +628,7 @@ function showFlyWaterActionBar(water) {
     </div>
     <div class="ht-fly-water-bar-actions ht-fly-water-bar-actions--single">
       <button class="ht-fly-pill ht-fly-pill--checkin-hero" type="button" onclick="fishStepCheckIn('${escapeHtml(water.id)}')">🎣 CHECK IN TO AREA</button>
-      <button class="ht-fly-pill ht-fly-pill--download" type="button" onclick="cmdDownloadArea()">📥 DOWNLOAD FOR OFFLINE</button>
+      <button class="ht-fly-pill ht-fly-pill--download" type="button" onclick="cmdDownloadArea()">� SAVE MAP FOR OFFLINE</button>
     </div>
   `;
   bar.classList.add('is-visible');
@@ -1939,7 +1939,7 @@ function _showStreamCommandTray(hs) {
         '<button class="ht-stream-command-btn" type="button" onclick="cmdLogHatch()">🦟 Log Hatch</button>' +
         '<button class="ht-stream-command-btn" type="button" onclick="cmdAiCoach()">🤖 AI Coach</button>' +
         '<button class="ht-stream-command-btn" type="button" onclick="cmdStrategy()">⚡ Strategy</button>' +
-        '<button class="ht-stream-command-btn" type="button" onclick="cmdDownloadArea()">📥 Offline</button>' +
+        '<button class="ht-stream-command-btn" type="button" onclick="cmdDownloadArea()">� Save Map</button>' +
         '<button class="ht-stream-command-btn ht-stream-command-btn--checkout" type="button" onclick="cmdCheckOut()">🔴 Check Out</button>' +
       '</div>' +
     '</div>';
