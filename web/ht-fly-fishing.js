@@ -5079,20 +5079,20 @@ function _deployMicroCluster(opts) {
   }
   var standSnap = _snapToStream(seg[standSIdx][0], seg[standSIdx][1], seg, rawBW, avgWidth);
 
-  // SVG: person holding fly rod, tiny, top-down silhouette
-  var standSvg = '<svg class="ht-stand-here-svg" width="26" height="32" viewBox="0 0 26 32" xmlns="http://www.w3.org/2000/svg">' +
-    '<circle cx="13" cy="8" r="4" fill="#ff6b00" stroke="#333" stroke-width="1"/>' +
-    '<rect x="10" y="12" width="6" height="12" rx="2" fill="#ff6b00" stroke="#333" stroke-width="0.8"/>' +
-    '<line class="ht-stand-flyline" x1="13" y1="6" x2="3" y2="1" stroke="#7cffc7" stroke-width="1.5" stroke-dasharray="2 2" stroke-linecap="round"/>' +
-    '<rect x="9" y="24" width="3" height="4" rx="1" fill="#cc5500"/>' +
-    '<rect x="14" y="24" width="3" height="4" rx="1" fill="#cc5500"/>' +
-    '</svg>';
-
+  // Clean circle + "STAND HERE" label (matches CAST HERE visual language)
   var standIcon = L.divIcon({
     className: 'ht-stand-here-pin',
-    html: '<div class="ht-stand-here-dot">' + standSvg + '</div>',
-    iconSize: [32, 38],
-    iconAnchor: [16, 32]
+    html: '<div class="ht-stand-here-dot"></div>' +
+          '<div class="ht-stand-here-ring"></div>' +
+          '<div class="ht-stand-here-ring ht-stand-here-ring-2"></div>',
+    iconSize: [30, 30],
+    iconAnchor: [15, 15]
+  });
+  var standLabelIcon = L.divIcon({
+    className: 'ht-stand-label-pin',
+    html: '<div class="ht-stand-label">STAND HERE</div>',
+    iconSize: [70, 14],
+    iconAnchor: [35, 28]
   });
   var standMarker = L.marker([standSnap.lat, standSnap.lng], {
     icon: standIcon, zIndexOffset: 555, interactive: false
@@ -5100,6 +5100,12 @@ function _deployMicroCluster(opts) {
   standMarker.__iconKind = 'stand';
   standMarker.__microIdx = opts.microIdx;
   markers.push(standMarker);
+  var standLabelMarker = L.marker([standSnap.lat, standSnap.lng], {
+    icon: standLabelIcon, zIndexOffset: 553, interactive: false
+  }).addTo(map);
+  standLabelMarker.__iconKind = 'standlabel';
+  standLabelMarker.__microIdx = opts.microIdx;
+  markers.push(standLabelMarker);
 
   // ══════════════════════════════════════════════════════════════
   //  3) WADE HERE pill — on the BANK at the stream entry point

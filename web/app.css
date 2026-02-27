@@ -5154,54 +5154,61 @@ body.module-fly #map {
   display: none;
 }
 
-/* ═══ Stand-Here Angler Position Pins — BOLD Hi-Vis Orange ═══ */
+/* ═══ Stand-Here Position Pins — Clean Circle (matches CAST HERE style) ═══ */
 .ht-stand-here-pin {
-  pointer-events: auto !important;
+  pointer-events: none !important;
   background: transparent !important;
   border: none !important;
 }
 .ht-stand-here-dot {
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  filter: drop-shadow(1px 2px 5px rgba(0, 0, 0, 0.65)) drop-shadow(0 0 14px rgba(255, 107, 0, 0.55));
-  animation: standHerePulse 3s ease-in-out infinite;
-  cursor: pointer;
-  position: relative;
-}
-.ht-stand-here-dot::before {
-  content: '';
-  position: absolute;
-  bottom: 4px;
-  left: 50%;
-  width: 32px;
-  height: 32px;
-  transform: translateX(-50%);
+  width: 10px;
+  height: 10px;
   border-radius: 50%;
-  border: 2px solid rgba(255, 107, 0, 0.5);
-  animation: standBeacon 2s ease-out infinite;
-  pointer-events: none;
+  background: radial-gradient(circle, #fff, #ff6b00 40%, rgba(255, 107, 0, 0.2));
+  box-shadow: 0 0 10px rgba(255, 107, 0, 0.7), 0 0 20px rgba(255, 107, 0, 0.3);
+  animation: standDotPulse 3s ease-in-out infinite;
+  position: absolute;
+  top: 10px; left: 10px;
 }
-.ht-stand-here-svg {
-  overflow: visible;
+.ht-stand-here-ring {
+  position: absolute;
+  top: 0; left: 0;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 107, 0, 0.6);
+  animation: standRipple 3s ease-out infinite;
+  box-sizing: border-box;
 }
-.ht-stand-flyline {
-  animation: standFlyLineCast 5s ease-in-out infinite;
-  transform-origin: 3px 1px;
+.ht-stand-here-ring-2 {
+  animation-delay: 0.4s;
+  border-color: rgba(255, 107, 0, 0.35);
 }
-@keyframes standBeacon {
-  0%   { width: 28px; height: 28px; opacity: 0.6; border-color: rgba(255, 107, 0, 0.6); }
-  100% { width: 64px; height: 64px; opacity: 0; border-color: rgba(255, 107, 0, 0); }
+.ht-stand-label-pin {
+  pointer-events: none !important;
 }
-@keyframes standHerePulse {
-  0%, 100% { filter: drop-shadow(1px 2px 5px rgba(0, 0, 0, 0.65)) drop-shadow(0 0 14px rgba(255, 107, 0, 0.55)); transform: scale(1); }
-  50%      { filter: drop-shadow(1px 2px 5px rgba(0, 0, 0, 0.65)) drop-shadow(0 0 22px rgba(255, 107, 0, 0.75)); transform: scale(1.06); }
+.ht-stand-label {
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 1.2px;
+  color: #ff6b00;
+  text-shadow: 0 0 6px rgba(0,0,0,0.9), 0 0 12px rgba(255, 107, 0, 0.4);
+  text-align: center;
+  animation: standLabelPulse 3s ease-in-out infinite;
+  white-space: nowrap;
 }
-@keyframes standFlyLineCast {
-  0%, 100% { opacity: 0.7; stroke-dashoffset: 0; }
-  25% { opacity: 0.9; }
-  50% { opacity: 0.5; }
-  75% { opacity: 0.8; }
+@keyframes standDotPulse {
+  0%, 100% { opacity: 0.7; transform: scale(1); }
+  50%      { opacity: 1; transform: scale(1.3); }
+}
+@keyframes standRipple {
+  0%   { transform: scale(0.5); opacity: 0.9; border-width: 2.5px; }
+  60%  { transform: scale(1.5); opacity: 0.4; border-width: 1.5px; }
+  100% { transform: scale(2.5); opacity: 0; border-width: 0.5px; }
+}
+@keyframes standLabelPulse {
+  0%, 100% { opacity: 0.6; }
+  50%      { opacity: 1; }
 }
 
 /* ═══ Animated Casting Arc — PRONOUNCED & VISIBLE ═══ */
