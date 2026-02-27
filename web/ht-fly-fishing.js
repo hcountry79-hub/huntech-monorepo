@@ -1997,6 +1997,43 @@ function _deployHotspotMicroSpots(idx) {
   var accepted = candidates.slice(0, maxMicros);
 
   var bounds = [[hs.lat, hs.lng]];
+
+  // ── STAND MARKER DEDUPLICATION ──
+  // Pre-compute stand positions for each accepted spot.
+  // If two stand positions are within 30ft (~9m), skip the second stand marker
+  // so we don't get overlapping STAND HERE circles.
+  var STAND_MERGE_DIST = 9; // 9 meters ≈ 30 feet
+  var standPositions = [];  // { lat, lng } for each accepted spot
+  var skipStandFlags = [];  // true = skip stand marker for this spot
+
+  accepted.forEach(function(mc, i) {
+    // Replicate the stand-position logic from _deployMicroCluster:
+    var fishSnap2 = _snapToStream(mc.lat, mc.lng, denseSeg, water.bankWidths, water.avgStreamWidth || 12);
+    var fishSIdx2 = fishSnap2.segIdx || mc.segIdx;
+    var standDistDense2 = 14;
+    var EDGE_BUF = 5;
+    var standSIdx2;
+    if (fishSIdx2 + standDistDense2 > denseSeg.length - 1 - EDGE_BUF) {
+      standSIdx2 = Math.max(fishSIdx2 - standDistDense2, EDGE_BUF);
+    } else {
+      standSIdx2 = Math.min(fishSIdx2 + standDistDense2, denseSeg.length - 1 - EDGE_BUF);
+    }
+    var ss = _snapToStream(denseSeg[standSIdx2][0], denseSeg[standSIdx2][1], denseSeg, water.bankWidths, water.avgStreamWidth || 12);
+    standPositions.push({ lat: ss.lat, lng: ss.lng });
+
+    // Check if any EARLIER stand position is within merge distance
+    var skip = false;
+    for (var j = 0; j < i; j++) {
+      if (skipStandFlags[j]) continue; // don't chain-skip — compare to the kept one
+      var d = _distM(ss.lat, ss.lng, standPositions[j].lat, standPositions[j].lng);
+      if (d < STAND_MERGE_DIST) {
+        skip = true;
+        break;
+      }
+    }
+    skipStandFlags.push(skip);
+  });
+
   accepted.forEach(function(mc, i) {
     var mType = microTypes[i] || 'primary-lie';
     var zone = { name: hs.name };
@@ -2007,7 +2044,8 @@ function _deployHotspotMicroSpots(idx) {
       wade: wadeMode, habitat: hs.habitat,
       microType: mType, microIdx: _activeMicroPins.length,
       spot: spot, water: water, zone: zone,
-      bankWidths: water.bankWidths
+      bankWidths: water.bankWidths,
+      skipStand: skipStandFlags[i]
     });
     clusterMarkers.forEach(function(mk) { _activeMicroPins.push(mk); });
     bounds.push([mc.lat, mc.lng]);
@@ -5045,12 +5083,12 @@ function _deployMicroCluster(opts) {
 
   var fishIcon = L.divIcon({
     className: 'ht-fish-swim-pin',
-    html: '<img src="assets/fish-swim.svg" width="36" height="20" ' +
+    html: '<img src="assets/fish-swim.svg" width="12" height="7" ' +
           'style="transform:rotate(' + Math.round(fishRotation) + 'deg);" alt="">' +
           '<span class="ht-fish-swim-label">' +
           escapeHtml(_capitalize(opts.microType.replace(/-/g, ' '))) + '</span>',
-    iconSize: [36, 20],
-    iconAnchor: [18, 10]
+    iconSize: [12, 7],
+    iconAnchor: [6, 4]
   });
   var fishMarker = L.marker([fishLat, fishLng], {
     icon: fishIcon, zIndexOffset: 550
@@ -5064,6 +5102,7 @@ function _deployMicroCluster(opts) {
   // ══════════════════════════════════════════════════════════════
   //  2) STANDING POSITION — downstream of fish, IN the water
   //     3D angler SVG with animated fly rod + beacon pulse ring
+  //     SKIP if opts.skipStand is true (shared stand marker nearby)
   // ══════════════════════════════════════════════════════════════
   // Standing position: normally downstream of fish (angler behind fish)
   // BUT if fish is near the downstream end of the zone, flip to upstream
@@ -5079,6 +5118,7 @@ function _deployMicroCluster(opts) {
   }
   var standSnap = _snapToStream(seg[standSIdx][0], seg[standSIdx][1], seg, rawBW, avgWidth);
 
+  if (!opts.skipStand) {
   // Clean circle + "STAND HERE" label (matches CAST HERE visual language)
   var standIcon = L.divIcon({
     className: 'ht-stand-here-pin',
@@ -5106,6 +5146,7 @@ function _deployMicroCluster(opts) {
   standLabelMarker.__iconKind = 'standlabel';
   standLabelMarker.__microIdx = opts.microIdx;
   markers.push(standLabelMarker);
+  } // end !skipStand
 
   // ══════════════════════════════════════════════════════════════
   //  3) WADE HERE pill — on the BANK at the stream entry point
